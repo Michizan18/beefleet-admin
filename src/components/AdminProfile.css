@@ -1,0 +1,148 @@
+.profile-container {
+  max-width: 1200px;
+}
+
+.profile-card {
+  border-radius: 10px;
+  overflow: hidden;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header {
+  background: linear-gradient(135deg, #2a52be 0%, #0097b2 100%);
+  height: 100px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.profile-info {
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+  margin-top: 15px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.info-icon {
+  margin-right: 10px;
+  color: #2a52be;
+}
+
+.admin-table td {
+  padding: 1rem;
+  vertical-align: middle;
+}
+
+.icon-container {
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(42, 82, 190, 0.1);
+  border-radius: 50%;
+  margin-right: 12px;
+  color: #2a52be;
+}
+
+.permissions-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.permission-badge {
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  border-radius: 5px;
+}
+
+.activity-timeline {
+  position: relative;
+  padding-left: 30px;
+}
+
+.activity-item {
+  position: relative;
+  padding-bottom: 20px;
+  padding-left: 15px;
+}
+
+.activity-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 15px;
+  height: calc(100% - 10px);
+  width: 2px;
+  background-color: #e9ecef;
+}
+
+.activity-dot {
+  position: absolute;
+  left: -10px;
+  top: 5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px #dee2e6;
+}
+
+.activity-date {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-bottom: 5px;
+}
+
+.activity-text {
+  color: #343a40;
+}
+
+/* Estilos adicionales para el modal de edición */
+.modal-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+}
+
+.form-label {
+  font-weight: 500;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #2a52be;
+  box-shadow: 0 0 0 0.2rem rgba(42, 82, 190, 0.25);
+}
+
+.btn-primary {
+  background-color: #2a52be;
+  border-color: #2a52be;
+}
+
+.btn-primary:hover {
+  background-color: #224294;
+  border-color: #1f3c87;
+}
+
+/* Animación para el mensaje de éxito */
+.alert-success {
+  animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

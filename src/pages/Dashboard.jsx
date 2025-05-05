@@ -143,7 +143,7 @@ const Dashboard = () => {
         </div>
       </nav>
       
-      {/* Menú lateral */}
+      {/* Menú lateral corregido */}
       <div className="sidebar">
         <div className="sidebar-sticky">
           <ul className="nav flex-column">
@@ -153,8 +153,8 @@ const Dashboard = () => {
               </Link>
             </li>
             <li className="nav-item mt-3">
-              <Link to="/empleados" className="nav-link">
-                <FaUsers className="icon" /> Empleados
+              <Link to="/conductores" className="nav-link">
+                <FaUsers className="icon" /> Conductores
               </Link>
             </li>
             <li className="nav-item">
@@ -254,7 +254,7 @@ const Dashboard = () => {
               <Card className="h-100">
                 <Card.Header className="d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">Empleados Recientes</h5>
-                  <Button variant="outline-primary" size="sm">Ver Todos</Button>
+                  <Button as={Link} to="/conductores" variant="outline-primary" size="sm">Ver Todos</Button>
                 </Card.Header>
                 <Card.Body>
                   <Table responsive className="table-hover">
@@ -288,7 +288,7 @@ const Dashboard = () => {
               <Card className="h-100">
                 <Card.Header className="d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">Reportes recientes</h5>
-                  <Button variant="outline-primary" size="sm">Ver Calendario</Button>
+                  <Button as={Link} to="/calendario" variant="outline-primary" size="sm">Ver Calendario</Button>
                 </Card.Header>
                 <Card.Body>
                   <div className="task-list">
@@ -323,7 +323,7 @@ const Dashboard = () => {
               <Card>
                 <Card.Header className="d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">Estado de Proyectos</h5>
-                  <Button variant="outline-primary" size="sm">Gestionar Proyectos</Button>
+                  <Button as={Link} to="/proyectos" variant="outline-primary" size="sm">Gestionar Proyectos</Button>
                 </Card.Header>
                 <Card.Body>
                   {userData?.proyectos.map(proyecto => (

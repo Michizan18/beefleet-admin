@@ -29,8 +29,19 @@ const Conductores = () => {
       
       try {
         // Simulación de llamada API
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
+        const response = await fetch('http://localhost:3001/api/states',{
+          method: 'POST',
+          headers:{
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if(!response.ok){
+          throw new Error('Error en la respuesta de la API');
+        }
+
+
+
         // Datos simulados del usuario
         const data = {
           adminName: "Carlos Rodríguez",
@@ -52,203 +63,15 @@ const Conductores = () => {
     const fetchConductores = async () => {
       try {
         // Simulación de llamada API
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const response = await fetch('http://localhost:3001/api/drivers',{
+          method: 'GET',
+          headers:{
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const driverData = await response.json
         
-        // Datos simulados de conductores
-        const driverData = [
-          { 
-            id: 1, 
-            nombre: "Juan Pérez", 
-            cedula: "1023456789", 
-            telefono: "300-123-4567", 
-            email: "juan.perez@example.com", 
-            ciudad: "Bogotá", 
-            fechaContratacion: "2023-08-15",
-            licencia: "C1",
-            estado: "Activo",
-            vehiculoAsignado: "ABC-123",
-            modeloVehiculo: "Camión Furgón 2023",
-            ultimoReporte: "2025-04-28",
-            viajesCompletados: 356,
-            calificacion: 4.8
-          },
-          { 
-            id: 2, 
-            nombre: "María López", 
-            cedula: "1098765432", 
-            telefono: "310-987-6543", 
-            email: "maria.lopez@example.com", 
-            ciudad: "Medellín", 
-            fechaContratacion: "2022-03-10",
-            licencia: "C2",
-            estado: "Activo",
-            vehiculoAsignado: "XYZ-789",
-            modeloVehiculo: "Tractomula 2022",
-            ultimoReporte: "2025-04-30",
-            viajesCompletados: 512,
-            calificacion: 4.9
-          },
-          { 
-            id: 3, 
-            nombre: "Pedro Ramírez", 
-            cedula: "1087654321", 
-            telefono: "320-456-7890", 
-            email: "pedro.ramirez@example.com", 
-            ciudad: "Cali", 
-            fechaContratacion: "2024-01-05",
-            licencia: "C3",
-            estado: "En ruta",
-            vehiculoAsignado: "DEF-456",
-            modeloVehiculo: "Camión Cisterna 2024",
-            ultimoReporte: "2025-04-25",
-            viajesCompletados: 78,
-            calificacion: 4.6
-          },
-          { 
-            id: 4, 
-            nombre: "Ana Gómez", 
-            cedula: "1076543210", 
-            telefono: "315-890-1234", 
-            email: "ana.gomez@example.com", 
-            ciudad: "Barranquilla", 
-            fechaContratacion: "2021-06-20",
-            licencia: "C1",
-            estado: "Descanso",
-            vehiculoAsignado: "GHI-789",
-            modeloVehiculo: "Camión Plataforma 2021",
-            ultimoReporte: "2025-04-20",
-            viajesCompletados: 298,
-            calificacion: 4.5
-          },
-          { 
-            id: 5, 
-            nombre: "Carlos Martínez", 
-            cedula: "1065432109", 
-            telefono: "300-234-5678", 
-            email: "carlos.martinez@example.com", 
-            ciudad: "Bucaramanga", 
-            fechaContratacion: "2022-09-15",
-            licencia: "C2",
-            estado: "Activo",
-            vehiculoAsignado: "JKL-012",
-            modeloVehiculo: "Camión Furgón 2022",
-            ultimoReporte: "2025-04-29",
-            viajesCompletados: 203,
-            calificacion: 4.7
-          },
-          { 
-            id: 6, 
-            nombre: "Laura Díaz", 
-            cedula: "1054321098", 
-            telefono: "310-345-6789", 
-            email: "laura.diaz@example.com", 
-            ciudad: "Cartagena", 
-            fechaContratacion: "2023-05-12",
-            licencia: "C1",
-            estado: "En ruta",
-            vehiculoAsignado: "MNO-345",
-            modeloVehiculo: "Camión Refrigerado 2023",
-            ultimoReporte: "2025-04-27",
-            viajesCompletados: 157,
-            calificacion: 4.6
-          },
-          { 
-            id: 7, 
-            nombre: "Roberto Sánchez", 
-            cedula: "1043210987", 
-            telefono: "320-456-7890", 
-            email: "roberto.sanchez@example.com", 
-            ciudad: "Pereira", 
-            fechaContratacion: "2024-02-28",
-            licencia: "C3",
-            estado: "Inactivo",
-            vehiculoAsignado: "PQR-678",
-            modeloVehiculo: "Tractomula 2021",
-            ultimoReporte: "2025-03-15",
-            viajesCompletados: 52,
-            calificacion: 4.3
-          },
-          { 
-            id: 8, 
-            nombre: "Carmen Ortiz", 
-            cedula: "1032109876", 
-            telefono: "315-567-8901", 
-            email: "carmen.ortiz@example.com", 
-            ciudad: "Manizales", 
-            fechaContratacion: "2021-11-10",
-            licencia: "C2",
-            estado: "Descanso",
-            vehiculoAsignado: "STU-901",
-            modeloVehiculo: "Camión Cisterna 2020",
-            ultimoReporte: "2025-04-22",
-            viajesCompletados: 328,
-            calificacion: 4.8
-          },
-          { 
-            id: 9, 
-            nombre: "Javier Restrepo", 
-            cedula: "1021098765", 
-            telefono: "300-678-9012", 
-            email: "javier.restrepo@example.com", 
-            ciudad: "Armenia", 
-            fechaContratacion: "2022-07-05",
-            licencia: "C1",
-            estado: "Activo",
-            vehiculoAsignado: "VWX-234",
-            modeloVehiculo: "Camión Plataforma 2022",
-            ultimoReporte: "2025-04-28",
-            viajesCompletados: 230,
-            calificacion: 4.7
-          },
-          { 
-            id: 10, 
-            nombre: "Sofía Vargas", 
-            cedula: "1010987654", 
-            telefono: "310-789-0123", 
-            email: "sofia.vargas@example.com", 
-            ciudad: "Ibagué", 
-            fechaContratacion: "2023-01-15",
-            licencia: "C2",
-            estado: "En ruta",
-            vehiculoAsignado: "YZA-567",
-            modeloVehiculo: "Camión Furgón 2021",
-            ultimoReporte: "2025-04-26",
-            viajesCompletados: 185,
-            calificacion: 4.6
-          },
-          { 
-            id: 11, 
-            nombre: "Diego Torres", 
-            cedula: "1009876543", 
-            telefono: "320-890-1234", 
-            email: "diego.torres@example.com", 
-            ciudad: "Neiva", 
-            fechaContratacion: "2021-09-20",
-            licencia: "C3",
-            estado: "Inactivo",
-            vehiculoAsignado: "BCD-890",
-            modeloVehiculo: "Tractomula 2020",
-            ultimoReporte: "2025-03-01",
-            viajesCompletados: 276,
-            calificacion: 4.4
-          },
-          { 
-            id: 12, 
-            nombre: "Valentina Mejía", 
-            cedula: "1098765432", 
-            telefono: "315-901-2345", 
-            email: "valentina.mejia@example.com", 
-            ciudad: "Pasto", 
-            fechaContratacion: "2024-03-01",
-            licencia: "C1",
-            estado: "Activo",
-            vehiculoAsignado: "EFG-123",
-            modeloVehiculo: "Camión Refrigerado 2024",
-            ultimoReporte: "2025-04-29",
-            viajesCompletados: 42,
-            calificacion: 4.8
-          }
-        ];
         
         setConductores(driverData);
         setFilteredConductores(driverData);
@@ -543,9 +366,9 @@ const Conductores = () => {
                   </thead>
                   <tbody>
                     {currentConductores.map(conductor => (
-                      <tr key={conductor.id}>
-                        <td>{conductor.nombre}</td>
-                        <td>{conductor.cedula}</td>
+                      <tr key={conductor.id_conductor}>
+                        <td>{conductor.nombre_conductor}</td>
+                        <td>{conductor.cedula_conductor}</td>
                         <td>
                           <div className="d-flex align-items-center">
                             <FaCarAlt className="me-2 text-secondary" />

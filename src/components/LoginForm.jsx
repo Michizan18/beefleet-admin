@@ -21,53 +21,38 @@ const LoginForm = () => {
     try {
       // Aquí simularíamos la conexión con la base de datos
       // En un caso real, esto sería una petición fetch o axios a tu backend
-      const response = await loginUser(email, password);
-      
-      if (response.success) {
+      const response = await fetch('http://localhost:3001/api/admin/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          correo_usuario : email, 
+          contraseña : password,
+        }),
+        },)
+    
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al iniciar sesión');
+      }
+      const data = await response.json();
+      if (data.success) {
         setSuccess(true);
-        // Aquí guardaríamos el token en localStorage o sessionStorage
-        localStorage.setItem('authToken', response.token);
-        // Redireccionar después del login exitoso
+        localStorage.setItem('authToken', data.token);
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 1500);
       } else {
-        setError(response.message || 'Error al iniciar sesión');
+        setError(data.message || 'Error al iniciar sesión');
       }
     } catch (err) {
-      setError('Error de conexión con el servidor');
+      setError(err.message || 'Error de conexión con el servidor');
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Función simulada de login - En un caso real, esto sería una petición API
-  const loginUser = async (email, password) => {
-    // Simulamos un retraso de red
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Esta sería la lógica que implementarías para conectar con tu backend PHP
-    // que a su vez se conectaría con phpMyAdmin/MySQL
-    
-    // Por ahora simulamos una respuesta
-    if (email === 'usuario@ejemplo.com' && password === 'password123') {
-      return {
-        success: true,
-        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsImVtYWlsIjoidXN1YXJpb0BlamVtcGxvLmNvbSJ9',
-        user: {
-          id: 1,
-          name: 'Usuario Ejemplo',
-          email: 'usuario@ejemplo.com'
-        }
-      };
-    } else {
-      return {
-        success: false,
-        message: 'Credenciales inválidas'
-      };
-    }
-  };
+  } 
+}
 
   return (
     <div className="login-container">

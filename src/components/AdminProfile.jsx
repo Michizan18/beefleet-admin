@@ -25,13 +25,16 @@ const AdminProfile = () => {
     try {
       setLoading(true);
       // En un caso real, esto sería una petición a tu API
-      // const response = await fetch('http://tu-servidor.com/api/admin/profile.php', {
+      // const id_usuario = await localStorage.getItem('id_usuario');
+      // console.log(id_usuario)
+      // const response = await fetch(`http://localhost:3001/api/admin/${id_usuario}`, {
       //   headers: {
-      //     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+      //     'Authorization': `Bearer ${localStorage.getItem('Token')}`,
+      //     'Content-Type': 'application/json',
       //   }
       // });
       // const data = await response.json();
-      
+      // console.log(data)
       // Datos simulados para demostración
       await new Promise(resolve => setTimeout(resolve, 800)); // Simulación de retraso de red
       

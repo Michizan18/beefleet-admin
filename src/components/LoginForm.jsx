@@ -1,9 +1,10 @@
 // LoginForm.jsx
 
-import { useState } from 'react';
+import React , { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Alert, Button, Card, Form } from 'react-bootstrap';
 import './LoginForm.css'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -17,42 +18,36 @@ const LoginForm = () => {
     setLoading(true);
     setError('');
     setSuccess(false);
-
-    try {
-      // Aquí simularíamos la conexión con la base de datos
-      // En un caso real, esto sería una petición fetch o axios a tu backend
-      const response = await fetch('http://localhost:3001/api/admin/', {
+    try{
+      const response = await fetch('http://localhost:3001/api/admin/',{
         method: 'POST',
-        headers: {
+        headers:{
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          correo_usuario : email, 
-          contraseña : password,
-        }),
+        body: JSON.stringify({
+          correo_usuario: email,
+          contraseña: password
         },)
-    
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al iniciar sesión');
-      }
+      },)
       const data = await response.json();
-      if (data.success) {
-        setSuccess(true);
-        localStorage.setItem('authToken', data.token);
-        setTimeout(() => {
+      if (data.success){
+        setSuccess(true)
+        await AsyncStorage.setItem('token', data.token);
+        await AsyncStorage.setItem('id_usuario', data.user)
+        setTimeout(()=>{
           window.location.href = '/dashboard';
-        }, 1500);
-      } else {
+
+        }, 1)
+      }else{
         setError(data.message || 'Error al iniciar sesión');
       }
-    } catch (err) {
-      setError(err.message || 'Error de conexión con el servidor');
-      console.error(err);
+    } catch (err){
+        setError('Error de conexión con el servidor');
+        console.error(err);
     } finally {
-      setLoading(false);
-  } 
-}
+        setLoading(false);
+    }
+  }
 
   return (
     <div className="login-container">

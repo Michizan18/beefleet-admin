@@ -4,7 +4,6 @@ import React , { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Alert, Button, Card, Form } from 'react-bootstrap';
 import './LoginForm.css'; 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -30,10 +29,11 @@ const LoginForm = () => {
         },)
       },)
       const data = await response.json();
-      if (data.success){
+      if (response.ok){
         setSuccess(true)
-        await AsyncStorage.setItem('token', data.token);
-        await AsyncStorage.setItem('id_usuario', data.user)
+        await localStorage.setItem('token', data.token);
+        await localStorage.setItem('id_usuario', data.user)
+        console.log(data);
         setTimeout(()=>{
           window.location.href = '/dashboard';
 

@@ -23,43 +23,6 @@ const Conductores = () => {
   const conductoresPorPagina = 8;
 
   useEffect(() => {
-    // Simulación de carga de datos
-    const fetchUserData = async () => {
-      setLoading(true);
-      
-      try {
-        // Simulación de llamada API
-        const response = await fetch('http://localhost:3001/api/states',{
-          method: 'POST',
-          headers:{
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if(!response.ok){
-          throw new Error('Error en la respuesta de la API');
-        }
-
-
-
-        // Datos simulados del usuario
-        const data = {
-          adminName: "Carlos Rodríguez",
-          notificaciones: [
-            { id: 1, texto: "Llanta desinflada", tiempo: "Hace 2 horas", tipo: "Problema con el vehículo" },
-            { id: 2, texto: "Demora carga en Cali", tiempo: "Hace 5 horas", tipo: "Retraso en la carga" },
-            { id: 3, texto: "Error con carga asignada", tiempo: "Ayer", tipo: "alert" }
-          ]
-        };
-        
-        setUserData(data);
-      } catch (error) {
-        console.error("Error al cargar datos del usuario:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     const fetchConductores = async () => {
       try {
         // Simulación de llamada API
@@ -70,17 +33,19 @@ const Conductores = () => {
           },
         });
 
-        const driverData = await response.json
+        const driverData = await response.json();
+        console.log(driverData[0]);
         
-        
-        setConductores(driverData);
-        setFilteredConductores(driverData);
+        setConductores(driverData[0]);
+        setFilteredConductores(driverData[0]);
       } catch (error) {
         console.error("Error al cargar datos de conductores:", error);
+      } finally{
+        setLoading(false);
       }
     };
     
-    fetchUserData();
+    // fetchUserData();
     fetchConductores();
   }, []);
   
@@ -91,7 +56,7 @@ const Conductores = () => {
     // Aplicar filtro por término de búsqueda
     if (searchTerm) {
       filtered = filtered.filter(conductor => 
-        conductor.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conductor.nombre_coductor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         conductor.cedula.includes(searchTerm) ||
         conductor.vehiculoAsignado.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -368,7 +333,7 @@ const Conductores = () => {
                     {currentConductores.map(conductor => (
                       <tr key={conductor.id_conductor}>
                         <td>{conductor.nombre_conductor}</td>
-                        <td>{conductor.cedula_conductor}</td>
+                        <td>{conductor.documento}</td>
                         <td>
                           <div className="d-flex align-items-center">
                             <FaCarAlt className="me-2 text-secondary" />
@@ -445,13 +410,13 @@ const Conductores = () => {
                   <div className="driver-avatar mb-3">
                     <FaUserCircle size={100} className="text-primary" />
                   </div>
-                  <h4>{currentDriver.nombre}</h4>
+                  <h4>{currentDriver.nombre_conductor}</h4>
                   <p className="mb-1">
                     <EstadoBadge estado={currentDriver.estado} />
                   </p>
                   <p className="text-muted">
                     <FaIdCard className="me-2" />
-                    {currentDriver.cedula}
+                    {currentDriver.documento}
                   </p>
                 </Col>
                 <Col md={8}>
@@ -468,7 +433,7 @@ const Conductores = () => {
                       <p className="mb-1"><strong>Email:</strong></p>
                       <p className="d-flex align-items-center">
                         <FaEnvelope className="me-2 text-primary" />
-                        {currentDriver.email}
+                        {currentDriver.correo_conductor}
                       </p>
                     </Col>
                   </Row>
@@ -484,7 +449,7 @@ const Conductores = () => {
                       <p className="mb-1"><strong>Licencia:</strong></p>
                       <p className="d-flex align-items-center">
                         <Badge bg="secondary" className="me-2">
-                          {currentDriver.licencia}
+                          {currentDriver.tipo_licencia}
                         </Badge>
                       </p>
                     </Col>
@@ -493,8 +458,8 @@ const Conductores = () => {
                   <h5 className="mb-3 mt-4">Información Laboral</h5>
                   <Row className="mb-3">
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Fecha Contratación:</strong></p>
-                      <p>{formatDate(currentDriver.fechaContratacion)}</p>
+                      <p className="mb-1"><strong>Experiencia</strong></p>
+                      <p>{formatDate(currentDriver.experiencia)}</p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Último Reporte:</strong></p>

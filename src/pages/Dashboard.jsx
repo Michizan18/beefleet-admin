@@ -15,7 +15,8 @@ const Dashboard = () => {
     // Simular carga de datos
     const fetchDashboardData = async () => {
       setLoading(true);
-      
+      const id_user = await localStorage.getItem('id_usuario');
+      console.log(id_user);
       try {
         // Simulación de llamada API
         await new Promise(resolve => setTimeout(resolve, 800));

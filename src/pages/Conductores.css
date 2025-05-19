@@ -1,130 +1,55 @@
-/* Estilos para la vista de conductores */
+.conductores-table th {
+  background-color: #f9f9f9;
+  font-weight: 600;
+}
 
-/* Estilos para las estrellas de calificación */
-.rating {
-    display: flex;
-    align-items: center;
-  }
-  
-  .rating-value {
-    margin-right: 8px;
-    font-weight: 600;
-  }
-  
-  .rating-stars {
-    display: inline-flex;
-  }
-  
-  .star {
-    color: #e0e0e0;
-    font-size: 16px;
-  }
-  
-  .star.filled {
-    color: #ffc107; /* Color amarillo para estrellas llenas */
-  }
-  
-  .rating-stars.large .star {
-    font-size: 24px;
-  }
-  
-  /* Estilos para el avatar del conductor en el modal */
-  .driver-avatar {
-    width: 100px;
-    height: 100px;
-    margin: 0 auto;
-    border-radius: 50%;
-    background-color: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-    border: 2px solid #dee2e6;
-  }
-  
-  /* Estilo para las tarjetas */
-  .card {
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-  }
-  
-  .card:hover {
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-  }
-  
-  /* Estilos para los badges de estado */
-  .badge {
-    font-weight: 500;
-    padding: 6px 10px;
-    border-radius: 30px;
-  }
-  
-  /* Estilo para mejorar la visualización en dispositivos móviles */
-  @media (max-width: 768px) {
-    .table-responsive {
-      border: 0;
-    }
-    
-    .driver-detail h5 {
-      margin-top: 1.5rem;
-    }
-  }
-  
-  /* Estilos para el modal de detalles */
-  .modal-content {
-    border-radius: 12px;
-    border: none;
-  }
-  
-  .modal-header {
-    background-color: #f8f9fa;
-    border-radius: 12px 12px 0 0;
-  }
-  
-  .driver-detail h5 {
-    color: #495057;
-    font-weight: 600;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #dee2e6;
-  }
-  
-  /* Estilos para botones de acción en la tabla */
-  .btn-sm {
-    border-radius: 4px;
-    padding: 0.25rem 0.5rem;
-  }
-  
-  /* Animación para el loading */
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-  }
-  
-  .spinner-grow {
-    width: 3rem;
-    height: 3rem;
-    margin-bottom: 1rem;
-  }
-  
-  /* Personalización para la paginación */
-  .pagination .page-item.active .page-link {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-  }
-  
-  .pagination .page-link {
-    color: #0d6efd;
-  }
-  
-  .pagination .page-link:focus {
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-  }
-  
-  /* Estilo para resaltar filas en hover */
-  .table-hover tbody tr:hover {
-    background-color: rgba(13, 110, 253, 0.05);
-  }
+.pagination .page-item.active .page-link {
+  background-color: #ff8c00;
+  border-color: #ff8c00;
+}
+
+.pagination .page-link {
+  color: #ff8c00;
+}
+
+.pagination .page-link:hover {
+  color: #e67e00;
+}
+
+.action-buttons .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.search-bar {
+  max-width: 300px;
+}
+
+.page-header h1 {
+  color: #343a40;
+}
+
+.btn-warning {
+  background-color: #ff8c00;
+  border-color: #ff8c00;
+}
+
+.btn-warning:hover {
+  background-color: #e67e00;
+  border-color: #e67e00;
+}
+
+.btn-outline-warning {
+  color: #ff8c00;
+  border-color: #ff8c00;
+}
+
+.btn-outline-warning:hover {
+  background-color: #ff8c00;
+  color: white;
+}
+
+.showing-entries {
+  color: #6c757d;
+  font-size: 0.875rem;
+}

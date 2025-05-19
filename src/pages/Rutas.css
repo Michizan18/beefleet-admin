@@ -1,0 +1,165 @@
+.route-card {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border-radius: 0.5rem;
+}
+
+.route-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+}
+
+.route-point {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+}
+
+.route-point h4 {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    font-size: 1.1rem;
+}
+
+.route-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 1rem;
+    flex: 2;
+}
+
+.route-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 220px;
+    height: calc(100vh - 56px);
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    z-index: 100;
+    padding-top: 1rem;
+}
+
+.sidebar-sticky {
+    position: sticky;
+    top: 0;
+    height: calc(100vh - 56px);
+    padding-top: 0.5rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.nav-link {
+    color: #495057;
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.3s ease;
+}
+
+.nav-link:hover {
+    background-color: #e9ecef;
+}
+
+.nav-link.active {
+    color: #fff;
+    background-color: #0d6efd;
+}
+
+.nav-item {
+    margin-bottom: 0.25rem;
+}
+
+.icon {
+    margin-right: 0.5rem;
+}
+
+.content {
+    margin-left: 220px;
+    margin-top: 56px;
+    padding: 1rem;
+    flex: 1;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.notification-dropdown {
+    min-width: 300px;
+    padding: 0;
+}
+
+.dropdown-header {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    padding: 0.7rem 1rem;
+}
+
+.notification-item {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.notification-text {
+    font-size: 0.9rem;
+}
+
+.notification-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.notification-item.warning .notification-text {
+    color: #f0ad4e;
+}
+
+.notification-item.alert .notification-text {
+    color: #d9534f;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+    width: 60px;
+    }
+    
+    .content {
+    margin-left: 60px;
+    }
+    
+    .sidebar .nav-link span {
+    display: none;
+    }
+    
+    .sidebar .icon {
+    margin-right: 0;
+    }
+}

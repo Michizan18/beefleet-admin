@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Table, Form, InputGroup, Badge, Pagination, Modal, Dropdown } from 'react-bootstrap';
+import { Card, Table, Button, Dropdown, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { 
-  FaUsers, FaClipboardList, FaChartLine, FaBell, 
-  FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog,
-  FaSearch, FaUserPlus, FaFilter, FaCarAlt, FaEdit,
-  FaTrashAlt, FaIdCard, FaPhone, FaEnvelope, FaMapMarkerAlt
+  FaUsers, FaPhone, FaEnvelope, FaMapMarkerAlt, FaIdCard, FaBell, 
+  FaUserPlus, FaUserCircle, FaCog, FaSignOutAlt, FaChartLine, 
+  FaClipboardList, FaCalendarAlt, FaSearch, FaFilter, FaCarAlt, 
+  FaEdit, FaTrashAlt, FaPlus, FaSave 
 } from 'react-icons/fa';
-import './Dashboard.css';
+import LayoutBarButton from '../components/LayoutBarButton';
+import './Conductores.css';
 
 const Conductores = () => {
   const [userData, setUserData] = useState(null);
@@ -19,6 +20,29 @@ const Conductores = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentDriver, setCurrentDriver] = useState(null);
   const [filterStatus, setFilterStatus] = useState('todos');
+  // Estado para el formulario de nuevo conductor
+  const [showNewDriverModal, setShowNewDriverModal] = useState(false);
+  const [newDriver, setNewDriver] = useState({
+    tipo_documento: '',
+    documento: '',
+    nombre_conductor: '',
+    apellido_conductor: '',
+    correo_conductor: '',
+    foto: '',
+    telefono: '',
+    ciudad: '',
+    direccion: '',
+    tipo_licencia: '',
+    fecha_vencimiento: '',
+    experiencia: '',
+    contraseña: '',
+    estado: 'Activo',
+    calificacion: 0,
+    vehiculoAsignado: '',
+    modeloVehiculo: '',
+    viajesCompletados: 0
+  });
+  const [validated, setValidated] = useState(false);
   
   const conductoresPorPagina = 8;
 
@@ -26,9 +50,9 @@ const Conductores = () => {
     const fetchConductores = async () => {
       try {
         // Simulación de llamada API
-        const response = await fetch('http://localhost:3001/api/drivers',{
+        const response = await fetch('http://localhost:3001/api/drivers', {
           method: 'GET',
-          headers:{
+          headers: {
             'Content-Type': 'application/json',
           },
         });
@@ -40,12 +64,11 @@ const Conductores = () => {
         setFilteredConductores(driverData[0]);
       } catch (error) {
         console.error("Error al cargar datos de conductores:", error);
-      } finally{
+      } finally {
         setLoading(false);
       }
     };
     
-    // fetchUserData();
     fetchConductores();
   }, []);
   
@@ -56,9 +79,9 @@ const Conductores = () => {
     // Aplicar filtro por término de búsqueda
     if (searchTerm) {
       filtered = filtered.filter(conductor => 
-        conductor.nombre_coductor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conductor.cedula.includes(searchTerm) ||
-        conductor.vehiculoAsignado.toLowerCase().includes(searchTerm.toLowerCase())
+        conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conductor.documento?.includes(searchTerm) ||
+        conductor.vehiculoAsignado?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -98,36 +121,91 @@ const Conductores = () => {
     setCurrentDriver(driver);
     setShowModal(true);
   };
+
+  // Manejar cambios en el formulario
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewDriver({
+      ...newDriver,
+      [name]: value
+    });
+  };
+
+  // Manejar envío del formulario
+  const handleSubmitNewDriver = (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
+      return;
+    }
+    
+    // Aquí iría la lógica para guardar el nuevo conductor
+    // Por ahora, simulamos añadirlo a la lista local
+    const newDriverWithId = {
+      ...newDriver,
+      id_conductor: conductores.length + 1, // Generar ID temporal
+      ultimoReporte: new Date().toISOString()
+    };
+    
+    setConductores([...conductores, newDriverWithId]);
+    
+    // Cerrar modal y resetear form
+    setShowNewDriverModal(false);
+    setNewDriver({
+      tipo_documento: '',
+      documento: '',
+      nombre_conductor: '',
+      apellido_conductor: '',
+      correo_conductor: '',
+      foto: '',
+      telefono: '',
+      ciudad: '',
+      direccion: '',
+      tipo_licencia: '',
+      fecha_vencimiento: '',
+      experiencia: '',
+      contraseña: '',
+      estado: 'Activo',
+      calificacion: 0,
+      vehiculoAsignado: '',
+      modeloVehiculo: '',
+      viajesCompletados: 0
+    });
+    setValidated(false);
+  };
   
   // Componente de Paginación
   const renderPagination = () => {
     if (totalPages <= 1) return null;
     
-    const pageItems = [];
-    for (let number = 1; number <= totalPages; number++) {
-      pageItems.push(
-        <Pagination.Item 
-          key={number} 
-          active={number === currentPage}
-          onClick={() => handlePageChange(number)}
-        >
-          {number}
-        </Pagination.Item>
-      );
-    }
-    
     return (
-      <Pagination className="justify-content-center mt-3">
-        <Pagination.Prev 
-          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1}
-        />
-        {pageItems}
-        <Pagination.Next 
-          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-          disabled={currentPage === totalPages}
-        />
-      </Pagination>
+      <div className="pagination-container d-flex justify-content-between align-items-center mt-3">
+        <div className="showing-entries">
+          Mostrando {indexOfFirstConductor + 1} a {Math.min(indexOfLastConductor, filteredConductores.length)} de {filteredConductores.length} registros
+        </div>
+        <ul className="pagination mb-0">
+          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+            <a className="page-link" href="#!" onClick={() => handlePageChange(Math.max(1, currentPage - 1))}>
+              Anterior
+            </a>
+          </li>
+          {[...Array(totalPages)].map((_, i) => (
+            <li key={i} className={`page-item ${i + 1 === currentPage ? 'active' : ''}`}>
+              <a className="page-link" href="#!" onClick={() => handlePageChange(i + 1)}>
+                {i + 1}
+              </a>
+            </li>
+          ))}
+          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+            <a className="page-link" href="#!" onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}>
+              Siguiente
+            </a>
+          </li>
+        </ul>
+      </div>
     );
   };
   
@@ -142,6 +220,7 @@ const Conductores = () => {
         variant = 'primary';
         break;
       case 'Descanso':
+      case 'Entrenamiento':
         variant = 'warning';
         break;
       case 'Inactivo':
@@ -151,246 +230,156 @@ const Conductores = () => {
         variant = 'secondary';
     }
     
-    return <Badge bg={variant}>{estado}</Badge>;
+    return <span className={`badge bg-${variant} rounded-pill`}>{estado}</span>;
   };
   
   if (loading) {
     return (
       <div className="loading-container">
-        <div className="spinner-grow text-primary" role="status">
+        <div className="spinner-grow text-warning" role="status">
           <span className="visually-hidden">Cargando...</span>
         </div>
-        <p>Cargando datos...</p>
+        <p>Cargando conductores...</p>
       </div>
     );
   }
   
-  return (
-    <div className="dashboard-container">
-      {/* Barra de navegación superior */}
-      <nav className="navbar navbar-expand navbar-dark bg-primary fixed-top">
-        <div className="container-fluid">
-          <a className="navbar-brand" href="#!">
-            <strong>Sistema de Gestión</strong>
-          </a>
-          
-          <ul className="navbar-nav ms-auto">
-            <li className="nav-item dropdown">
-              <Dropdown>
-                <Dropdown.Toggle variant="transparent" id="notification-dropdown" className="nav-link">
-                  <FaBell className="icon" />
-                  <span className="badge rounded-pill bg-danger">
-                    {userData?.notificaciones.length || 0}
-                  </span>
-                </Dropdown.Toggle>
-                
-                <Dropdown.Menu className="dropdown-menu-end notification-dropdown">
-                  <h6 className="dropdown-header">Notificaciones</h6>
-                  {userData?.notificaciones.map(notif => (
-                    <Dropdown.Item key={notif.id} className={`notification-item ${notif.tipo}`}>
-                      <div className="notification-text">{notif.texto}</div>
-                      <div className="notification-time">{notif.tiempo}</div>
-                    </Dropdown.Item>
-                  ))}
-                  <Dropdown.Divider />
-                  <Dropdown.Item className="text-center">Ver todas</Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            </li>
-            
-            <li className="nav-item dropdown">
-              <Dropdown>
-                <Dropdown.Toggle variant="transparent" id="user-dropdown" className="nav-link">
-                  <FaUserCircle className="icon" />
-                  <span className="d-none d-md-inline-block ms-1">
-                    {userData?.adminName || 'Usuario'}
-                  </span>
-                </Dropdown.Toggle>
-                
-                <Dropdown.Menu className="dropdown-menu-end">
-                  <Dropdown.Item as={Link} to="/profile">
-                    <FaUserCircle className="me-2" /> Mi Perfil
-                  </Dropdown.Item>
-                  <Dropdown.Item href="#!">
-                    <FaCog className="me-2" /> Configuración
-                  </Dropdown.Item>
-                  <Dropdown.Divider />
-                  <Dropdown.Item href="#!">
-                    <FaSignOutAlt className="me-2" /> Cerrar Sesión
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            </li>
-          </ul>
-        </div>
-      </nav>
-      
-      {/* Menú lateral */}
-      <div className="sidebar">
-        <div className="sidebar-sticky">
-          <ul className="nav flex-column">
-            <li className="nav-item">
-              <Link to="/dashboard" className="nav-link">
-                <FaChartLine className="icon" /> Dashboard
-              </Link>
-            </li>
-            <li className="nav-item mt-3">
-              <Link to="/conductores" className="nav-link active">
-                <FaUsers className="icon" /> Conductores
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/proyectos" className="nav-link">
-                <FaClipboardList className="icon" /> Proyectos
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/calendario" className="nav-link">
-                <FaCalendarAlt className="icon" /> Calendario
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/profile" className="nav-link">
-                <FaUserCircle className="icon" /> Mi Perfil
-              </Link>
-            </li>
-          </ul>
-        </div>
+  const conductoresContent = (
+    <>
+      <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
+        <h1>Gestión de Conductores</h1>
+        <Button 
+          variant="warning" 
+          className="d-flex align-items-center"
+          onClick={() => setShowNewDriverModal(true)}
+        >
+          <FaPlus className="me-2" /> Nuevo Conductor
+        </Button>
       </div>
       
-      {/* Contenido principal */}
-      <main className="content">
-        <Container fluid>
-          <Row className="align-items-center mb-4">
-            <Col>
-              <h1 className="mt-4">Gestión de Conductores</h1>
-              <p className="text-muted">Administra la información de los conductores activos y su estado</p>
+      {/* Filtros y búsqueda */}
+      <Card className="mb-4">
+        <Card.Body>
+          <Row>
+            <Col md={6} lg={8}>
+              <InputGroup>
+                <InputGroup.Text id="basic-addon1" className="bg-warning text-white">
+                  <FaSearch />
+                </InputGroup.Text>
+                <Form.Control
+                  placeholder="Buscar por nombre, cédula o vehículo"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </InputGroup>
             </Col>
-            <Col xs="auto">
-              <Button variant="primary" className="d-flex align-items-center">
-                <FaUserPlus className="me-2" /> Nuevo Conductor
-              </Button>
+            <Col md={6} lg={4} className="mt-3 mt-md-0">
+              <InputGroup>
+                <InputGroup.Text id="filter-addon" className="bg-warning text-white">
+                  <FaFilter />
+                </InputGroup.Text>
+                <Form.Select 
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <option value="todos">Todos los estados</option>
+                  <option value="Activo">Activo</option>
+                  <option value="En ruta">En ruta</option>
+                  <option value="Descanso">Descanso</option>
+                  <option value="Inactivo">Inactivo</option>
+                </Form.Select>
+              </InputGroup>
             </Col>
           </Row>
-          
-          {/* Filtros y búsqueda */}
-          <Card className="mb-4">
-            <Card.Body>
-              <Row>
-                <Col md={6} lg={8}>
-                  <InputGroup>
-                    <InputGroup.Text id="basic-addon1">
-                      <FaSearch />
-                    </InputGroup.Text>
-                    <Form.Control
-                      placeholder="Buscar por nombre, cédula o vehículo"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </InputGroup>
-                </Col>
-                <Col md={6} lg={4} className="mt-3 mt-md-0">
-                  <InputGroup>
-                    <InputGroup.Text id="filter-addon">
-                      <FaFilter />
-                    </InputGroup.Text>
-                    <Form.Select 
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
-                    >
-                      <option value="todos">Todos los estados</option>
-                      <option value="Activo">Activo</option>
-                      <option value="En ruta">En ruta</option>
-                      <option value="Descanso">Descanso</option>
-                      <option value="Inactivo">Inactivo</option>
-                    </Form.Select>
-                  </InputGroup>
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
-          
-          {/* Listado de conductores */}
-          <Card>
-            <Card.Header>
+        </Card.Body>
+      </Card>
+      
+      {/* Listado de conductores */}
+      <Card>
+        <Card.Header className="bg-white">
+          <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center">
+              <FaUsers className="text-warning me-2" size={20} />
               <h5 className="mb-0">Listado de Conductores</h5>
-            </Card.Header>
-            <Card.Body>
-              <div className="table-responsive">
-                <Table hover>
-                  <thead>
-                    <tr>
-                      <th>Nombre</th>
-                      <th>Cédula</th>
-                      <th>Vehículo</th>
-                      <th>Ciudad</th>
-                      <th>Estado</th>
-                      <th>Calificación</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentConductores.map(conductor => (
-                      <tr key={conductor.id_conductor}>
-                        <td>{conductor.nombre_conductor}</td>
-                        <td>{conductor.documento}</td>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <FaCarAlt className="me-2 text-secondary" />
-                            {conductor.vehiculoAsignado}
-                          </div>
-                        </td>
-                        <td>{conductor.ciudad}</td>
-                        <td>
-                          <EstadoBadge estado={conductor.estado} />
-                        </td>
-                        <td>
-                          <div className="rating">
-                            <span className="rating-value">{conductor.calificacion}</span>
-                            <div className="rating-stars">
-                              {[...Array(5)].map((_, i) => (
-                                <span 
-                                  key={i}
-                                  className={`star ${i < Math.floor(conductor.calificacion) ? 'filled' : ''}`}
-                                >★</span>
-                              ))}
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <Button 
-                            variant="outline-info" 
-                            size="sm" 
-                            className="me-1"
-                            onClick={() => handleShowDetails(conductor)}
-                          >
-                            Ver
-                          </Button>
-                          <Button variant="outline-primary" size="sm" className="me-1">
-                            <FaEdit />
-                          </Button>
-                          <Button variant="outline-danger" size="sm">
-                            <FaTrashAlt />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
-              
-              {filteredConductores.length === 0 && (
-                <div className="text-center py-4">
-                  <p className="text-muted">No se encontraron conductores con los criterios de búsqueda.</p>
-                </div>
-              )}
-              
-              {/* Paginación */}
-              {renderPagination()}
-            </Card.Body>
-          </Card>
-        </Container>
-      </main>
+            </div>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <div className="table-responsive">
+            <Table hover className="conductores-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Cédula</th>
+                  <th>Vehículo</th>
+                  <th>Ciudad</th>
+                  <th>Estado</th>
+                  <th>Calificación</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentConductores.map(conductor => (
+                  <tr key={conductor.id_conductor}>
+                    <td>{conductor.nombre_conductor}</td>
+                    <td>{conductor.documento}</td>
+                    <td>
+                      <div className="d-flex align-items-center">
+                        <FaCarAlt className="me-2 text-warning" />
+                        {conductor.vehiculoAsignado}
+                      </div>
+                    </td>
+                    <td>{conductor.ciudad}</td>
+                    <td>
+                      <EstadoBadge estado={conductor.estado} />
+                    </td>
+                    <td>
+                      <div className="rating">
+                        <span className="rating-value">{conductor.calificacion}</span>
+                        <div className="rating-stars">
+                          {[...Array(5)].map((_, i) => (
+                            <span 
+                              key={i}
+                              className={`star ${i < Math.floor(conductor.calificacion) ? 'filled' : ''}`}
+                            >★</span>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <Button 
+                          variant="outline-warning" 
+                          size="sm" 
+                          className="me-1"
+                          onClick={() => handleShowDetails(conductor)}
+                        >
+                          Ver
+                        </Button>
+                        <Button variant="outline-warning" size="sm" className="me-1">
+                          <FaEdit />
+                        </Button>
+                        <Button variant="outline-danger" size="sm">
+                          <FaTrashAlt />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+          
+          {filteredConductores.length === 0 && (
+            <div className="text-center py-4">
+              <p className="text-muted">No se encontraron conductores con los criterios de búsqueda.</p>
+            </div>
+          )}
+          
+          {/* Paginación */}
+          {renderPagination()}
+        </Card.Body>
+      </Card>
       
       {/* Modal de detalles del conductor */}
       <Modal 
@@ -399,7 +388,7 @@ const Conductores = () => {
         size="lg"
         centered
       >
-        <Modal.Header closeButton>
+        <Modal.Header closeButton className="border-bottom border-warning">
           <Modal.Title>Detalles del Conductor</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -408,7 +397,7 @@ const Conductores = () => {
               <Row>
                 <Col md={4} className="text-center mb-4 mb-md-0">
                   <div className="driver-avatar mb-3">
-                    <FaUserCircle size={100} className="text-primary" />
+                    <FaUserCircle size={100} className="text-warning" />
                   </div>
                   <h4>{currentDriver.nombre_conductor}</h4>
                   <p className="mb-1">
@@ -418,6 +407,9 @@ const Conductores = () => {
                     <FaIdCard className="me-2" />
                     {currentDriver.documento}
                   </p>
+                  <p className="text-muted">
+                    {currentDriver.tipo_documento}
+                  </p>
                 </Col>
                 <Col md={8}>
                   <h5 className="mb-3">Información de Contacto</h5>
@@ -425,14 +417,14 @@ const Conductores = () => {
                     <Col sm={6}>
                       <p className="mb-1"><strong>Teléfono:</strong></p>
                       <p className="d-flex align-items-center">
-                        <FaPhone className="me-2 text-primary" />
+                        <FaPhone className="me-2 text-warning" />
                         {currentDriver.telefono}
                       </p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Email:</strong></p>
                       <p className="d-flex align-items-center">
-                        <FaEnvelope className="me-2 text-primary" />
+                        <FaEnvelope className="me-2 text-warning" />
                         {currentDriver.correo_conductor}
                       </p>
                     </Col>
@@ -441,14 +433,14 @@ const Conductores = () => {
                     <Col sm={6}>
                       <p className="mb-1"><strong>Ciudad:</strong></p>
                       <p className="d-flex align-items-center">
-                        <FaMapMarkerAlt className="me-2 text-primary" />
+                        <FaMapMarkerAlt className="me-2 text-warning" />
                         {currentDriver.ciudad}
                       </p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Licencia:</strong></p>
                       <p className="d-flex align-items-center">
-                        <Badge bg="secondary" className="me-2">
+                        <Badge bg="warning" className="me-2">
                           {currentDriver.tipo_licencia}
                         </Badge>
                       </p>
@@ -458,12 +450,22 @@ const Conductores = () => {
                   <h5 className="mb-3 mt-4">Información Laboral</h5>
                   <Row className="mb-3">
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Experiencia</strong></p>
+                      <p className="mb-1"><strong>Experiencia:</strong></p>
                       <p>{formatDate(currentDriver.experiencia)}</p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Último Reporte:</strong></p>
                       <p>{formatDate(currentDriver.ultimoReporte)}</p>
+                    </Col>
+                  </Row>
+                  <Row className="mb-3">
+                    <Col sm={6}>
+                      <p className="mb-1"><strong>Licencia:</strong></p>
+                      <p>{formatDate(currentDriver.tipo_licencia)}</p>
+                    </Col>
+                    <Col sm={6}>
+                      <p className="mb-1"><strong>Fecha de vencimiento:</strong></p>
+                      <p>{formatDate(currentDriver.fecha_vencimiento)}</p>
                     </Col>
                   </Row>
                   
@@ -472,7 +474,7 @@ const Conductores = () => {
                     <Col sm={6}>
                       <p className="mb-1"><strong>Placa:</strong></p>
                       <p className="d-flex align-items-center">
-                        <FaCarAlt className="me-2 text-primary" />
+                        <FaCarAlt className="me-2 text-warning" />
                         {currentDriver.vehiculoAsignado}
                       </p>
                     </Col>
@@ -486,21 +488,7 @@ const Conductores = () => {
                   <Row>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Viajes Completados:</strong></p>
-                      <h3 className="text-primary">{currentDriver.viajesCompletados}</h3>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Calificación:</strong></p>
-                      <div className="rating">
-                        <h3 className="text-primary">{currentDriver.calificacion}</h3>
-                        <div className="rating-stars large">
-                          {[...Array(5)].map((_, i) => (
-                            <span 
-                              key={i}
-                              className={`star ${i < Math.floor(currentDriver.calificacion) ? 'filled' : ''}`}
-                            >★</span>
-                          ))}
-                        </div>
-                      </div>
+                      <h3 className="text-warning">{currentDriver.viajesCompletados}</h3>
                     </Col>
                   </Row>
                 </Col>
@@ -512,12 +500,358 @@ const Conductores = () => {
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Cerrar
           </Button>
-          <Button variant="primary">
+          <Button variant="warning">
             <FaEdit className="me-2" /> Editar Información
           </Button>
         </Modal.Footer>
       </Modal>
-    </div>
+      
+      {/* Modal para crear nuevo conductor */}
+      <Modal
+        show={showNewDriverModal}
+        onHide={() => setShowNewDriverModal(false)}
+        size="lg"
+        centered
+        backdrop="static"
+      >
+        <Form noValidate validated={validated} onSubmit={handleSubmitNewDriver}>
+          <Modal.Header closeButton className="border-bottom border-warning">
+            <Modal.Title>
+              <FaUserPlus className="me-2 text-warning" />
+              Registrar Nuevo Conductor
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="new-driver-form">
+              {/* Información personal */}
+              <h5 className="border-bottom pb-2 mb-3">Información Personal</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Tipo de Documento</Form.Label>
+                    <Form.Select
+                      name="tipo_documento"
+                      value={newDriver.tipo_documento}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="CC">Cédula de Ciudadanía</option>
+                      <option value="CE">Cédula de Extranjería</option>
+                      <option value="PAS">Pasaporte</option>
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Seleccione un tipo de documento
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Número de Documento</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="documento"
+                      value={newDriver.documento}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      El número de documento es obligatorio
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Nombre</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="nombre_conductor"
+                      value={newDriver.nombre_conductor}
+                      onChange={handleInputChange}
+                      required
+                      maxLength={45}
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      El nombre es obligatorio
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Apellido</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="apellido_conductor"
+                      value={newDriver.apellido_conductor}
+                      onChange={handleInputChange}
+                      required
+                      maxLength={45}
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      El apellido es obligatorio
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Correo Electrónico</Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text className="bg-warning text-white">
+                        <FaEnvelope />
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="email"
+                        name="correo_conductor"
+                        value={newDriver.correo_conductor}
+                        onChange={handleInputChange}
+                        required
+                        maxLength={45}
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        Ingrese un correo electrónico válido
+                      </Form.Control.Feedback>
+                    </InputGroup>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Teléfono</Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text className="bg-warning text-white">
+                        <FaPhone />
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="tel"
+                        name="telefono"
+                        value={newDriver.telefono}
+                        onChange={handleInputChange}
+                        required
+                        maxLength={45}
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        El teléfono es obligatorio
+                      </Form.Control.Feedback>
+                    </InputGroup>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <Row className="mb-3">
+                <Col md={12}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>URL de Foto</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="foto"
+                      value={newDriver.foto}
+                      onChange={handleInputChange}
+                      maxLength={200}
+                    />
+                    <Form.Text className="text-muted">
+                      Opcional: URL de la imagen del conductor
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              {/* Dirección y ubicación */}
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Ubicación</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Ciudad</Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text className="bg-warning text-white">
+                        <FaMapMarkerAlt />
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="text"
+                        name="ciudad"
+                        value={newDriver.ciudad}
+                        onChange={handleInputChange}
+                        required
+                        maxLength={100}
+                      />
+                      <Form.Control.Feedback type="invalid">
+                        La ciudad es obligatoria
+                      </Form.Control.Feedback>
+                    </InputGroup>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Dirección</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="direccion"
+                      value={newDriver.direccion}
+                      onChange={handleInputChange}
+                      required
+                      maxLength={250}
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      La dirección es obligatoria
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              {/* Información de licencia */}
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Licencia</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Tipo de Licencia</Form.Label>
+                    <Form.Select
+                      name="tipo_licencia"
+                      value={newDriver.tipo_licencia}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="A1">A1 - Motocicletas</option>
+                      <option value="A2">A2 - Motocicletas, motocarros, cuatrimotos</option>
+                      <option value="B1">B1 - Automóviles, camionetas</option>
+                      <option value="B2">B2 - Camiones rígidos, buses</option>
+                      <option value="B3">B3 - Vehículos articulados</option>
+                      <option value="C1">C1 - Automóviles, camionetas servicio público</option>
+                      <option value="C2">C2 - Camiones rígidos, buses servicio público</option>
+                      <option value="C3">C3 - Vehículos articulados servicio público</option>
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Seleccione un tipo de licencia
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Fecha de Vencimiento</Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="fecha_vencimiento"
+                      value={newDriver.fecha_vencimiento}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      La fecha de vencimiento es obligatoria
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Años de Experiencia</Form.Label>
+                    <Form.Control
+                      type="number"
+                      name="experiencia"
+                      value={newDriver.experiencia}
+                      onChange={handleInputChange}
+                      min="0"
+                      max="50"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              {/* Información de cuenta */}
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Cuenta</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Contraseña</Form.Label>
+                    <Form.Control
+                      type="password"
+                      name="contraseña"
+                      value={newDriver.contraseña}
+                      onChange={handleInputChange}
+                      required
+                      maxLength={250}
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      La contraseña es obligatoria
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Estado</Form.Label>
+                    <Form.Select
+                      name="estado"
+                      value={newDriver.estado}
+                      onChange={handleInputChange}
+                    >
+                      <option value="Activo">Activo</option>
+                      <option value="Inactivo">Inactivo</option>
+                      <option value="En ruta">En ruta</option>
+                      <option value="Descanso">Descanso</option>
+                      <option value="Entrenamiento">Entrenamiento</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              {/* Información de vehículo */}
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Vehículo</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Placa del Vehículo</Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text className="bg-warning text-white">
+                        <FaCarAlt />
+                      </InputGroup.Text>
+                      <Form.Control
+                        type="text"
+                        name="vehiculoAsignado"
+                        value={newDriver.vehiculoAsignado}
+                        onChange={handleInputChange}
+                        placeholder="Ej: ABC123"
+                      />
+                    </InputGroup>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Modelo del Vehículo</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="modeloVehiculo"
+                      value={newDriver.modeloVehiculo}
+                      onChange={handleInputChange}
+                      placeholder="Ej: Toyota Corolla 2023"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowNewDriverModal(false)}>
+              Cancelar
+            </Button>
+            <Button variant="warning" type="submit">
+              <FaSave className="me-2" /> Guardar Conductor
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+      
+    </>
+  );
+
+  return (
+    <LayoutBarButton userData={userData}>
+      {conductoresContent}
+    </LayoutBarButton>
   );
 };
 

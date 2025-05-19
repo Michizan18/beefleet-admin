@@ -3,7 +3,8 @@ import { Container, Row, Col, Card, Button, Table, ProgressBar, Dropdown } from 
 import { Link } from 'react-router-dom';
 import { 
   FaUsers, FaClipboardList, FaChartLine, FaBell, 
-  FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog
+  FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog,
+  FaCar
 } from 'react-icons/fa';
 import './Dashboard.css';
 
@@ -15,7 +16,8 @@ const Dashboard = () => {
     // Simular carga de datos
     const fetchDashboardData = async () => {
       setLoading(true);
-      
+      const id_user = await localStorage.getItem('id_usuario');
+      console.log(id_user);
       try {
         // Simulación de llamada API
         await new Promise(resolve => setTimeout(resolve, 800));
@@ -28,11 +30,17 @@ const Dashboard = () => {
             tareasPendientes: 12,
             proyectosActivos: 8,
             empleadosNuevos: 3,
+            vehiculosActivos: 18,  // Añadido contador de vehículos
           },
           empleadosRecientes: [
             { id: 1, nombre: "Pablo Cárdenas", fechaIngreso: "2025-04-15", estado: "Activo" },
             { id: 2, nombre: "Luis Martínez", fechaIngreso: "2025-04-12", estado: "Activo" },
             { id: 3, nombre: "Mario López", fechaIngreso: "2025-04-05", estado: "Entrenamiento" }
+          ],
+          vehiculosRecientes: [  // Añadido datos de vehículos
+            { id: 1, placa: "ABC-123", modelo: "Ford F-150", estado: "Activo" },
+            { id: 2, placa: "XYZ-789", modelo: "Toyota Hilux", estado: "Activo" },
+            { id: 3, placa: "DEF-456", modelo: "Chevrolet Silverado", estado: "Mantenimiento" }
           ],
           proyectos: [
             { id: 1, nombre: "Rediseño Portal Web", progreso: 75, estado: "En progreso" },
@@ -157,6 +165,12 @@ const Dashboard = () => {
                 <FaUsers className="icon" /> Conductores
               </Link>
             </li>
+            {/* Nuevo enlace para Vehículos */}
+            <li className="nav-item">
+              <Link to="/vehiculos" className="nav-link">
+                <FaCar className="icon" /> Vehículos
+              </Link>
+            </li>
             <li className="nav-item">
               <Link to="/proyectos" className="nav-link">
                 <FaClipboardList className="icon" /> Proyectos
@@ -246,11 +260,28 @@ const Dashboard = () => {
                 </Card.Body>
               </Card>
             </Col>
+
+            {/* Nueva tarjeta para Vehículos Activos */}
+            <Col md={3} sm={6} className="mb-4">
+              <Card className="stats-card">
+                <Card.Body>
+                  <div className="d-flex align-items-center">
+                    <div className="stats-icon">
+                      <FaCar />
+                    </div>
+                    <div>
+                      <h4 className="stats-number">{userData?.stats.vehiculosActivos}</h4>
+                      <div className="stats-label">Vehículos Activos</div>
+                    </div>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
           </Row>
           
           <Row>
             {/* Lista de Empleados Recientes */}
-            <Col lg={6} className="mb-4">
+            <Col lg={4} className="mb-4">
               <Card className="h-100">
                 <Card.Header className="d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">Empleados Recientes</h5>
@@ -283,8 +314,42 @@ const Dashboard = () => {
               </Card>
             </Col>
             
-            {/* Reportes */}
-            <Col lg={6} className="mb-4">
+            {/* Nueva sección de Vehículos Recientes */}
+            <Col lg={4} className="mb-4">
+              <Card className="h-100">
+                <Card.Header className="d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">Vehículos Recientes</h5>
+                  <Button as={Link} to="/vehiculos" variant="outline-primary" size="sm">Ver Todos</Button>
+                </Card.Header>
+                <Card.Body>
+                  <Table responsive className="table-hover">
+                    <thead>
+                      <tr>
+                        <th>Placa</th>
+                        <th>Modelo</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {userData?.vehiculosRecientes.map(vehiculo => (
+                        <tr key={vehiculo.id}>
+                          <td>{vehiculo.placa}</td>
+                          <td>{vehiculo.modelo}</td>
+                          <td>
+                            <span className={`badge bg-${vehiculo.estado === 'Activo' ? 'success' : 'warning'} rounded-pill`}>
+                              {vehiculo.estado}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </Card.Body>
+              </Card>
+            </Col>
+            
+            {/* Reportes - Reducido a 4 columnas */}
+            <Col lg={4} className="mb-4">
               <Card className="h-100">
                 <Card.Header className="d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">Reportes recientes</h5>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Badge, Table, Button, Modal, Form, Spinner } from 'react-bootstrap';
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaClock, FaUsers, FaIdCard, FaEdit, FaSave } from 'react-icons/fa';
-import NavBar from './NavBar';
+import NavBar from '../components/NavBar';
 import './AdminProfile.css';
 
 const AdminProfile = () => {

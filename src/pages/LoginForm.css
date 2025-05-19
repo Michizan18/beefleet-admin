@@ -1,7 +1,7 @@
 .login-container {
     height: 100vh;
     width: 100%;
-    background-image: url('./img/background.jpeg');
+    background-image: url('../components/img/background.jpeg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

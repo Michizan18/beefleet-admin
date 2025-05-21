@@ -16,39 +16,22 @@ const AdminProfile = () => {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  useEffect(() => {
-    // Simulamos la carga de datos desde el servidor
-    fetchAdminProfile();
-  }, []);
-
   const fetchAdminProfile = async () => {
     try {
       setLoading(true);
-      // En un caso real, esto sería una petición a tu API
-      // const response = await fetch('http://tu-servidor.com/api/admin/profile.php', {
-      //   headers: {
-      //     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      //   }
-      // });
-      // const data = await response.json();
-      
-      // Datos simulados para demostración
+      const id_usuario = await localStorage.getItem('id_usuario');
+      console.log(id_usuario)
+      const response = await fetch(`http://localhost:3001/api/admin/${id_usuario}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('Token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
+      const data = await response.json();
+      console.log(data)
       await new Promise(resolve => setTimeout(resolve, 800)); // Simulación de retraso de red
-      
-      const data = {
-        id: 1,
-        nombre: "Carlos Rodríguez",
-        rol: "Administrador General",
-        documento: "12345678-A",
-        estado: "Activo",
-        correo: "carlos.rodriguez@empresa.com",
-        telefono: "321 123 4567",
-        ultimoAcceso: "2025-04-27T15:32:41",
-        direccion: "Rionegro calle 23 #12",
-        empleadosACargo: 12,
-        fechaContratacion: "2022-03-15",
-        permisos: ["Gestión de usuarios", "Finanzas", "Recursos Humanos", "Reportes"]
-      };
+    
       
       setAdmin(data);
       setEditForm(data); // También inicializamos el formulario con los datos actuales
@@ -171,7 +154,7 @@ const AdminProfile = () => {
               <Col lg={4} md={5}>
                 <Card className="profile-card">
                   <div className="profile-header text-center">
-                    <h3 className='mt-5 text-white'>{admin.nombre}</h3>
+                    <h3 className='mt-5 text-white'>{admin.nombre_usuario}</h3>
                   </div>
                   <Card.Body className="text-center">
                     <div className="mb-3">

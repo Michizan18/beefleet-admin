@@ -5,6 +5,7 @@ import AdminProfile from './components/AdminProfile';
 import Conductores from './pages/Conductores';
 import Rutas from './pages/Rutas';
 import NotificacionesAdmin from './pages/NotificacionesAdmin';
+import Vehiculos from './pages/Vehiculos'; // Importa el componente Vehiculos
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/conductores" element={<Conductores/>} />
         <Route path="/rutas" element={<Rutas />} />
         <Route path="/notificaciones" element={<NotificacionesAdmin />} />
+        <Route path="/vehiculos" element={<Vehiculos/>} /> {/* Agrega la ruta para vehículos */}
       </Routes>
     </Router>
   )

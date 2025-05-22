@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navbar, Container, Dropdown } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
+import MenuNotificaciones from './MenuNotificaciones';
 import { 
   FaUsers, FaCar, FaChartLine, FaBell, 
-  FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog
+  FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog, FaMapMarkedAlt 
 } from 'react-icons/fa';
 import './LayoutBarButton.css';
 
@@ -22,28 +23,10 @@ const LayoutBarButton = ({ children, userData }) => {
           </a>
           
           <ul className="navbar-nav ms-auto">
-            <li className="nav-item dropdown">
-              <Dropdown>
-                <Dropdown.Toggle variant="transparent" id="notification-dropdown" className="nav-link">
-                  <FaBell className="icon" />
-                  <span className="badge rounded-pill bg-danger">
-                    {userData?.notificaciones?.length || 0}
-                  </span>
-                </Dropdown.Toggle>
-                
-                <Dropdown.Menu className="dropdown-menu-end notification-dropdown">
-                  <h6 className="dropdown-header">Notificaciones</h6>
-                  {userData?.notificaciones?.map(notif => (
-                    <Dropdown.Item key={notif.id} className={`notification-item ${notif.tipo}`}>
-                      <div className="notification-text">{notif.texto}</div>
-                      <div className="notification-time">{notif.tiempo}</div>
-                    </Dropdown.Item>
-                  ))}
-                  <Dropdown.Divider />
-                  <Dropdown.Item className="text-center">Ver todas</Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            </li>
+  <li className="nav-item">
+    {/* Usa el componente MenuNotificaciones en lugar del código duplicado */}
+    <MenuNotificaciones userData={userData} />
+  </li>
             
             <li className="nav-item dropdown">
               <Dropdown>
@@ -94,16 +77,17 @@ const LayoutBarButton = ({ children, userData }) => {
             <FaCar className="icon" /> Vehículos
           </Link>
           <Link 
-            to="/calendario" 
+            to="/rutas" 
             className={`header-button ${currentPath === '/rutas' ? 'active' : ''}`}
           >
-            <FaCalendarAlt className="icon" /> Rutas
+            <FaMapMarkedAlt className="icon" /> Rutas
           </Link>
-                    <Link 
-            to="/calendario" 
+          <Link 
+            to="/cargas" 
             className={`header-button ${currentPath === '/cargas' ? 'active' : ''}`}
           >
             <FaCalendarAlt className="icon" /> Cargas
+            
           </Link>
           <Link 
             to="/profile" 

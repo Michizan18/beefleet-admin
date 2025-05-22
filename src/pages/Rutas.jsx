@@ -6,8 +6,9 @@ import {
   FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog,
   FaSearch, FaPlus, FaFilter, FaTruck, FaEdit,
   FaTrashAlt, FaMapMarkedAlt, FaMapMarkerAlt, FaArrowRight, 
-  FaRulerHorizontal, FaBoxOpen, FaInfoCircle, FaSave
+  FaRulerHorizontal, FaBoxOpen, FaInfoCircle, FaSave,
 } from 'react-icons/fa';
+import LayoutBarButton from '../components/LayoutBarButton';
 import './Rutas.css';
 
 const Rutas = () => {
@@ -30,7 +31,6 @@ const Rutas = () => {
     distancia: '',
     carga: '',
     tiempo_estimado: '',
-    estado: 'Disponible'
   });
   
   const rutasPorPagina = 8;
@@ -376,7 +376,7 @@ const Rutas = () => {
     );
   }
   
-  return (
+  const rutasContent = (
     <div className="dashboard-container">
       {/* Barra de navegación superior */}
       <nav className="navbar navbar-expand navbar-dark bg-primary fixed-top">
@@ -435,44 +435,6 @@ const Rutas = () => {
           </ul>
         </div>
       </nav>
-      
-      {/* Menú lateral */}
-      <div className="sidebar">
-        <div className="sidebar-sticky">
-          <ul className="nav flex-column">
-            <li className="nav-item">
-              <Link to="/dashboard" className="nav-link">
-                <FaChartLine className="icon" /> Dashboard
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/conductores" className="nav-link">
-                <FaUsers className="icon" /> Conductores
-              </Link>
-            </li>
-            <li className="nav-item mt-3">
-              <Link to="/rutas" className="nav-link active">
-                <FaMapMarkedAlt className="icon" /> Rutas
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/proyectos" className="nav-link">
-                <FaClipboardList className="icon" /> Proyectos
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/calendario" className="nav-link">
-                <FaCalendarAlt className="icon" /> Calendario
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link to="/profile" className="nav-link">
-                <FaUserCircle className="icon" /> Mi Perfil
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </div>
       
       {/* Contenido principal */}
       <main className="content">
@@ -758,6 +720,63 @@ const Rutas = () => {
                       name="origen"
                       value={nuevaRuta.origen}
                       onChange={handleNuevaRutaChange}
+                      placeholder="Ciudad de origen"
+                      required
+                    />
+                  </InputGroup>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Destino *</Form.Label>
+                  <InputGroup>
+                    <InputGroup.Text>
+                      <FaMapMarkerAlt className="text-success" />
+                    </InputGroup.Text>
+                    <Form.Control
+                      type="text"
+                      name="destino"
+                      value={nuevaRuta.destino}
+                      onChange={handleNuevaRutaChange}
+                      placeholder="Ciudad de destino"
+                      required
+                    />
+                  </InputGroup>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Distancia (km) *</Form.Label>
+                  <InputGroup>
+                    <InputGroup.Text>
+                      <FaRulerHorizontal />
+                    </InputGroup.Text>
+                    <Form.Control
+                      type="number"
+                      name="distancia"
+                      value={nuevaRuta.distancia}
+                      onChange={handleNuevaRutaChange}
+                      placeholder="Distancia en kilómetros"
+                      required
+                    />
+                  </InputGroup>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Tiempo Estimado</Form.Label>
+                  <InputGroup>
+                    <InputGroup.Text>
+                      <FaCalendarAlt />
+                    </InputGroup.Text>
+                    <Form.Control
+                      type="text"
+                      name="tiempo_estimado"
+                      value={nuevaRuta.tiempo_estimado}
+                      onChange={handleNuevaRutaChange}
                       placeholder="Duración estimada (ej. 8 horas)"
                     />
                   </InputGroup>
@@ -780,23 +799,25 @@ const Rutas = () => {
                   required
                 />
               </InputGroup>
-            </Form.Group>
-            
+            </Form.Group> 
             <Form.Group className="mb-3">
               <Form.Label>Estado</Form.Label>
-              <Form.Select
-                name="estado"
-                value={nuevaRuta.estado}
-                onChange={handleNuevaRutaChange}
-              >
-                <option value="Disponible">Disponible</option>
-                <option value="En progreso">En progreso</option>
-                <option value="Completada">Completada</option>
-                <option value="Cancelada">Cancelada</option>
-              </Form.Select>
+              <InputGroup>
+                <InputGroup.Text>
+                  <FaInfoCircle />
+                </InputGroup.Text>
+                <Form.Select
+                  name="estado"
+                  value={nuevaRuta.estado}
+                  onChange={handleNuevaRutaChange}
+                >
+                  <option value="Disponible">Disponible</option>
+                  <option value="En progreso">En progreso</option>
+                  <option value="Completada">Completada</option>
+                  <option value="Cancelada">Cancelada</option>
+                </Form.Select>
+              </InputGroup>
             </Form.Group>
-            
-            <p className="text-muted mt-2">* Campos obligatorios</p>
           </Form>
         </Modal.Body>
         <Modal.Footer>
@@ -808,10 +829,12 @@ const Rutas = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-      
-
     </div>
   );
-};
-
+  return (
+    <LayoutBarButton>
+      {rutasContent}
+    </LayoutBarButton>
+  );
+}
 export default Rutas;

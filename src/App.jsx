@@ -3,6 +3,8 @@ import LoginForm from './components/LoginForm'
 import Dashboard from './pages/Dashboard'; 
 import AdminProfile from './components/AdminProfile';
 import Conductores from './pages/Conductores';
+import Rutas from './pages/Rutas';
+import NotificacionesAdmin from './pages/NotificacionesAdmin';
 
 function App() {
   return (
@@ -12,6 +14,8 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<AdminProfile />} />
         <Route path="/conductores" element={<Conductores/>} />
+        <Route path="/rutas" element={<Rutas />} />
+        <Route path="/notificaciones" element={<NotificacionesAdmin />} />
       </Routes>
     </Router>
   )

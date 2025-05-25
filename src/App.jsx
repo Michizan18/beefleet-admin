@@ -1,9 +1,12 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import LoginForm from './pages/LoginForm'
+import LoginForm from './components/LoginForm'
 import Dashboard from './pages/Dashboard'; 
-import AdminProfile from './pages/AdminProfile';
+import AdminProfile from './components/AdminProfile';
 import Conductores from './pages/Conductores';
-import Vehiculos from './pages/Vehiculos';
+import Rutas from './pages/Rutas';
+import NotificacionesAdmin from './pages/NotificacionesAdmin';
+import Vehiculos from './pages/Vehiculos'; 
+import Cargas from './pages/Cargas';
 
 function App() {
   return (
@@ -13,9 +16,13 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<AdminProfile />} />
         <Route path="/conductores" element={<Conductores/>} />
-        <Route path="/vehiculos" element={<Vehiculos />} />
+        <Route path="/rutas" element={<Rutas />} />
+        <Route path="/notificaciones" element={<NotificacionesAdmin />} />
+        <Route path="/vehiculos" element={<Vehiculos/>} /> 
+        <Route path="/cargas" element={<Cargas/>} />
       </Routes>
     </Router>
   )
 }
+
 export default App

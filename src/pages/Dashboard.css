@@ -1,0 +1,235 @@
+.dashboard-container {
+  display: flex;
+  min-height: 90vh;
+}
+
+/* Navbar superior */
+.navbar {
+  height: 60px;
+  background-color: #ff8c00 !important; /* Color naranja */
+  color: white;
+}
+
+.navbar-dark .navbar-brand,
+.navbar-dark .nav-link {
+  color: white !important;
+}
+
+/* Header menu en lugar del sidebar */
+.header-menu {
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  margin-top: 60px; /* Para estar debajo del navbar */
+  width: 100%;
+  z-index: 1000;
+}
+
+.header-buttons {
+  display: flex;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.header-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  color: #495057;
+  text-decoration: none;
+  text-align: center;
+  flex: 1;
+  transition: all 0.3s;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+
+.header-button:hover {
+  background-color: #f8f9fa;
+  color: #ff8c00;
+  border-bottom: 3px solid #ff8c00;
+}
+
+.header-button.active {
+  color: #ff8c00;
+  background-color: #f8f9fa;
+  border-bottom: 3px solid #ff8c00;
+  font-weight: bold;
+}
+
+.header-button .icon {
+  margin-right: 8px;
+  font-size: 1.2rem;
+}
+
+/* Contenido principal */
+.content {
+  flex: 1;
+  padding: 20px;
+  margin-top: 50px; /* Espacio para el header menu */
+  background-color: #f8f9fa;
+}
+
+/* Tarjetas de estadísticas */
+.stats-card {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+}
+
+.stats-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  margin-right: 15px;
+  background-color: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+}
+
+.stats-icon.orange {
+  background-color: rgba(255, 140, 0, 0.1);
+  color: #ff8c00;
+}
+
+.stats-number {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0;
+  color: #343a40;
+}
+
+.stats-label {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+/* Lista de tareas */
+.task-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.task-item:last-child {
+  border-bottom: none;
+}
+
+.task-icon {
+  margin-right: 15px;
+}
+
+.priority-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.priority-alta {
+  background-color: #dc3545;
+}
+
+.priority-media {
+  background-color: #ffc107;
+}
+
+.priority-baja {
+  background-color: #0dcaf0;
+}
+
+.task-info {
+  flex: 1;
+}
+
+.task-title {
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.task-date {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.task-priority {
+  margin-left: auto;
+}
+
+/* Estado de proyectos */
+.project-item {
+  margin-bottom: 15px;
+}
+
+/* Notificaciones */
+.notification-dropdown {
+  min-width: 280px;
+  padding: 0;
+}
+
+.notification-item {
+  padding: 10px 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.notification-text {
+  font-size: 0.85rem;
+  margin-bottom: 5px;
+}
+
+.notification-time {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.notification-item.alert {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+/* Botones */
+.btn-outline-warning {
+  color: #ff8c00;
+  border-color: #ff8c00;
+}
+
+.btn-outline-warning:hover {
+  background-color: #ff8c00;
+  color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-button {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .header-button .icon {
+    margin-right: 4px;
+    font-size: 1rem;
+  }
+}
+

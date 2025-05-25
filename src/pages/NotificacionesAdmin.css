@@ -1,0 +1,111 @@
+.notificaciones-admin-container {
+  padding: 0 15px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 70vh;
+}
+
+.notificacion-card {
+  border-left: 4px solid #f0ad4e;
+  transition: all 0.2s ease;
+}
+
+.notificacion-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.notificacion-descripcion {
+  font-size: 1rem;
+}
+
+.tipo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(240, 173, 78, 0.1);
+  padding: 6px;
+}
+
+/* Estilos para diferentes prioridades */
+.notificacion-card.prioridad-alta {
+  border-left-color: #f0ad4e;
+}
+
+.notificacion-card.prioridad-critica {
+  border-left-color: #d9534f;
+}
+
+.notificacion-card.prioridad-media {
+  border-left-color: #5bc0de;
+}
+
+.notificacion-card.prioridad-baja {
+  border-left-color: #5cb85c;
+}
+
+/* Estado de la notificación */
+.notificacion-card.estado-pendiente {
+  background-color: rgba(217, 83, 79, 0.05);
+}
+
+.notificacion-card.estado-recibido {
+  background-color: rgba(91, 192, 222, 0.05);
+}
+
+.notificacion-card.estado-proceso {
+  background-color: rgba(240, 173, 78, 0.05);
+}
+
+.notificacion-card.estado-resuelto {
+  background-color: rgba(92, 184, 92, 0.05);
+}
+
+/* Estilos para diferentes etapas */
+.etapa-badge {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.etapa-cargando {
+  background-color: #5bc0de;
+  color: white;
+}
+
+.etapa-descargando {
+  background-color: #5cb85c;
+  color: white;
+}
+
+.etapa-viajando {
+  background-color: #f0ad4e;
+  color: white;
+}
+
+/* Estilos para el modal */
+.imagen-placeholder {
+  border: 1px dashed #dee2e6;
+  cursor: pointer;
+}
+
+/* Estilos responsive */
+@media (max-width: 768px) {
+  .notificaciones-admin-container h1 {
+    font-size: 1.5rem;
+  }
+  
+  .notificacion-descripcion {
+    font-size: 0.9rem;
+  }
+}

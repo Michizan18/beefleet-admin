@@ -4,8 +4,10 @@ import { Link, useLocation } from 'react-router-dom';
 import MenuNotificaciones from './MenuNotificaciones';
 import { 
   FaUsers, FaCar, FaChartLine, FaBell, 
-  FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog, FaMapMarkedAlt 
+  FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog, FaMapMarkedAlt, FaTruckLoading,
 } from 'react-icons/fa';
+import { FaPeopleCarryBox, FaMoneyBillWave } from "react-icons/fa6";
+import { GiReceiveMoney } from "react-icons/gi";
 import './LayoutBarButton.css';
 
 const LayoutBarButton = ({ children, userData }) => {
@@ -86,7 +88,28 @@ const LayoutBarButton = ({ children, userData }) => {
             to="/cargas" 
             className={`header-button ${currentPath === '/cargas' ? 'active' : ''}`}
           >
-            <FaCalendarAlt className="icon" /> Cargas
+            <FaTruckLoading className="icon" /> Cargas
+            
+          </Link>
+                    <Link 
+            to="/cargas" 
+            className={`header-button ${currentPath === '/clientes' ? 'active' : ''}`}
+          >
+            <FaPeopleCarryBox className="icon" /> Clientes
+            
+          </Link>
+                    <Link 
+            to="/cargas" 
+            className={`header-button ${currentPath === '/ventas' ? 'active' : ''}`}
+          >
+            <FaMoneyBillWave  className="icon" /> Ventas
+            
+          </Link>
+                    <Link 
+            to="/cargas" 
+            className={`header-button ${currentPath === '/gastos' ? 'active' : ''}`}
+          >
+            <GiReceiveMoney className="icon" /> Gastos
             
           </Link>
           <Link 

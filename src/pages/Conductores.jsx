@@ -46,6 +46,27 @@ const Conductores = () => {
   
   const conductoresPorPagina = 8;
 
+  const [driverStep, setDriverStep] = useState(1);
+const totalDriverSteps = 4;
+
+// Funciones para navegación de pasos
+const nextDriverStep = () => {
+  if (driverStep < totalDriverSteps) {
+    setDriverStep(driverStep + 1);
+  }
+};
+
+const prevDriverStep = () => {
+  if (driverStep > 1) {
+    setDriverStep(driverStep - 1);
+  }
+};
+
+const resetDriverForm = () => {
+  setDriverStep(1);
+  setShowNewDriverModal(false);
+};
+
   useEffect(() => {
     const fetchConductores = async () => {
       try {

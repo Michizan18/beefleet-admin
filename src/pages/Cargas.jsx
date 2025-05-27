@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, Table, Button, Dropdown, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { 
-  FaBoxes, FaPhone, FaEnvelope, FaMapMarkerAlt, FaIdCard, FaBell, 
-  FaUserPlus, FaUserCircle, FaCog, FaSignOutAlt, FaChartLine, 
-  FaClipboardList, FaCalendarAlt, FaSearch, FaFilter, FaCarAlt, 
+  FaBoxes, FaPhone, FaMapMarkerAlt, 
+  FaUserCircle,  FaSearch, FaFilter,
   FaEdit, FaTrashAlt, FaPlus, FaSave, FaComments, FaTruck, FaBuilding,
   FaWeightHanging, FaRoute, FaCalendar
 } from 'react-icons/fa';
@@ -13,7 +12,6 @@ import './Cargas.css';
 
 const Cargas = () => {
   const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [showCargaModal, setShowCargaModal] = useState(false);

@@ -21,7 +21,6 @@ const Dashboard = () => {
         
         // Datos simulados
         const data = {
-          adminName: "Carlos Rodríguez",
           stats: {
             empleadosActivos: 45,
             tareasPendientes: 12,

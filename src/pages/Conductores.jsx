@@ -130,6 +130,31 @@ const Conductores = () => {
       </Pagination>
     );
   };
+
+  const handleDelete = async (id_conductor) => {
+    const confirmDelete = window.confirm("¿Estás seguro de que deseas eliminar este conductor?");
+    if (!confirmDelete) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('Token')}`, // Si necesitas autenticación
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Error al eliminar el conductor');
+      }
+      // Actualiza el estado para eliminar el conductor de la lista
+      setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
+      setFilteredConductores(filteredConductores.filter(conductor => conductor.id_conductor !== id_conductor));
+      alert("Conductor eliminado con éxito.");
+    } catch (error) {
+      console.error("Error al eliminar el conductor:", error);
+      alert("No se pudo eliminar el conductor. Intenta nuevamente.");
+    }
+  };
+
   
   // Componente para el badge de estado
   const EstadoBadge = ({ estado }) => {
@@ -369,7 +394,7 @@ const Conductores = () => {
                           <Button variant="outline-primary" size="sm" className="me-1">
                             <FaEdit />
                           </Button>
-                          <Button variant="outline-danger" size="sm">
+                          <Button onClick={() => handleDelete(conductor.id_conductor)} variant="outline-danger" size="sm">
                             <FaTrashAlt />
                           </Button>
                         </td>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Navbar, Nav, Container, Badge } from 'react-bootstrap';
 import { FaTachometerAlt, FaBell, FaUser, FaSignOutAlt } from 'react-icons/fa';
 import { Link } from 'react-router-dom';

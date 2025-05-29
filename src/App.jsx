@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import LoginForm from './components/LoginForm'
+import LoginForm from './pages/LoginForm'
 import Dashboard from './pages/Dashboard'; 
-import AdminProfile from './components/AdminProfile';
+import AdminProfile from './pages/AdminProfile';
 import Conductores from './pages/Conductores';
 import Rutas from './pages/Rutas';
 import NotificacionesAdmin from './pages/NotificacionesAdmin';

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Badge, Table, Button, Modal, Form, Spinner } from 'react-bootstrap';
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaClock, FaUsers, FaIdCard, FaEdit, FaSave } from 'react-icons/fa';
-import NavBar from '../components/NavBar';
+import LayoutBarButton from "../components/LayoutBarButton";
 import './AdminProfile.css';
 
 const AdminProfile = () => {
@@ -110,7 +110,7 @@ const AdminProfile = () => {
   if (loading) {
     return (
       <>
-        <NavBar notifications={notifications} />
+        <LayoutBarButton notifications={notifications} />
         <Container className="my-5 text-center">
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Cargando...</span>
@@ -124,7 +124,7 @@ const AdminProfile = () => {
   if (error) {
     return (
       <>
-        <NavBar notifications={notifications} />
+        <LayoutBarButton notifications={notifications} />
         <Container className="my-5">
           <div className="alert alert-danger" role="alert">
             {error}
@@ -144,7 +144,7 @@ const AdminProfile = () => {
 
   return (
     <>
-      <NavBar notifications={notifications} />
+      <layoutBarButton userData={notifications} />
       <Container className="my-5 profile-container">
         <h1 className="text-center mb-5">Perfil de Administrador</h1>
         

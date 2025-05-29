@@ -13,6 +13,8 @@ const LoginForm = () => {
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
+    debugger
+    console.log('inicio')
     e.preventDefault();
     setLoading(true);
     setError('');

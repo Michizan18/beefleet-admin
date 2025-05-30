@@ -19,7 +19,6 @@ const Dashboard = () => {
         
         // Datos simulados actualizados con sección de clientes
         const data = {
-          adminName: "Carlos Rodríguez",
           stats: {
             empleadosActivos: 45,
             tareasPendientes: 12,

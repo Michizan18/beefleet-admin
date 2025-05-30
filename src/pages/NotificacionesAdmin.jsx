@@ -229,17 +229,6 @@ const NotificacionesAdmin = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner-grow text-warning" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
-        <p>Cargando notificaciones...</p>
-      </div>
-    );
-  }
-
   return (
     <LayoutBarButton userData={userData}>
       <div className="notificaciones-admin-container">

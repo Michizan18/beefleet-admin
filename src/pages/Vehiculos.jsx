@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Card, Table, Button, Dropdown, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { 
-  FaUsers, FaPhone, FaEnvelope, FaMapMarkerAlt, FaIdCard, FaBell, 
-  FaUserPlus, FaUserCircle, FaCog, FaSignOutAlt, FaChartLine, 
-  FaClipboardList, FaCalendarAlt, FaSearch, FaFilter, FaCarAlt, 
-  FaEdit, FaTrashAlt, FaPlus, FaSave, FaComments
+  FaIdCard,  
+  FaUserCircle, 
+  FaSearch, FaFilter, FaCarAlt, 
+  FaEdit, FaTrashAlt, FaPlus, FaSave,
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 import './Vehiculos.css';

@@ -6,10 +6,8 @@ import './MenuNotificaciones.css';
 
 const MenuNotificaciones = ({ userData }) => {
   const navigate = useNavigate();
-  
-  // Función para manejar clic en "Ver todas"
   const handleVerTodas = () => {
-    navigate('/notificaciones'); // Cambié de './notificaciones' a '/notificaciones'
+    navigate('/notificaciones'); 
   };
 
   return (

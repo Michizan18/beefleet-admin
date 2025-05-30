@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, Table, Button, Dropdown, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { 
-  FaUsers, FaPhone, FaEnvelope, FaMapMarkerAlt, FaIdCard, FaBell, 
-  FaUserPlus, FaUserCircle, FaCog, FaSignOutAlt, FaChartLine, 
-  FaClipboardList, FaCalendarAlt, FaSearch, FaFilter, FaCarAlt, 
+  FaUsers, FaPhone, FaEnvelope, FaMapMarkerAlt, FaIdCard, 
+  FaUserPlus, FaUserCircle, FaSearch, FaFilter, FaCarAlt, 
   FaEdit, FaTrashAlt, FaPlus, FaSave 
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
@@ -45,27 +44,6 @@ const Conductores = () => {
   const [validated, setValidated] = useState(false);
   
   const conductoresPorPagina = 8;
-
-  const [driverStep, setDriverStep] = useState(1);
-const totalDriverSteps = 4;
-
-// Funciones para navegación de pasos
-const nextDriverStep = () => {
-  if (driverStep < totalDriverSteps) {
-    setDriverStep(driverStep + 1);
-  }
-};
-
-const prevDriverStep = () => {
-  if (driverStep > 1) {
-    setDriverStep(driverStep - 1);
-  }
-};
-
-const resetDriverForm = () => {
-  setDriverStep(1);
-  setShowNewDriverModal(false);
-};
 
   useEffect(() => {
     const fetchConductores = async () => {
@@ -253,17 +231,6 @@ const resetDriverForm = () => {
     
     return <span className={`badge bg-${variant} rounded-pill`}>{estado}</span>;
   };
-  
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner-grow text-warning" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
-        <p>Cargando conductores...</p>
-      </div>
-    );
-  }
   
   const conductoresContent = (
     <>

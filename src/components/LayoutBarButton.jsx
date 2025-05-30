@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Navbar, Container, Dropdown } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import MenuNotificaciones from './MenuNotificaciones';
@@ -12,9 +12,19 @@ import './LayoutBarButton.css';
 import logo from './img/logo.png'; // Asegúrate de tener una imagen de logo si es necesario
 
 const LayoutBarButton = ({ children, userData }) => {
+  const [user, setUser ] = useState(null)
   // Usar useLocation para determinar la ruta actual y aplicar estilos active
   const location = useLocation();
   const currentPath = location.pathname;
+  useEffect(() => {
+      const fetchData = () => {
+        const userStorage = localStorage.getItem('veterinario');
+        if (userStorage) {
+          setUser(JSON.parse(userStorage));
+        }
+      };
+      fetchData();
+    }, []);
 
   return (
     <div className="dashboard-container">
@@ -41,7 +51,7 @@ const LayoutBarButton = ({ children, userData }) => {
                 <Dropdown.Toggle variant="transparent" id="user-dropdown" className="nav-link">
                   <FaUserCircle className="icon" />
                   <span className="d-none d-md-inline-block ms-1">
-                    {userData?.adminName || 'Usuario'}
+                    {user.nombre_usuario || 'Usuario'}
                   </span>
                 </Dropdown.Toggle>
                 
@@ -98,21 +108,21 @@ const LayoutBarButton = ({ children, userData }) => {
             
           </Link>
                     <Link 
-            to="/cargas" 
+            to="/clientes" 
             className={`header-button ${currentPath === '/clientes' ? 'active' : ''}`}
           >
             <FaPeopleCarryBox className="icon" /> Clientes
             
           </Link>
                     <Link 
-            to="/cargas" 
+            to="/ventas" 
             className={`header-button ${currentPath === '/ventas' ? 'active' : ''}`}
           >
             <FaMoneyBillWave  className="icon" /> Ventas
             
           </Link>
                     <Link 
-            to="/cargas" 
+            to="/gastos" 
             className={`header-button ${currentPath === '/gastos' ? 'active' : ''}`}
           >
             <GiReceiveMoney className="icon" /> Gastos

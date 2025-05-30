@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Table, Modal, Form } from 'react-bootstrap';
 import { FaRoute, FaPlus, FaEdit, FaTrash, FaSearch, FaMapMarkerAlt } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
-import './Rutas.css';
 
 const Rutas = () => {
   const [rutasData, setRutasData] = useState([]);

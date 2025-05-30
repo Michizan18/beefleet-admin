@@ -8,7 +8,6 @@ import {
   FaEdit, FaTrashAlt, FaPlus, FaSave,
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
-import './Vehiculos.css';
 
 const Vehiculos = () => {
   const [userData, setUserData] = useState(null);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Navbar, Container, Dropdown } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import MenuNotificaciones from './MenuNotificaciones';
@@ -11,9 +11,19 @@ import { GiReceiveMoney } from "react-icons/gi";
 import './LayoutBarButton.css';
 
 const LayoutBarButton = ({ children, userData }) => {
+  const [user, setUser ] = useState(null)
   // Usar useLocation para determinar la ruta actual y aplicar estilos active
   const location = useLocation();
   const currentPath = location.pathname;
+  useEffect(() => {
+      const fetchData = () => {
+        const userStorage = localStorage.getItem('veterinario');
+        if (userStorage) {
+          setUser(JSON.parse(userStorage));
+        }
+      };
+      fetchData();
+    }, []);
 
   return (
     <div className="dashboard-container">
@@ -35,7 +45,7 @@ const LayoutBarButton = ({ children, userData }) => {
                 <Dropdown.Toggle variant="transparent" id="user-dropdown" className="nav-link">
                   <FaUserCircle className="icon" />
                   <span className="d-none d-md-inline-block ms-1">
-                    {userData?.adminName || 'Usuario'}
+                    {user.nombre_usuario || 'Usuario'}
                   </span>
                 </Dropdown.Toggle>
                 

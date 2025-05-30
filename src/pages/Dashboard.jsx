@@ -6,54 +6,37 @@ import LayoutBarButton from '../components/LayoutBarButton';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+  const [conductores, setConductores] = useState(null);
+  const [user, setUser ] = useState(null);
+
   useEffect(() => {
-    // Simular carga de datos
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      const id_user = await localStorage.getItem('id_usuario');
-      console.log(id_user);
+    const fetchData = () => {
+      const userStorage = localStorage.getItem('veterinario');
+      if (userStorage) {
+        setUser(JSON.parse(userStorage));
+      }
+      };
+    fetchData();
+    const fetchConductores = async () => {
       try {
-        // Simulación de llamada API
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Datos simulados
-        const data = {
-          adminName: "Carlos Rodríguez",
-          stats: {
-            empleadosActivos: 45,
-            tareasPendientes: 12,
-            proyectosActivos: 8,
-            empleadosNuevos: 3,
+        const response = await fetch('http://localhost:3001/api/drivers', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          empleadosRecientes: [
-            { id: 1, nombre: "Pablo Cárdenas", fechaIngreso: "2025-04-15", estado: "Activo" },
-            { id: 2, nombre: "Luis Martínez", fechaIngreso: "2025-04-12", estado: "Activo" },
-            { id: 3, nombre: "Mario López", fechaIngreso: "2025-04-05", estado: "Entrenamiento" }
-          ],
-          reportes: [
-            { id: 1, descripcion: "Carga completada", fecha: "2025-04-30", prioridad: "Media" },
-            { id: 2, descripcion: "Revisión tecnomecánica - vehículo ABC-123", fecha: "2025-05-02", prioridad: "Alta" },
-            { id: 3, descripcion: "Inconveniente con ruta", fecha: "2025-05-05", prioridad: "Alta" }
-          ],
-          notificaciones: [
-            { id: 1, texto: "Llanta desinflada", tiempo: "Hace 2 horas", tipo: "Problema con el vehículo" },
-            { id: 2, texto: "Demora carga en Cali", tiempo: "Hace 5 horas", tipo: "Retraso en la carga" },
-            { id: 3, texto: "Error con carga asignada", tiempo: "Ayer", tipo: "alert" }
-          ]
-        };
+        });
+        const driverData = await response.json();
+        console.log(driverData[0]);
         
-        setUserData(data);
+        setConductores(driverData[0]);
       } catch (error) {
-        console.error("Error al cargar datos del dashboard:", error);
+        console.error("Error al cargar datos de conductores:", error);
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchDashboardData();
+    fetchConductores();
   }, []);
   
   // Formatear fecha a formato español
@@ -91,7 +74,7 @@ const Dashboard = () => {
                   <FaUsers />
                 </div>
                 <div>
-                  <h4 className="stats-number">{userData?.stats.empleadosActivos}</h4>
+                  <h4 className="stats-number">{conductores.lenght}</h4>
                   <div className="stats-label">Empleados Activos</div>
                 </div>
               </div>
@@ -107,7 +90,7 @@ const Dashboard = () => {
                   <FaChartLine />
                 </div>
                 <div>
-                  <h4 className="stats-number">{userData?.stats.tareasPendientes}</h4>
+                  <h4 className="stats-number">{conductores.lenght}</h4>
                   <div className="stats-label">Tareas Pendientes</div>
                 </div>
               </div>
@@ -123,7 +106,7 @@ const Dashboard = () => {
                   <FaChartLine />
                 </div>
                 <div>
-                  <h4 className="stats-number">{userData?.stats.proyectosActivos}</h4>
+                  <h4 className="stats-number">{conductores.lenght}</h4>
                   <div className="stats-label">Proyectos Activos</div>
                 </div>
               </div>
@@ -139,7 +122,7 @@ const Dashboard = () => {
                   <FaUsers />
                 </div>
                 <div>
-                  <h4 className="stats-number">{userData?.stats.empleadosNuevos}</h4>
+                  <h4 className="stats-number">{conductores.lenght}</h4>
                   <div className="stats-label">Nuevos Empleados</div>
                 </div>
               </div>
@@ -166,13 +149,13 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {userData?.empleadosRecientes.map(empleado => (
-                    <tr key={empleado.id}>
-                      <td>{empleado.nombre}</td>
-                      <td>{formatDate(empleado.fechaIngreso)}</td>
+                  {conductores.map(conductor => (
+                    <tr key={conductor.id_conductor}>
+                      <td>{conductor.nombre}</td>
+                      <td>{formatDate(conductor.fechaIngreso)}</td>
                       <td>
-                        <span className={`badge bg-${empleado.estado === 'Activo' ? 'success' : 'warning'} rounded-pill`}>
-                          {empleado.estado}
+                        <span className={`badge bg-${conductor.estado === 'Activo' ? 'success' : 'warning'} rounded-pill`}>
+                          {conductor.estado}
                         </span>
                       </td>
                     </tr>
@@ -192,7 +175,7 @@ const Dashboard = () => {
             </Card.Header>
             <Card.Body>
               <div className="task-list">
-                {userData?.reportes.map(tarea => (
+                {user.reportes.map(tarea => (
                   <div key={tarea.id} className="task-item">
                     <div className="task-icon">
                       <span className={`priority-dot priority-${tarea.prioridad.toLowerCase()}`}></span>
@@ -220,7 +203,7 @@ const Dashboard = () => {
   );
   
   return (
-    <LayoutBarButton userData={userData}>
+    <LayoutBarButton user={user}>
       {dashboardContent}
     </LayoutBarButton>
   );

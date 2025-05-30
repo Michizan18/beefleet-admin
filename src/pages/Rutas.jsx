@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Table, Modal, Form } from 'react-bootstrap';
 import { FaRoute, FaPlus, FaEdit, FaTrash, FaSearch, FaMapMarkerAlt } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
-import './Rutas.css';
 
 const Rutas = () => {
   const [rutasData, setRutasData] = useState([]);
@@ -24,7 +23,6 @@ const Rutas = () => {
 
   useEffect(() => {
     fetchRutas();
-    fetchUserData();
   }, []);
 
   useEffect(() => {
@@ -40,17 +38,6 @@ const Rutas = () => {
       setFilteredRutas(filtered);
     }
   }, [searchTerm, rutasData]);
-
-  const fetchUserData = async () => {
-    try {
-      // Simulación de datos del usuario - ajusta según tu API
-      setUserData({
-        adminName: "Carlos Rodríguez"
-      });
-    } catch (error) {
-      console.error("Error al cargar datos del usuario:", error);
-    }
-  };
 
   const fetchRutas = async () => {
     setLoading(true);
@@ -258,17 +245,6 @@ const Rutas = () => {
       [name]: value
     }));
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container d-flex flex-column justify-content-center align-items-center" style={{height: '200px'}}>
-        <div className="spinner-grow text-warning" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
-        <p className="mt-3">Cargando rutas...</p>
-      </div>
-    );
-  }
 
   const rutasContent = (
     <>

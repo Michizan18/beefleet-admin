@@ -3,7 +3,6 @@ import { Card, Badge, Button, Row, Col, Dropdown, Form, InputGroup, Modal } from
 import { FaSearch, FaBell, FaMapMarkerAlt, FaTrash, FaCheckCircle, FaImage, FaExclamationTriangle } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import LayoutBarButton from '../components/LayoutBarButton';
-import './NotificacionesAdmin.css';
 
 const NotificacionesAdmin = () => {
   const [notificaciones, setNotificaciones] = useState([]);
@@ -228,17 +227,6 @@ const NotificacionesAdmin = () => {
       default: return <FaBell className="text-secondary" />;
     }
   };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner-grow text-warning" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
-        <p>Cargando notificaciones...</p>
-      </div>
-    );
-  }
 
   return (
     <LayoutBarButton userData={userData}>

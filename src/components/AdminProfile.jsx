@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Badge, Table, Button, Modal, Form, Spinner } from 'react-bootstrap';
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaClock, FaUsers, FaIdCard, FaEdit, FaSave } from 'react-icons/fa';
-import NavBar from './NavBar';
 import './AdminProfile.css';
+import LayoutBarButton from './LayoutBarButton';
 
 const AdminProfile = () => {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notifications, setNotifications] = useState(3);
+  const [userData, setUserData] = useState(null);
   
   // Estados para el modal de edición
   const [showEditModal, setShowEditModal] = useState(false);
@@ -109,43 +110,18 @@ const AdminProfile = () => {
 
   if (loading) {
     return (
-      <>
-        <NavBar notifications={notifications} />
-        <Container className="my-5 text-center">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-          <p className="mt-3">Cargando información del perfil...</p>
-        </Container>
-      </>
+      <div className="loading-container">
+        <div className="spinner-grow text-warning" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+        <p>Cargando información del perfil...</p>
+      </div>
     );
   }
 
-  if (error) {
-    return (
-      <>
-        <NavBar notifications={notifications} />
-        <Container className="my-5">
-          <div className="alert alert-danger" role="alert">
-            {error}
-            <Button 
-              variant="outline-danger" 
-              size="sm" 
-              className="ms-3"
-              onClick={fetchAdminProfile}
-            >
-              Reintentar
-            </Button>
-          </div>
-        </Container>
-      </>
-    );
-  }
-
-  return (
+  const perfilContent = (
     <>
-      <NavBar notifications={notifications} />
-      <Container className="my-5 profile-container">
+      <Container className="d-flex justify-content-between align-items-center mt-4 mb-4">
         <h1 className="text-center mb-5">Perfil de Administrador</h1>
         
         {admin && (
@@ -505,6 +481,12 @@ const AdminProfile = () => {
         )}
       </Container>
     </>
+  );
+
+    return (
+    <LayoutBarButton userData={userData}>
+      {perfilContent}
+    </LayoutBarButton>
   );
 };
 

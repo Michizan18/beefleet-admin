@@ -9,6 +9,7 @@ import {
 import { FaPeopleCarryBox, FaMoneyBillWave } from "react-icons/fa6";
 import { GiReceiveMoney } from "react-icons/gi";
 import './LayoutBarButton.css';
+import logo from './img/logo.png'; // Asegúrate de tener una imagen de logo si es necesario
 
 const LayoutBarButton = ({ children, userData }) => {
   const [user, setUser ] = useState(null)
@@ -30,7 +31,12 @@ const LayoutBarButton = ({ children, userData }) => {
       {/* Barra de navegación superior */}
       <nav className="navbar navbar-expand navbar-dark bg-warning fixed-top">
         <div className="container-fluid">
-          <a className="navbar-brand" href="#!">
+          <a className="navbar-brand d-flex align-items-center" href="#!">
+            <img 
+              src={logo} 
+              alt="Logo" 
+              style={{ height: '105px', marginRight: '30px' }} 
+            />
             <strong>Bienvenido Admin</strong>
           </a>
           
@@ -53,7 +59,7 @@ const LayoutBarButton = ({ children, userData }) => {
                   <Dropdown.Item as={Link} to="/profile">
                     <FaUserCircle className="me-2" /> Mi Perfil
                   </Dropdown.Item>
-                  <Dropdown.Item href="#!">
+                  <Dropdown.Item as={Link} to="/configuraciones">
                     <FaCog className="me-2" /> Configuración
                   </Dropdown.Item>
                   <Dropdown.Divider />
@@ -102,21 +108,21 @@ const LayoutBarButton = ({ children, userData }) => {
             
           </Link>
                     <Link 
-            to="/cargas" 
+            to="/clientes" 
             className={`header-button ${currentPath === '/clientes' ? 'active' : ''}`}
           >
             <FaPeopleCarryBox className="icon" /> Clientes
             
           </Link>
                     <Link 
-            to="/cargas" 
+            to="/ventas" 
             className={`header-button ${currentPath === '/ventas' ? 'active' : ''}`}
           >
             <FaMoneyBillWave  className="icon" /> Ventas
             
           </Link>
                     <Link 
-            to="/cargas" 
+            to="/gastos" 
             className={`header-button ${currentPath === '/gastos' ? 'active' : ''}`}
           >
             <GiReceiveMoney className="icon" /> Gastos

@@ -1,14 +1,14 @@
 .notification-bell {
   position: relative;
   font-size: 1.2rem;
-  color: #6c757d;
+  color: #ffffff;
   padding: 0.5rem;
   background: transparent;
   border: none;
 }
 
 .notification-bell:hover {
-  color: #343a40;
+  color: #724f2e;
 }
 
 .notification-badge {

@@ -12,7 +12,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchData = () => {
-      const userStorage = localStorage.getItem('veterinario');
+      const userStorage = localStorage.getItem('usuario');
       if (userStorage) {
         setUser(JSON.parse(userStorage));
       }

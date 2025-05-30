@@ -98,21 +98,21 @@ const LayoutBarButton = ({ children, userData }) => {
             
           </Link>
                     <Link 
-            to="/cargas" 
+            to="/clientes" 
             className={`header-button ${currentPath === '/clientes' ? 'active' : ''}`}
           >
             <FaPeopleCarryBox className="icon" /> Clientes
             
           </Link>
                     <Link 
-            to="/cargas" 
+            to="/ventas" 
             className={`header-button ${currentPath === '/ventas' ? 'active' : ''}`}
           >
             <FaMoneyBillWave  className="icon" /> Ventas
             
           </Link>
                     <Link 
-            to="/cargas" 
+            to="/gastos" 
             className={`header-button ${currentPath === '/gastos' ? 'active' : ''}`}
           >
             <GiReceiveMoney className="icon" /> Gastos

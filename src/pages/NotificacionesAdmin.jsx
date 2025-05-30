@@ -3,7 +3,6 @@ import { Card, Badge, Button, Row, Col, Dropdown, Form, InputGroup, Modal } from
 import { FaSearch, FaBell, FaMapMarkerAlt, FaTrash, FaCheckCircle, FaImage, FaExclamationTriangle } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import LayoutBarButton from '../components/LayoutBarButton';
-import './NotificacionesAdmin.css';
 
 const NotificacionesAdmin = () => {
   const [notificaciones, setNotificaciones] = useState([]);

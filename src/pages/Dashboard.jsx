@@ -5,66 +5,69 @@ import { FaUsers, FaChartLine, FaCalendarAlt } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 import './Dashboard.css';
 
+
 const Dashboard = () => {
-  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+  const [conductores, setConductores] = useState([]);
+  const [reportes, setReportes] = useState([]);
+  // const [userData, setUserData] = useState([]);
+
   useEffect(() => {
-    // Simular carga de datos
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      const id_user = await localStorage.getItem('id_usuario');
-      console.log(id_user);
+    const fetchData = async () => {
       try {
-        // Simulación de llamada API
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Datos simulados
-        const data = {
-          adminName: "Carlos Rodríguez",
-          stats: {
-            empleadosActivos: 45,
-            tareasPendientes: 12,
-            proyectosActivos: 8,
-            empleadosNuevos: 3,
-          },
-          empleadosRecientes: [
-            { id: 1, nombre: "Pablo Cárdenas", fechaIngreso: "2025-04-15", estado: "Activo" },
-            { id: 2, nombre: "Luis Martínez", fechaIngreso: "2025-04-12", estado: "Activo" },
-            { id: 3, nombre: "Mario López", fechaIngreso: "2025-04-05", estado: "Entrenamiento" }
-          ],
-          reportes: [
-            { id: 1, descripcion: "Carga completada", fecha: "2025-04-30", prioridad: "Media" },
-            { id: 2, descripcion: "Revisión tecnomecánica - vehículo ABC-123", fecha: "2025-05-02", prioridad: "Alta" },
-            { id: 3, descripcion: "Inconveniente con ruta", fecha: "2025-05-05", prioridad: "Alta" }
-          ],
-          notificaciones: [
-            { id: 1, texto: "Llanta desinflada", tiempo: "Hace 2 horas", tipo: "Problema con el vehículo" },
-            { id: 2, texto: "Demora carga en Cali", tiempo: "Hace 5 horas", tipo: "Retraso en la carga" },
-            { id: 3, texto: "Error con carga asignada", tiempo: "Ayer", tipo: "alert" }
-          ]
-        };
-        
-        setUserData(data);
+        const [reportesResponse, conductoresResponse] = await Promise.all([
+          fetch('http://localhost:3001/api/reports', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }),
+          fetch('http://localhost:3001/api/drivers', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }),
+        ]);
+
+        if (!reportesResponse.ok || !conductoresResponse.ok) {
+          throw new Error('Error en la respuesta de la API');
+        }
+
+        const reportesData = await reportesResponse.json();
+        const conductoresData = await conductoresResponse.json();
+
+        setReportes(reportesData);
+        setConductores(conductoresData);
+
+        // const parced = localStorage.getItem('usuario');
+        // if (parced) {
+        //   const parced2 = JSON.parse(parced);
+        //   const userStorage = parced2.user;
+        //   if (userStorage) {
+        //     setUserData(userStorage);
+        //   }
+        // }
+        // console.log(userStorage)
       } catch (error) {
-        console.error("Error al cargar datos del dashboard:", error);
+        console.error('Error al obtener datos:', error);
       } finally {
-        setLoading(false);
+        setLoading(false); // Establece loading en false después de obtener los datos
       }
     };
-    
-    fetchDashboardData();
+
+    fetchData();
   }, []);
-  
+
   // Formatear fecha a formato español
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   };
-  
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -75,12 +78,12 @@ const Dashboard = () => {
       </div>
     );
   }
-  
+
   // Contenido del Dashboard que irá dentro del Layout
   const dashboardContent = (
     <>
       <h1 className="mt-4 mb-4">Dashboard</h1>
-      
+
       {/* Tarjetas de estadísticas */}
       <Row className="stats-cards">
         <Col md={3} sm={6} className="mb-4">
@@ -91,63 +94,17 @@ const Dashboard = () => {
                   <FaUsers />
                 </div>
                 <div>
-                  <h4 className="stats-number">{userData?.stats.empleadosActivos}</h4>
+                  <h4 className="stats-number">{conductores.length}</h4>
                   <div className="stats-label">Empleados Activos</div>
                 </div>
               </div>
             </Card.Body>
           </Card>
         </Col>
-        
-        <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
-            <Card.Body>
-              <div className="d-flex align-items-center">
-                <div className="stats-icon orange">
-                  <FaChartLine />
-                </div>
-                <div>
-                  <h4 className="stats-number">{userData?.stats.tareasPendientes}</h4>
-                  <div className="stats-label">Tareas Pendientes</div>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        
-        <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
-            <Card.Body>
-              <div className="d-flex align-items-center">
-                <div className="stats-icon orange">
-                  <FaChartLine />
-                </div>
-                <div>
-                  <h4 className="stats-number">{userData?.stats.proyectosActivos}</h4>
-                  <div className="stats-label">Proyectos Activos</div>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        
-        <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
-            <Card.Body>
-              <div className="d-flex align-items-center">
-                <div className="stats-icon orange">
-                  <FaUsers />
-                </div>
-                <div>
-                  <h4 className="stats-number">{userData?.stats.empleadosNuevos}</h4>
-                  <div className="stats-label">Nuevos Empleados</div>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
+
+        {/* Otras tarjetas... */}
       </Row>
-      
+
       <Row>
         {/* Lista de Empleados Recientes */}
         <Col lg={6} className="mb-4">
@@ -166,13 +123,13 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {userData?.empleadosRecientes.map(empleado => (
-                    <tr key={empleado.id}>
-                      <td>{empleado.nombre}</td>
-                      <td>{formatDate(empleado.fechaIngreso)}</td>
+                  {conductores.map(conductor => (
+                    <tr key={conductor.id_conductor}>
+                      <td>{conductor.nombre_conductor}</td>
+                      <td>{formatDate(conductor.fechaVencimiento)}</td>
                       <td>
-                        <span className={`badge bg-${empleado.estado === 'Activo' ? 'success' : 'warning'} rounded-pill`}>
-                          {empleado.estado}
+                        <span className={`badge bg-${conductor.estado === 'activo' ? 'success' : 'warning'} rounded-pill`}>
+                          {conductor.estado}
                         </span>
                       </td>
                     </tr>
@@ -182,7 +139,7 @@ const Dashboard = () => {
             </Card.Body>
           </Card>
         </Col>
-        
+
         {/* Reportes */}
         <Col lg={6} className="mb-4">
           <Card className="h-100">
@@ -192,21 +149,21 @@ const Dashboard = () => {
             </Card.Header>
             <Card.Body>
               <div className="task-list">
-                {userData?.reportes.map(tarea => (
-                  <div key={tarea.id} className="task-item">
+                {reportes.map(reporte => (
+                  <div key={reporte.id_estado} className="task-item">
                     <div className="task-icon">
-                      <span className={`priority-dot priority-${tarea.prioridad.toLowerCase()}`}></span>
+                      <span className={`priority-dot priority-${reporte.tipo_estado.toLowerCase()}`}></span>
                     </div>
                     <div className="task-info">
-                      <h6 className="task-title">{tarea.descripcion}</h6>
+                      <h6 className="task-title">{reporte.descripcion}</h6>
                       <div className="task-date">
                         <FaCalendarAlt className="me-1" size={12} />
-                        {formatDate(tarea.fecha)}
+                        {formatDate(reporte.fecha)}
                       </div>
                     </div>
                     <div className="task-priority">
-                      <span className={`badge bg-${tarea.prioridad === 'Alta' ? 'danger' : tarea.prioridad === 'Media' ? 'warning' : 'info'}`}>
-                        {tarea.prioridad}
+                      <span className={`badge bg-${reporte.tipo_estado === 'activo' ? 'danger' : reporte.tipo_estado === 'Media' ? 'warning' : 'info'}`}>
+                        {reporte.tipo_estado}
                       </span>
                     </div>
                   </div>
@@ -218,9 +175,9 @@ const Dashboard = () => {
       </Row>
     </>
   );
-  
+
   return (
-    <LayoutBarButton userData={userData}>
+    <LayoutBarButton>
       {dashboardContent}
     </LayoutBarButton>
   );

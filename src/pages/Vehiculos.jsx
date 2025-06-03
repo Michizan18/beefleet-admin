@@ -18,6 +18,7 @@ const Vehiculos = () => {
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [currentVehicle, setCurrentVehicle] = useState(null);
   const [showNewVehicleModal, setShowNewVehicleModal] = useState(false);
+  const [vehiculos, setVehiculos] = useState([]);
   
   // Estado para nuevo vehículo
   const [newVehicle, setNewVehicle] = useState({
@@ -38,67 +39,57 @@ const Vehiculos = () => {
   
   const [validated, setValidated] = useState(false);
 
-  const vehicles = [
-    {
-      placa: 'ABC-123',
-      modelo: 'Toyota Hilux',
-      año: 2022,
-      conductor: 'Luis Martínez',
-      estado: 'Activo',
-      ultimaRevision: '15 abr 2025',
-      proximaRevision: '15 jul 2025',
-      kilometraje: '15000',
-      marca: 'Toyota',
-      color: 'Blanco',
-      capacidad: '5',
-      tipo: 'Camioneta',
-      asignado: true
-    },
-    {
-      placa: 'XYZ-789',
-      modelo: 'Ford Transit',
-      año: 2021,
-      conductor: 'Pablo Cárdenas',
-      estado: 'En mantenimiento',
-      ultimaRevision: '10 may 2025',
-      proximaRevision: '10 ago 2025',
-      kilometraje: '25000',
-      marca: 'Ford',
-      color: 'Azul',
-      capacidad: '14',
-      tipo: 'Van',
-      asignado: true
-    },
-    {
-      placa: 'DEF-456',
-      modelo: 'Chevrolet NPR',
-      año: 2023,
-      conductor: 'Sin asignar',
-      estado: 'Disponible',
-      ultimaRevision: '28 mar 2025',
-      proximaRevision: '28 jun 2025',
-      kilometraje: '8000',
-      marca: 'Chevrolet',
-      color: 'Blanco',
-      capacidad: '2.5 ton',
-      tipo: 'Camión',
-      asignado: false
-    },
-  ];
+   useEffect(() => {
+    const fetchVehiculos = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/vehicles', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    // Filtrar por término de búsqueda
-    const matchesSearch = 
-      vehicle.placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.modelo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (vehicle.conductor && vehicle.conductor.toLowerCase().includes(searchTerm.toLowerCase()));
+        const vehicleData = await response.json();
+        setVehiculos(vehicleData);
+      } catch (error) {
+        console.error("Error al cargar datos de Vehiculos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVehiculos();
+    const handleDeleteVehicle = async (id_vehiculo) => {
+      try {
+        const response = await fetch(`http://localhost:3001/api/vehicles/${id_vehiculo}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) {
+          throw new Error('Error al eliminar el Vehiculo');
+        }
+        // setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Hubo un error al eliminar el conductor');
+      }
+    };
+
     
-    // Filtrar por estado
-    const matchesStatus = 
-      statusFilter === 'Todos' || vehicle.estado === statusFilter;
+  }, []);
+  console.log(vehiculos);
+
+  // const filteredVehicles = vehiculos.filter((vehiculos) => {
+  //   // Filtrar por término de búsqueda
+  //   const matchesSearch = 
+  //     vehiculos.placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     vehiculos.modelo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     (vehiculos.conductor && vehiculos.conductor.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    return matchesSearch && matchesStatus;
-  });
+  //   // Filtrar por estado
+  //   const matchesStatus = 
+  //     statusFilter === 'Todos' || vehiculos.estado === statusFilter;
+    
+  //   return matchesSearch && matchesStatus;
+  // });
   
   // Mostrar detalles del vehículo
   const handleShowDetails = (vehicle) => {
@@ -246,11 +237,11 @@ const Vehiculos = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredVehicles.map((vehicle, index) => (
-                  <tr key={index}>
+                {vehiculos.map((vehiculo) => (
+                  <tr key={vehiculo.id_vehiculo}>
                     <td>{vehicle.placa}</td>
                     <td>{vehicle.modelo}</td>
-                    <td>{vehicle.año}</td>
+                    <td>{vehicle.matricula}</td>
                     <td>
                       {vehicle.asignado ? (
                         <div className="d-flex align-items-center">
@@ -262,9 +253,9 @@ const Vehiculos = () => {
                       )}
                     </td>
                     <td>
-                      <EstadoBadge estado={vehicle.estado} />
+                      <EstadoBadge estado={vehicle.estado_vehiculo} />
                     </td>
-                    <td>{vehicle.ultimaRevision}</td>
+                    <td>{vehicle.seguro}</td>
                     <td>
                       <div className="action-buttons">
                         <Button 
@@ -278,7 +269,11 @@ const Vehiculos = () => {
                         <Button variant="outline-warning" size="sm" className="me-1">
                           <FaEdit />
                         </Button>
-                        <Button variant="outline-danger" size="sm">
+                        <Button 
+                          variant="outline-danger" 
+                          size="sm"
+                          onClick={() => handleDeleteVehicle(vehicle.id_vehiculo)}
+                        >
                           <FaTrashAlt />
                         </Button>
                       </div>

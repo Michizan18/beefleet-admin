@@ -19,8 +19,9 @@ const Conductores = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentDriver, setCurrentDriver] = useState(null);
   const [filterStatus, setFilterStatus] = useState('todos');
-  // Estado para el formulario de nuevo conductor
+  const [isUpdating, setIsUpdating] = useState('');
   const [showNewDriverModal, setShowNewDriverModal] = useState(false);
+  const [showUpdateDriverModal, setShowUpdateDrivermodal] = useState(false);
   const [newDriver, setNewDriver] = useState({
     tipo_documento: '',
     documento: '',
@@ -48,8 +49,7 @@ const Conductores = () => {
   useEffect(() => {
     const fetchConductores = async () => {
       try {
-        // Simulación de llamada API
-        const response = await fetch('http://localhost:3001/api/conductores', {
+        const response = await fetch('http://localhost:3001/api/drivers', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -57,10 +57,9 @@ const Conductores = () => {
         });
 
         const driverData = await response.json();
-        console.log(driverData[0]);
-        
-        setConductores(driverData[0]);
-        setFilteredConductores(driverData[0]);
+        console.log(driverData);
+        setConductores(driverData);
+        setFilteredConductores(driverData);
       } catch (error) {
         console.error("Error al cargar datos de conductores:", error);
       } finally {
@@ -130,8 +129,64 @@ const Conductores = () => {
     });
   };
 
+  const handleDeleteDriver = async (id_conductor) => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Error al eliminar el Conductor');
+    }
+    // Actualiza la lista de conductores después de eliminar
+    setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Hubo un error al eliminar el conductor');
+  }
+};
+
+  const updateConductor = async(id_conductor, updatedData) => {
+    try {
+      setIsUpdating(true);
+      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type' : 'application/json'
+        },
+        body: JSON.stringify(updatedData)
+      });
+      if (!response.ok){
+        throw new Error('Error al actualizar el conductor')
+      }
+      const data = await response.json();
+      setConductores(data);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Hubo un error al crear el conductor');
+    } finally{
+      setIsUpdating(false)
+    }
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const updateConductor = {
+      tipo_documento: formData.get('tipo_documento'),
+      documento: formData.get('documento'),
+      nombre_conductor: formData.get('nombre_conductor'),
+      apellido_conductor: formData.get('apellido_conductor'),
+      correo_conductor: formData.get('correo_conductor'),
+      foto: formData.get('foto'),
+      telefono: formData.get('telefono'),
+      ciudad: formData.get('ciudad'),
+      direccion: formData.get('direccion')
+    }
+    updateConductor(conductor.id_conductor, updateConductor);
+  }
+
   // Manejar envío del formulario
-  const handleSubmitNewDriver = (e) => {
+  const handleSubmitNewDriver = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
     
@@ -140,41 +195,74 @@ const Conductores = () => {
       setValidated(true);
       return;
     }
-    
-    // Aquí iría la lógica para guardar el nuevo conductor
-    // Por ahora, simulamos añadirlo a la lista local
-    const newDriverWithId = {
-      ...newDriver,
-      id_conductor: conductores.length + 1, // Generar ID temporal
-      ultimoReporte: new Date().toISOString()
-    };
-    
-    setConductores([...conductores, newDriverWithId]);
-    
-    // Cerrar modal y resetear form
-    setShowNewDriverModal(false);
-    setNewDriver({
-      tipo_documento: '',
-      documento: '',
-      nombre_conductor: '',
-      apellido_conductor: '',
-      correo_conductor: '',
-      foto: '',
-      telefono: '',
-      ciudad: '',
-      direccion: '',
-      tipo_licencia: '',
-      fecha_vencimiento: '',
-      experiencia: '',
-      contraseña: '',
-      estado: 'Activo',
-      calificacion: 0,
-      vehiculoAsignado: '',
-      modeloVehiculo: '',
-      viajesCompletados: 0
-    });
+
+    // const formData = new FormData();
+    // Object.entries(newDriver).forEach(([key, value]) => {
+    //   if (value !== '') {
+    //     formData.append(key, value);
+    //   }
+    // });
+
+    try {
+      setIsUpdating(true);
+      const payload = {
+        tipo_documento: newDriver.tipo_documento,
+        documento: parseInt(newDriver.documento, 10),
+        nombre_conductor: newDriver.nombre_conductor,
+        apellido_conductor: newDriver.apellido_conductor,
+        correo_conductor: newDriver.correo_conductor,
+        foto: newDriver.foto,
+        telefono: newDriver.telefono,
+        ciudad: newDriver.ciudad,
+        direccion: newDriver.direccion,
+        experiencia: parseInt(newDriver.experiencia, 10),
+        tipo_licencia: newDriver.tipo_licencia,
+        fecha_vencimiento: newDriver.fecha_vencimiento,
+        estado: newDriver.estado
+      }
+      const response = await fetch('http://localhost:3001/api/drivers',{
+        method: 'POST',
+        headers:{
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok){
+        throw new Error('Error al crear el Conductor');
+      }
+
+      const data = await response.json();
+      console.log('Conductor creado:', data);
+      alert('Conductor creado Exitosamente');
+      setShowNewDriverModal(false);
+      setConductores(prev => [...prev, data.driver]);
+      setNewDriver({
+        tipo_documento: '',
+        documento: '',
+        nombre_conductor: '',
+        apellido_conductor: '',
+        correo_conductor: '',
+        foto: '',
+        telefono: '',
+        ciudad: '',
+        direccion: '',
+        tipo_licencia: '',
+        fecha_vencimiento: '',
+        experiencia: '',
+        contraseña: '',
+        estado: 'Activo',
+      });
     setValidated(false);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Hubo un error al crear el conductor');
+    }
+    
+    
   };
+
+  
   
   // Componente de Paginación
   const renderPagination = () => {
@@ -347,7 +435,11 @@ const Conductores = () => {
                         <Button variant="outline-warning" size="sm" className="me-1">
                           <FaEdit />
                         </Button>
-                        <Button variant="outline-danger" size="sm">
+                        <Button 
+                          variant="outline-danger" 
+                          size="sm"
+                          onClick={() => handleDeleteDriver(conductor.id_conductor)}
+                          >
                           <FaTrashAlt />
                         </Button>
                       </div>
@@ -755,22 +847,6 @@ const Conductores = () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Contraseña</Form.Label>
-                    <Form.Control
-                      type="password"
-                      name="contraseña"
-                      value={newDriver.contraseña}
-                      onChange={handleInputChange}
-                      required
-                      maxLength={250}
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La contraseña es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
                     <Form.Label>Estado</Form.Label>
                     <Form.Select
                       name="estado"
@@ -783,40 +859,6 @@ const Conductores = () => {
                       <option value="Descanso">Descanso</option>
                       <option value="Entrenamiento">Entrenamiento</option>
                     </Form.Select>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              {/* Información de vehículo */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Vehículo</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Placa del Vehículo</Form.Label>
-                    <InputGroup>
-                      <InputGroup.Text className="bg-warning text-white">
-                        <FaCarAlt />
-                      </InputGroup.Text>
-                      <Form.Control
-                        type="text"
-                        name="vehiculoAsignado"
-                        value={newDriver.vehiculoAsignado}
-                        onChange={handleInputChange}
-                        placeholder="Ej: ABC123"
-                      />
-                    </InputGroup>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Modelo del Vehículo</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="modeloVehiculo"
-                      value={newDriver.modeloVehiculo}
-                      onChange={handleInputChange}
-                      placeholder="Ej: Toyota Corolla 2023"
-                    />
                   </Form.Group>
                 </Col>
               </Row>
@@ -837,7 +879,7 @@ const Conductores = () => {
   );
 
   return (
-    <LayoutBarButton userData={userData}>
+    <LayoutBarButton>
       {conductoresContent}
     </LayoutBarButton>
   );

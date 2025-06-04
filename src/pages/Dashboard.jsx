@@ -187,7 +187,7 @@ const Dashboard = () => {
           <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Reportes recientes</h5>
-              <Button as={Link} to="/calendario" variant="outline-warning" size="sm">Ver Calendario</Button>
+              <Button as={Link} to="/notificaciones" variant="outline-warning" size="sm">Ver Reportes</Button>
             </Card.Header>
             <Card.Body>
               <div className="task-list">

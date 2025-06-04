@@ -231,7 +231,7 @@ const NotificacionesAdmin = () => {
   return (
     <LayoutBarButton userData={userData}>
       <div className="notificaciones-admin-container">
-        <h1 className="mt-4 mb-4">Notificaciones de Conductores</h1>
+        <h1 className="mt-4 mb-4">Reportes de Conductores</h1>
         
         {/* Filtros y búsqueda */}
         <Row className="mb-4 align-items-center">

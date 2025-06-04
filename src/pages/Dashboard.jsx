@@ -5,12 +5,10 @@ import { FaUsers, FaChartLine, FaCalendarAlt, FaBuilding, FaSearch, FaPlus, FaEd
 import LayoutBarButton from '../components/LayoutBarButton';
 import './Dashboard.css';
 
-
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [conductores, setConductores] = useState([]);
   const [reportes, setReportes] = useState([]);
-  // const [userData, setUserData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,35 +35,55 @@ const Dashboard = () => {
         const reportesData = await reportesResponse.json();
         const conductoresData = await conductoresResponse.json();
 
-        setReportes(reportesData);
-        setConductores(conductoresData);
+        // Validar que los datos sean arrays y tengan la estructura esperada
+        setReportes(Array.isArray(reportesData) ? reportesData : []);
+        setConductores(Array.isArray(conductoresData) ? conductoresData : []);
 
-        // const parced = localStorage.getItem('usuario');
-        // if (parced) {
-        //   const parced2 = JSON.parse(parced);
-        //   const userStorage = parced2.user;
-        //   if (userStorage) {
-        //     setUserData(userStorage);
-        //   }
-        // }
-        // console.log(userStorage)
       } catch (error) {
         console.error('Error al obtener datos:', error);
+        // En caso de error, establecer arrays vacíos para evitar errores de renderizado
+        setReportes([]);
+        setConductores([]);
       } finally {
-        setLoading(false); // Establece loading en false después de obtener los datos
+        setLoading(false);
       }
     };
 
     fetchData();
   }, []);
 
-  // Formatear fecha a formato español
+  // Formatear fecha a formato español con validación
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    if (!dateString) return 'Fecha no disponible';
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (error) {
+      return 'Fecha inválida';
+    }
+  };
+
+  // Función para obtener clase de prioridad de forma segura
+  const getPriorityClass = (tipoEstado) => {
+    if (!tipoEstado) return 'default';
+    return tipoEstado.toLowerCase();
+  };
+
+  // Función para obtener clase de badge de forma segura
+  const getBadgeClass = (tipoEstado) => {
+    if (!tipoEstado) return 'secondary';
+    const estado = tipoEstado.toLowerCase();
+    switch (estado) {
+      case 'activo':
+        return 'danger';
+      case 'media':
+        return 'warning';
+      default:
+        return 'info';
+    }
   };
 
   if (loading) {
@@ -79,7 +97,6 @@ const Dashboard = () => {
     );
   }
 
-  // Contenido del Dashboard que irá dentro del Layout
   const dashboardContent = (
     <>
       <h1 className="mt-4 mb-4">Dashboard</h1>
@@ -101,8 +118,6 @@ const Dashboard = () => {
             </Card.Body>
           </Card>
         </Col>
-
-        {/* Otras tarjetas... */}
       </Row>
 
       <Row>
@@ -114,28 +129,32 @@ const Dashboard = () => {
               <Button as={Link} to="/conductores" variant="outline-warning" size="sm">Ver Todos</Button>
             </Card.Header>
             <Card.Body>
-              <Table responsive className="table-hover">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Fecha Ingreso</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {conductores.map(conductor => (
-                    <tr key={conductor.id_conductor}>
-                      <td>{conductor.nombre_conductor}</td>
-                      <td>{formatDate(conductor.fechaVencimiento)}</td>
-                      <td>
-                        <span className={`badge bg-${conductor.estado === 'activo' ? 'success' : 'warning'} rounded-pill`}>
-                          {conductor.estado}
-                        </span>
-                      </td>
+              {conductores.length > 0 ? (
+                <Table responsive className="table-hover">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Fecha Ingreso</th>
+                      <th>Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </Table>
+                  </thead>
+                  <tbody>
+                    {conductores.map(conductor => (
+                      <tr key={conductor.id_conductor || Math.random()}>
+                        <td>{conductor.nombre_conductor || 'Sin nombre'}</td>
+                        <td>{formatDate(conductor.fechaVencimiento)}</td>
+                        <td>
+                          <span className={`badge bg-${conductor.estado === 'activo' ? 'success' : 'warning'} rounded-pill`}>
+                            {conductor.estado || 'Sin estado'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              ) : (
+                <p className="text-muted">No hay empleados para mostrar</p>
+              )}
             </Card.Body>
           </Card>
         </Col>
@@ -149,25 +168,29 @@ const Dashboard = () => {
             </Card.Header>
             <Card.Body>
               <div className="task-list">
-                {reportes.map(reporte => (
-                  <div key={reporte.id_estado} className="task-item">
-                    <div className="task-icon">
-                      <span className={`priority-dot priority-${reporte.tipo_estado.toLowerCase()}`}></span>
-                    </div>
-                    <div className="task-info">
-                      <h6 className="task-title">{reporte.descripcion}</h6>
-                      <div className="task-date">
-                        <FaCalendarAlt className="me-1" size={12} />
-                        {formatDate(reporte.fecha)}
+                {reportes.length > 0 ? (
+                  reportes.map(reporte => (
+                    <div key={reporte.id_estado || Math.random()} className="task-item">
+                      <div className="task-icon">
+                        <span className={`priority-dot priority-${getPriorityClass(reporte.tipo_estado)}`}></span>
+                      </div>
+                      <div className="task-info">
+                        <h6 className="task-title">{reporte.descripcion || 'Sin descripción'}</h6>
+                        <div className="task-date">
+                          <FaCalendarAlt className="me-1" size={12} />
+                          {formatDate(reporte.fecha)}
+                        </div>
+                      </div>
+                      <div className="task-priority">
+                        <span className={`badge bg-${getBadgeClass(reporte.tipo_estado)}`}>
+                          {reporte.tipo_estado || 'Sin estado'}
+                        </span>
                       </div>
                     </div>
-                    <div className="task-priority">
-                      <span className={`badge bg-${reporte.tipo_estado === 'activo' ? 'danger' : reporte.tipo_estado === 'Media' ? 'warning' : 'info'}`}>
-                        {reporte.tipo_estado}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-muted">No hay reportes para mostrar</p>
+                )}
               </div>
             </Card.Body>
           </Card>

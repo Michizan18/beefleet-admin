@@ -129,20 +129,35 @@ const Conductores = () => {
     });
   };
 
-  const handleDeleteDriver = async (id_conductor) => {
-  try {
-    const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      throw new Error('Error al eliminar el Conductor');
+const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
+  // Mostrar ventana de confirmación con información del conductor
+  const confirmDelete = window.confirm(
+    `¿Estás seguro de que quieres eliminar al conductor?\n\n` 
+  );
+  
+  // Solo proceder si el usuario confirma
+  if (confirmDelete) {
+    try {
+      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al eliminar el Conductor');
+      }
+      
+      // Actualiza la lista de conductores después de eliminar
+      setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
+      
+      // Mostrar mensaje de éxito
+      alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
+      
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Hubo un error al eliminar el conductor');
     }
-    // Actualiza la lista de conductores después de eliminar
-    setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Hubo un error al eliminar el conductor');
   }
+  // Si el usuario cancela, no hacer nada
 };
 
   const updateConductor = async(id_conductor, updatedData) => {
@@ -185,84 +200,127 @@ const Conductores = () => {
     updateConductor(conductor.id_conductor, updateConductor);
   }
 
-  // Manejar envío del formulario
-  const handleSubmitNewDriver = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
+ // Función mejorada para manejar el envío del formulario
+const handleSubmitNewDriver = async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setValidated(true);
+    return;
+  }
+
+  try {
+    setIsUpdating(true);
     
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setValidated(true);
+    // Validar campos requeridos antes de enviar
+    if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
+      alert('Por favor complete todos los campos requeridos');
       return;
     }
 
-    // const formData = new FormData();
-    // Object.entries(newDriver).forEach(([key, value]) => {
-    //   if (value !== '') {
-    //     formData.append(key, value);
-    //   }
-    // });
+    const payload = {
+      tipo_documento: newDriver.tipo_documento || 'CC', // Valor por defecto
+      documento: parseInt(newDriver.documento, 10),
+      nombre_conductor: newDriver.nombre_conductor.trim(),
+      apellido_conductor: newDriver.apellido_conductor?.trim() || '',
+      correo_conductor: newDriver.correo_conductor.trim(),
+      foto: newDriver.foto || '', // Campo opcional
+      telefono: newDriver.telefono || '',
+      ciudad: newDriver.ciudad || '',
+      direccion: newDriver.direccion || '',
+      experiencia: parseInt(newDriver.experiencia, 10) || 0,
+      tipo_licencia: newDriver.tipo_licencia || '',
+      fecha_vencimiento: newDriver.fecha_vencimiento || null,
+      contraseña: newDriver.contraseña || 'defaultPassword123', // Agregar contraseña por defecto
+      estado: newDriver.estado || 'Activo'
+    };
 
-    try {
-      setIsUpdating(true);
-      const payload = {
-        tipo_documento: newDriver.tipo_documento,
-        documento: parseInt(newDriver.documento, 10),
-        nombre_conductor: newDriver.nombre_conductor,
-        apellido_conductor: newDriver.apellido_conductor,
-        correo_conductor: newDriver.correo_conductor,
-        foto: newDriver.foto,
-        telefono: newDriver.telefono,
-        ciudad: newDriver.ciudad,
-        direccion: newDriver.direccion,
-        experiencia: parseInt(newDriver.experiencia, 10),
-        tipo_licencia: newDriver.tipo_licencia,
-        fecha_vencimiento: newDriver.fecha_vencimiento,
-        estado: newDriver.estado
-      }
-      const response = await fetch('http://localhost:3001/api/drivers',{
-        method: 'POST',
-        headers:{
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-      
-      if (!response.ok){
-        throw new Error('Error al crear el Conductor');
-      }
+    console.log('Payload a enviar:', payload);
 
-      const data = await response.json();
-      console.log('Conductor creado:', data);
-      alert('Conductor creado Exitosamente');
-      setShowNewDriverModal(false);
-      setConductores(prev => [...prev, data.driver]);
-      setNewDriver({
-        tipo_documento: '',
-        documento: '',
-        nombre_conductor: '',
-        apellido_conductor: '',
-        correo_conductor: '',
-        foto: '',
-        telefono: '',
-        ciudad: '',
-        direccion: '',
-        tipo_licencia: '',
-        fecha_vencimiento: '',
-        experiencia: '',
-        contraseña: '',
-        estado: 'Activo',
-      });
-    setValidated(false);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al crear el conductor');
+    const response = await fetch('http://localhost:3001/api/drivers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // Obtener el texto de la respuesta para debugging
+    const responseText = await response.text();
+    console.log('Respuesta del servidor:', responseText);
+
+    if (!response.ok) {
+      let errorMessage = 'Error al crear el Conductor';
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        errorMessage = responseText || errorMessage;
+      }
+      throw new Error(`Error ${response.status}: ${errorMessage}`);
     }
-    
-    
-  };
 
-  
+    const data = JSON.parse(responseText);
+    console.log('Conductor creado:', data);
+    
+    alert('Conductor creado exitosamente');
+    setShowNewDriverModal(false);
+    
+    // Actualizar la lista de conductores
+    setConductores(prev => [...prev, data.driver || data]);
+    
+    // Limpiar el formulario
+    setNewDriver({
+      tipo_documento: '',
+      documento: '',
+      nombre_conductor: '',
+      apellido_conductor: '',
+      correo_conductor: '',
+      foto: '',
+      telefono: '',
+      ciudad: '',
+      direccion: '',
+      tipo_licencia: '',
+      fecha_vencimiento: '',
+      experiencia: '',
+      contraseña: '',
+      estado: 'Activo',
+    });
+    
+    setValidated(false);
+    
+  } catch (error) {
+    console.error('Error completo:', error);
+    alert(`Hubo un error al crear el conductor: ${error.message}`);
+  } finally {
+    setIsUpdating(false);
+  }
+};
+
+// Función adicional para verificar la conexión con el backend
+const testBackendConnection = async () => {
+  try {
+    const response = await fetch('http://localhost:3001/api/drivers', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (response.ok) {
+      console.log('Conexión con backend exitosa');
+      return true;
+    } else {
+      console.log('Problema con backend:', response.status);
+      return false;
+    }
+  } catch (error) {
+    console.error('No se puede conectar con el backend:', error);
+    return false;
+  }
+};
   
   // Componente de Paginación
   const renderPagination = () => {

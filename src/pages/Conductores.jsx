@@ -49,7 +49,7 @@ const Conductores = () => {
     const fetchConductores = async () => {
       try {
         // Simulación de llamada API
-        const response = await fetch('http://localhost:3001/api/drivers', {
+        const response = await fetch('http://localhost:3001/api/conductores', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

@@ -13,6 +13,8 @@ const LoginForm = () => {
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
+    debugger
+    console.log('inicio')
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -32,8 +34,8 @@ const LoginForm = () => {
       if (response.ok){
         setSuccess(true)
         await localStorage.setItem('token', data.token);
-        await localStorage.setItem('id_usuario', data.user)
-        console.log(data);
+        await localStorage.setItem('usuario', data.user)
+        console.log(data.user);
         setTimeout(()=>{
           window.location.href = '/dashboard';
 

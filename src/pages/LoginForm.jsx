@@ -36,9 +36,9 @@ const LoginForm = () => {
         await localStorage.setItem('token', data.token);
         await localStorage.setItem('usuario', data.user)
         console.log(data.user);
+        await localStorage.setItem('usuario', JSON.stringify(data))
         setTimeout(()=>{
           window.location.href = '/dashboard';
-
         }, 1)
       }else{
         setError(data.message || 'Error al iniciar sesión');

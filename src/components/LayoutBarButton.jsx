@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 import React, { useState } from 'react';
+=======
+>>>>>>> main
 import { Navbar, Container, Dropdown } from 'react-bootstrap';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import MenuNotificaciones from './MenuNotificaciones';
 import { 
@@ -11,6 +15,7 @@ import { GiReceiveMoney } from "react-icons/gi";
 import './LayoutBarButton.css';
 import logo from './img/logo.png'; // Asegúrate de tener una imagen de logo si es necesario
 
+<<<<<<< HEAD
 const LayoutBarButton = ({ children, userData }) => {
   const [user, setUser ] = useState(null)
   // Usar useLocation para determinar la ruta actual y aplicar estilos active
@@ -25,6 +30,23 @@ const LayoutBarButton = ({ children, userData }) => {
       };
       fetchData();
     }, []);
+=======
+const LayoutBarButton = ({ children} ) => {
+  // Usar useLocation para determinar la ruta actual y aplicar estilos active
+  const location = useLocation();
+  const currentPath = location.pathname;
+  // const [userData, setUserData] = useState([]);
+
+  // const parced = localStorage.getItem('usuario');
+  // if (parced) {
+  //   const parced2 = JSON.parse(parced);
+  //   const userStorage = parced2.user;
+  //   if (userStorage) {
+  //     setUserData(userStorage);
+  //   }
+  // }
+
+>>>>>>> main
 
   return (
     <div className="dashboard-container">
@@ -43,7 +65,7 @@ const LayoutBarButton = ({ children, userData }) => {
           <ul className="navbar-nav ms-auto">
   <li className="nav-item">
     {/* Usa el componente MenuNotificaciones en lugar del código duplicado */}
-    <MenuNotificaciones userData={userData} />
+    <MenuNotificaciones  />
   </li>
             
             <li className="nav-item dropdown">
@@ -51,7 +73,11 @@ const LayoutBarButton = ({ children, userData }) => {
                 <Dropdown.Toggle variant="transparent" id="user-dropdown" className="nav-link">
                   <FaUserCircle className="icon" />
                   <span className="d-none d-md-inline-block ms-1">
+<<<<<<< HEAD
                     {user.nombre_usuario || 'Usuario'}
+=======
+                    {'Usuario' || 'Usuario'}
+>>>>>>> main
                   </span>
                 </Dropdown.Toggle>
                 
@@ -108,14 +134,22 @@ const LayoutBarButton = ({ children, userData }) => {
             
           </Link>
           <Link 
+<<<<<<< HEAD
             to="/clientes" 
+=======
+            to="/cargas" 
+>>>>>>> main
             className={`header-button ${currentPath === '/clientes' ? 'active' : ''}`}
           >
             <FaPeopleCarryBox className="icon" /> Clientes
             
           </Link>
           <Link 
+<<<<<<< HEAD
             to="/ventas" 
+=======
+            to="/cargas" 
+>>>>>>> main
             className={`header-button ${currentPath === '/ventas' ? 'active' : ''}`}
           >
             <FaMoneyBillWave  className="icon" /> Ventas

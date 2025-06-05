@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 import './Conductores.css';
+import { apiRequest } from '../utils/api';
 
 const Conductores = () => {
   const [userData, setUserData] = useState(null);
@@ -37,38 +38,51 @@ const Conductores = () => {
     experiencia: '',
     contraseña: '',
     estado: 'Activo',
-    calificacion: 0,
-    vehiculoAsignado: '',
-    modeloVehiculo: '',
-    viajesCompletados: 0
   });
   const [validated, setValidated] = useState(false);
   
   const conductoresPorPagina = 8;
 
-  useEffect(() => {
-    const fetchConductores = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/drivers', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const driverData = await response.json();
-        console.log(driverData);
-        setConductores(driverData);
-        setFilteredConductores(driverData);
-      } catch (error) {
-        console.error("Error al cargar datos de conductores:", error);
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  const fetchConductores = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('No hay token disponible');
+        return;
       }
-    };
-    
-    fetchConductores();
-  }, []);
+
+      const response = await fetch('http://localhost:3001/api/drivers', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      // Debug: ver qué devuelve el servidor
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const driverData = await response.json();
+      setConductores(driverData);
+      setFilteredConductores(driverData);
+    } catch (error) {
+      console.error("Error al cargar datos de conductores:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchConductores();
+}, []);
   
   useEffect(() => {
     // Filtrar conductores según búsqueda y estado
@@ -78,8 +92,7 @@ const Conductores = () => {
     if (searchTerm) {
       filtered = filtered.filter(conductor => 
         conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conductor.documento?.includes(searchTerm) ||
-        conductor.vehiculoAsignado?.toLowerCase().includes(searchTerm.toLowerCase())
+        conductor.documento?.includes(searchTerm)
       );
     }
     
@@ -130,21 +143,17 @@ const Conductores = () => {
   };
 
 const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
-  // Mostrar ventana de confirmación con información del conductor
   const confirmDelete = window.confirm(
-    `¿Estás seguro de que quieres eliminar al conductor?\n\n` 
+    `¿Estás seguro de que quieres eliminar al conductor?\n\n` +
+    `Nombre: ${nombre_conductor} ${apellido_conductor}\n` +
+    `Documento: ${documento}`
   );
   
-  // Solo proceder si el usuario confirma
   if (confirmDelete) {
     try {
-      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-        method: 'DELETE',
+      await apiRequest(`/api/drivers/${id_conductor}`, {
+        method: 'DELETE'
       });
-      
-      if (!response.ok) {
-        throw new Error('Error al eliminar el Conductor');
-      }
       
       // Actualiza la lista de conductores después de eliminar
       setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
@@ -154,10 +163,9 @@ const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_condu
       
     } catch (error) {
       console.error('Error:', error);
-      alert('Hubo un error al eliminar el conductor');
+      alert(`Hubo un error al eliminar el conductor: ${error.message}`);
     }
   }
-  // Si el usuario cancela, no hacer nada
 };
 
   const updateConductor = async(id_conductor, updatedData) => {
@@ -200,7 +208,7 @@ const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_condu
     updateConductor(conductor.id_conductor, updateConductor);
   }
 
- // Función mejorada para manejar el envío del formulario
+// Función corregida para manejar el envío del formulario
 const handleSubmitNewDriver = async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
@@ -220,49 +228,31 @@ const handleSubmitNewDriver = async (e) => {
       return;
     }
 
+    // Payload ajustado a lo que espera el backend
     const payload = {
-      tipo_documento: newDriver.tipo_documento || 'CC', // Valor por defecto
+      tipo_documento: newDriver.tipo_documento || 'CC',
       documento: parseInt(newDriver.documento, 10),
       nombre_conductor: newDriver.nombre_conductor.trim(),
       apellido_conductor: newDriver.apellido_conductor?.trim() || '',
       correo_conductor: newDriver.correo_conductor.trim(),
-      foto: newDriver.foto || '', // Campo opcional
+      foto: newDriver.foto || '',
       telefono: newDriver.telefono || '',
       ciudad: newDriver.ciudad || '',
       direccion: newDriver.direccion || '',
-      experiencia: parseInt(newDriver.experiencia, 10) || 0,
       tipo_licencia: newDriver.tipo_licencia || '',
-      fecha_vencimiento: newDriver.fecha_vencimiento || null,
-      contraseña: newDriver.contraseña || 'defaultPassword123', // Agregar contraseña por defecto
+      fecha_vencimiento: newDriver.fecha_vencimiento || '',
+      experiencia: newDriver.experiencia || '',
       estado: newDriver.estado || 'Activo'
     };
 
     console.log('Payload a enviar:', payload);
 
-    const response = await fetch('http://localhost:3001/api/drivers', {
+    // Usar la función apiRequest
+    const data = await apiRequest('/api/drivers', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
 
-    // Obtener el texto de la respuesta para debugging
-    const responseText = await response.text();
-    console.log('Respuesta del servidor:', responseText);
-
-    if (!response.ok) {
-      let errorMessage = 'Error al crear el Conductor';
-      try {
-        const errorData = JSON.parse(responseText);
-        errorMessage = errorData.message || errorMessage;
-      } catch (e) {
-        errorMessage = responseText || errorMessage;
-      }
-      throw new Error(`Error ${response.status}: ${errorMessage}`);
-    }
-
-    const data = JSON.parse(responseText);
     console.log('Conductor creado:', data);
     
     alert('Conductor creado exitosamente');
@@ -378,8 +368,10 @@ const testBackendConnection = async () => {
     return <span className={`badge bg-${variant} rounded-pill`}>{estado}</span>;
   };
   
+  
   const conductoresContent = (
     <>
+      
       <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
         <h1>Gestión de Conductores</h1>
         <Button 
@@ -401,7 +393,7 @@ const testBackendConnection = async () => {
                   <FaSearch />
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Buscar por nombre, cédula o vehículo"
+                  placeholder="Buscar por nombre o cédula"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -445,40 +437,19 @@ const testBackendConnection = async () => {
                 <tr>
                   <th>Nombre</th>
                   <th>Cédula</th>
-                  <th>Vehículo</th>
                   <th>Ciudad</th>
                   <th>Estado</th>
-                  <th>Calificación</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {currentConductores.map(conductor => (
-                  <tr key={conductor.id_conductor}>
-                    <td>{conductor.nombre_conductor}</td>
+                {filteredConductores.map((conductor, index) => (
+                  <tr key={conductor.id_conductor || conductor.id || index}>
+                    <td>{conductor.nombre_conductor} {conductor.apellido_conductor}</td>
                     <td>{conductor.documento}</td>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <FaCarAlt className="me-2 text-warning" />
-                        {conductor.vehiculoAsignado}
-                      </div>
-                    </td>
                     <td>{conductor.ciudad}</td>
                     <td>
                       <EstadoBadge estado={conductor.estado} />
-                    </td>
-                    <td>
-                      <div className="rating">
-                        <span className="rating-value">{conductor.calificacion}</span>
-                        <div className="rating-stars">
-                          {[...Array(5)].map((_, i) => (
-                            <span 
-                              key={i}
-                              className={`star ${i < Math.floor(conductor.calificacion) ? 'filled' : ''}`}
-                            >★</span>
-                          ))}
-                        </div>
-                      </div>
                     </td>
                     <td>
                       <div className="action-buttons">
@@ -575,14 +546,6 @@ const testBackendConnection = async () => {
                         {currentDriver.ciudad}
                       </p>
                     </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Licencia:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <Badge bg="warning" className="me-2">
-                          {currentDriver.tipo_licencia}
-                        </Badge>
-                      </p>
-                    </Col>
                   </Row>
                   
                   <h5 className="mb-3 mt-4">Información Laboral</h5>
@@ -599,34 +562,15 @@ const testBackendConnection = async () => {
                   <Row className="mb-3">
                     <Col sm={6}>
                       <p className="mb-1"><strong>Licencia:</strong></p>
-                      <p>{formatDate(currentDriver.tipo_licencia)}</p>
+                      <p className="d-flex align-items-center">
+                        <Badge bg="warning" className="me-2">
+                          {currentDriver.tipo_licencia}
+                        </Badge>
+                      </p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Fecha de vencimiento:</strong></p>
                       <p>{formatDate(currentDriver.fecha_vencimiento)}</p>
-                    </Col>
-                  </Row>
-                  
-                  <h5 className="mb-3 mt-4">Vehículo</h5>
-                  <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Placa:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <FaCarAlt className="me-2 text-warning" />
-                        {currentDriver.vehiculoAsignado}
-                      </p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Modelo:</strong></p>
-                      <p>{currentDriver.modeloVehiculo}</p>
-                    </Col>
-                  </Row>
-                  
-                  <h5 className="mb-3 mt-4">Estadísticas</h5>
-                  <Row>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Viajes Completados:</strong></p>
-                      <h3 className="text-warning">{currentDriver.viajesCompletados}</h3>
                     </Col>
                   </Row>
                 </Col>

@@ -7,9 +7,8 @@ import {
   FaEdit, FaTrashAlt, FaPlus, FaSave 
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
-import apiRequest from '../services/api';
 import './Conductores.css';
-import { apiRequest } from '../utils/api';
+import api from '../api';
 
 const Conductores = () => {
   const [userData, setUserData] = useState(null);
@@ -135,25 +134,28 @@ useEffect(() => {
   };
 
   // Manejar cambios en el formulario
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    // Manejar campos numéricos específicamente
-    let processedValue = value;
-    
-    if (name === 'documento') {
-      // Solo permitir números para documento
-      processedValue = value.replace(/\D/g, '');
-    } else if (name === 'experiencia') {
-      // Solo permitir números para experiencia
-      processedValue = value.replace(/\D/g, '');
-    }
-    
-    setNewDriver({
-      ...newDriver,
-      [name]: processedValue
-    });
-  };
+const handleInputChange = (e) => {
+  const { name, value } = e.target;
+  
+  // Manejar campos numéricos específicamente
+  let processedValue = value;
+  
+  if (name === 'documento') {
+    // Solo permitir números para documento
+    processedValue = value.replace(/\D/g, '');
+  } else if (name === 'experiencia') {
+    // Solo permitir números para experiencia
+    processedValue = value.replace(/\D/g, '');
+  } else if (name === 'telefono') {
+    // Solo permitir números para teléfono
+    processedValue = value.replace(/\D/g, '');
+  }
+  
+  setNewDriver({
+    ...newDriver,
+    [name]: processedValue
+  });
+};
 
   const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
     const confirmDelete = window.confirm(
@@ -164,7 +166,7 @@ useEffect(() => {
     
     if (confirmDelete) {
       try {
-        await apiRequest(`/drivers/${id_conductor}`, {
+        await api(`/drivers/${id_conductor}`, {
           method: 'DELETE'
         });
         
@@ -235,32 +237,15 @@ const handleSubmitNewDriver = async (e) => {
   try {
     setIsUpdating(true);
     
-    // Validar campos requeridos antes de enviar
-    if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
-      alert('Por favor complete todos los campos requeridos');
-      return;
-    }
-
-    // CORREGIR EL PAYLOAD - Asegurar tipos de datos correctos
+    // PAYLOAD ULTRA MINIMALISTA - Solo los campos absolutamente necesarios
     const payload = {
-      tipo_documento: newDriver.tipo_documento || 'CC',
-      documento: newDriver.documento.toString(), // Asegurar que sea string
+      documento: newDriver.documento.trim(),
       nombre_conductor: newDriver.nombre_conductor.trim(),
-      apellido_conductor: newDriver.apellido_conductor?.trim() || '',
-      correo_conductor: newDriver.correo_conductor.trim(),
-      foto: newDriver.foto || null, // Enviar null en lugar de string vacío
-      telefono: newDriver.telefono || null,
-      ciudad: newDriver.ciudad || null,
-      direccion: newDriver.direccion || null,
-      tipo_licencia: newDriver.tipo_licencia || null,
-      fecha_vencimiento: newDriver.fecha_vencimiento || null,
-      experiencia: newDriver.experiencia ? parseInt(newDriver.experiencia, 10) : null,
-      estado: newDriver.estado || 'Activo'
+      correo_conductor: newDriver.correo_conductor.trim().toLowerCase()
     };
 
-    console.log('Payload a enviar:', payload);
+    console.log('=== MINIMAL TEST: Payload ===', payload);
 
-    // USAR FETCH DIRECTAMENTE EN LUGAR DE apiRequest para mejor control de errores
     const token = localStorage.getItem('token');
     
     const response = await fetch('http://localhost:3001/api/drivers', {
@@ -272,45 +257,24 @@ const handleSubmitNewDriver = async (e) => {
       body: JSON.stringify(payload)
     });
 
-    // Manejar respuesta del servidor
+    const responseText = await response.text();
+    
+    console.log('=== MINIMAL TEST: Response ===', {
+      status: response.status,
+      statusText: response.statusText,
+      body: responseText
+    });
+
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Error del servidor:', errorData);
-      throw new Error(`Error ${response.status}: ${errorData}`);
+      throw new Error(`Status ${response.status}: ${responseText}`);
     }
 
-    const data = await response.json();
-    console.log('Conductor creado exitosamente:', data);
-    
-    alert('Conductor creado exitosamente');
-    setShowNewDriverModal(false);
-    
-    // Actualizar la lista de conductores
-    setConductores(prev => [...prev, data.driver || data]);
-    
-    // Limpiar el formulario
-    setNewDriver({
-      tipo_documento: '',
-      documento: '',
-      nombre_conductor: '',
-      apellido_conductor: '',
-      correo_conductor: '',
-      foto: '',
-      telefono: '',
-      ciudad: '',
-      direccion: '',
-      tipo_licencia: '',
-      fecha_vencimiento: '',
-      experiencia: '',
-      contraseña: '',
-      estado: 'Activo',
-    });
-    
-    setValidated(false);
+    // Si llegamos aquí, el payload mínimo funciona
+    alert('¡Payload mínimo funciona! Ahora vamos agregando campos...');
     
   } catch (error) {
-    console.error('Error completo:', error);
-    alert(`Hubo un error al crear el conductor: ${error.message}`);
+    console.error('=== MINIMAL TEST: Error ===', error);
+    alert(`Error con payload mínimo: ${error.message}`);
   } finally {
     setIsUpdating(false);
   }
@@ -371,6 +335,44 @@ const testBackendConnection = async () => {
     );
   };
   
+  const testCreateDriver = async () => {
+  try {
+    const testPayload = {
+      tipo_documento: 'CC',
+      documento: '12345678',
+      nombre_conductor: 'Test',
+      apellido_conductor: 'Driver',
+      correo_conductor: 'test@example.com',
+      telefono: '1234567890',
+      ciudad: 'Bogotá',
+      direccion: 'Calle Test 123',
+      tipo_licencia: 'B1',
+      experiencia: 5,
+      estado: 'Activo'
+    };
+
+    console.log('=== TEST: Enviando payload de prueba ===');
+    const response = await fetch('http://localhost:3001/api/drivers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(testPayload)
+    });
+
+    const responseText = await response.text();
+    console.log('=== TEST: Response ===', {
+      status: response.status,
+      headers: [...response.headers.entries()],
+      body: responseText
+    });
+
+  } catch (error) {
+    console.error('=== TEST: Error ===', error);
+  }
+};
+
   // Componente para el badge de estado
   const EstadoBadge = ({ estado }) => {
     let variant;
@@ -408,6 +410,13 @@ const testBackendConnection = async () => {
         >
           <FaPlus className="me-2" /> Nuevo Conductor
         </Button>
+        <Button 
+  variant="info" 
+  className="ms-2"
+  onClick={testCreateDriver}
+>
+  Test Backend
+</Button>
       </div>
       
       {/* Filtros y búsqueda */}
@@ -748,7 +757,9 @@ const testBackendConnection = async () => {
                         value={newDriver.telefono}
                         onChange={handleInputChange}
                         required
-                        maxLength={45}
+                        maxLength={15}
+                        pattern="[0-9]*"
+                        title="Solo números"
                       />
                       <Form.Control.Feedback type="invalid">
                         El teléfono es obligatorio

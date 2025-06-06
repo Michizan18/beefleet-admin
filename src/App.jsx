@@ -7,6 +7,8 @@ import Rutas from './pages/Rutas';
 import NotificacionesAdmin from './pages/NotificacionesAdmin';
 import Vehiculos from './pages/Vehiculos'; 
 import Cargas from './pages/Cargas';
+import Ventas from './pages/Ventas';
+import Clientes from './pages/Clientes';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
         <Route path="/notificaciones" element={<NotificacionesAdmin />} />
         <Route path="/vehiculos" element={<Vehiculos/>} /> 
         <Route path="/cargas" element={<Cargas/>} />
+        <Route path="/ventas" element={<Ventas/>} />
+        <Route path="/clientes" element={<Clientes/>} />
       </Routes>
     </Router>
   )

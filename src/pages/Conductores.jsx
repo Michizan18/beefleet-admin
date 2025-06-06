@@ -7,6 +7,7 @@ import {
   FaEdit, FaTrashAlt, FaPlus, FaSave 
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
+import apiRequest from '../services/api';
 import './Conductores.css';
 import { apiRequest } from '../utils/api';
 
@@ -136,77 +137,89 @@ useEffect(() => {
   // Manejar cambios en el formulario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    // Manejar campos numéricos específicamente
+    let processedValue = value;
+    
+    if (name === 'documento') {
+      // Solo permitir números para documento
+      processedValue = value.replace(/\D/g, '');
+    } else if (name === 'experiencia') {
+      // Solo permitir números para experiencia
+      processedValue = value.replace(/\D/g, '');
+    }
+    
     setNewDriver({
       ...newDriver,
-      [name]: value
+      [name]: processedValue
     });
   };
 
-const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
-  const confirmDelete = window.confirm(
-    `¿Estás seguro de que quieres eliminar al conductor?\n\n` +
-    `Nombre: ${nombre_conductor} ${apellido_conductor}\n` +
-    `Documento: ${documento}`
-  );
-  
-  if (confirmDelete) {
-    try {
-      await apiRequest(`/api/drivers/${id_conductor}`, {
-        method: 'DELETE'
-      });
-      
-      // Actualiza la lista de conductores después de eliminar
-      setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
-      
-      // Mostrar mensaje de éxito
-      alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
-      
-    } catch (error) {
-      console.error('Error:', error);
-      alert(`Hubo un error al eliminar el conductor: ${error.message}`);
-    }
-  }
-};
-
-  const updateConductor = async(id_conductor, updatedData) => {
-    try {
-      setIsUpdating(true);
-      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type' : 'application/json'
-        },
-        body: JSON.stringify(updatedData)
-      });
-      if (!response.ok){
-        throw new Error('Error al actualizar el conductor')
+  const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que quieres eliminar al conductor?\n\n` +
+      `Nombre: ${nombre_conductor} ${apellido_conductor}\n` +
+      `Documento: ${documento}`
+    );
+    
+    if (confirmDelete) {
+      try {
+        await apiRequest(`/drivers/${id_conductor}`, {
+          method: 'DELETE'
+        });
+        
+        // Actualiza la lista de conductores después de eliminar
+        setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
+        
+        // Mostrar mensaje de éxito
+        alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert(`Hubo un error al eliminar el conductor: ${error.message}`);
       }
-      const data = await response.json();
-      setConductores(data);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al crear el conductor');
-    } finally{
-      setIsUpdating(false)
     }
-  }
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const updateConductor = {
-      tipo_documento: formData.get('tipo_documento'),
-      documento: formData.get('documento'),
-      nombre_conductor: formData.get('nombre_conductor'),
-      apellido_conductor: formData.get('apellido_conductor'),
-      correo_conductor: formData.get('correo_conductor'),
-      foto: formData.get('foto'),
-      telefono: formData.get('telefono'),
-      ciudad: formData.get('ciudad'),
-      direccion: formData.get('direccion')
-    }
-    updateConductor(conductor.id_conductor, updateConductor);
-  }
+  // const updateConductor = async(id_conductor, updatedData) => {
+  //   try {
+  //     setIsUpdating(true);
+  //     const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type' : 'application/json'
+  //       },
+  //       body: JSON.stringify(updatedData)
+  //     });
+  //     if (!response.ok){
+  //       throw new Error('Error al actualizar el conductor')
+  //     }
+  //     const data = await response.json();
+  //     setConductores(data);
+  //   } catch (error) {
+  //     console.error('Error:', error);
+  //     alert('Hubo un error al crear el conductor');
+  //   } finally{
+  //     setIsUpdating(false)
+  //   }
+  // }
+
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   const formData = new FormData(e.target);
+  //   const updateConductor = {
+  //     tipo_documento: formData.get('tipo_documento'),
+  //     documento: formData.get('documento'),
+  //     nombre_conductor: formData.get('nombre_conductor'),
+  //     apellido_conductor: formData.get('apellido_conductor'),
+  //     correo_conductor: formData.get('correo_conductor'),
+  //     foto: formData.get('foto'),
+  //     telefono: formData.get('telefono'),
+  //     ciudad: formData.get('ciudad'),
+  //     direccion: formData.get('direccion')
+  //   }
+  //   updateConductor(conductor.id_conductor, updateConductor);
+  // }
 
 // Función corregida para manejar el envío del formulario
 const handleSubmitNewDriver = async (e) => {
@@ -228,32 +241,46 @@ const handleSubmitNewDriver = async (e) => {
       return;
     }
 
-    // Payload ajustado a lo que espera el backend
+    // CORREGIR EL PAYLOAD - Asegurar tipos de datos correctos
     const payload = {
       tipo_documento: newDriver.tipo_documento || 'CC',
-      documento: parseInt(newDriver.documento, 10),
+      documento: newDriver.documento.toString(), // Asegurar que sea string
       nombre_conductor: newDriver.nombre_conductor.trim(),
       apellido_conductor: newDriver.apellido_conductor?.trim() || '',
       correo_conductor: newDriver.correo_conductor.trim(),
-      foto: newDriver.foto || '',
-      telefono: newDriver.telefono || '',
-      ciudad: newDriver.ciudad || '',
-      direccion: newDriver.direccion || '',
-      tipo_licencia: newDriver.tipo_licencia || '',
-      fecha_vencimiento: newDriver.fecha_vencimiento || '',
-      experiencia: newDriver.experiencia || '',
+      foto: newDriver.foto || null, // Enviar null en lugar de string vacío
+      telefono: newDriver.telefono || null,
+      ciudad: newDriver.ciudad || null,
+      direccion: newDriver.direccion || null,
+      tipo_licencia: newDriver.tipo_licencia || null,
+      fecha_vencimiento: newDriver.fecha_vencimiento || null,
+      experiencia: newDriver.experiencia ? parseInt(newDriver.experiencia, 10) : null,
       estado: newDriver.estado || 'Activo'
     };
 
     console.log('Payload a enviar:', payload);
 
-    // Usar la función apiRequest
-    const data = await apiRequest('/api/drivers', {
+    // USAR FETCH DIRECTAMENTE EN LUGAR DE apiRequest para mejor control de errores
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch('http://localhost:3001/api/drivers', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
       body: JSON.stringify(payload)
     });
 
-    console.log('Conductor creado:', data);
+    // Manejar respuesta del servidor
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Error del servidor:', errorData);
+      throw new Error(`Error ${response.status}: ${errorData}`);
+    }
+
+    const data = await response.json();
+    console.log('Conductor creado exitosamente:', data);
     
     alert('Conductor creado exitosamente');
     setShowNewDriverModal(false);
@@ -467,7 +494,12 @@ const testBackendConnection = async () => {
                         <Button 
                           variant="outline-danger" 
                           size="sm"
-                          onClick={() => handleDeleteDriver(conductor.id_conductor)}
+                          onClick={() => handleDeleteDriver(
+                            conductor.id_conductor, 
+                            conductor.nombre_conductor, 
+                            conductor.apellido_conductor, 
+                            conductor.documento
+                          )}
                           >
                           <FaTrashAlt />
                         </Button>
@@ -631,11 +663,13 @@ const testBackendConnection = async () => {
                   <Form.Group className="mb-3">
                     <Form.Label>Número de Documento</Form.Label>
                     <Form.Control
-                      type="text"
+                      type="text"  // Cambiar de "text" a "text" pero con validación
                       name="documento"
                       value={newDriver.documento}
                       onChange={handleInputChange}
                       required
+                      pattern="[0-9]+"  // Solo números
+                      title="Solo se permiten números"
                     />
                     <Form.Control.Feedback type="invalid">
                       El número de documento es obligatorio
@@ -833,12 +867,13 @@ const testBackendConnection = async () => {
                   <Form.Group className="mb-3">
                     <Form.Label>Años de Experiencia</Form.Label>
                     <Form.Control
-                      type="number"
+                      type="text"  // Cambiar de "number" a "text" para mejor control
                       name="experiencia"
                       value={newDriver.experiencia}
                       onChange={handleInputChange}
-                      min="0"
-                      max="50"
+                      pattern="[0-9]*"
+                      title="Solo números"
+                      placeholder="Años de experiencia"
                     />
                   </Form.Group>
                 </Col>

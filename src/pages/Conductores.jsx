@@ -22,6 +22,8 @@ const Conductores = () => {
   const [isUpdating, setIsUpdating] = useState('');
   const [showNewDriverModal, setShowNewDriverModal] = useState(false);
   const [showUpdateDriverModal, setShowUpdateDrivermodal] = useState(false);
+    
+  // Estado para nuevo conductor
   const [newDriver, setNewDriver] = useState({
     tipo_documento: '',
     documento: '',
@@ -37,11 +39,25 @@ const Conductores = () => {
     experiencia: '',
     contraseña: '',
     estado: 'Activo',
-    calificacion: 0,
-    vehiculoAsignado: '',
-    modeloVehiculo: '',
-    viajesCompletados: 0
   });
+
+  // Estado para editar conductor
+  const [editDriver, setEditDriver] = useState({
+    id_conductor: '',
+    tipo_documento: '',
+    documento: '',
+    nombre_conductor: '',
+    apellido_conductor: '',
+    correo_conductor: '',
+    foto: '',
+    telefono: '',
+    ciudad: '',
+    direccion: '',
+    tipo_licencia: '',
+    fecha_vencimiento: '',
+    experiencia: '',
+  });
+
   const [validated, setValidated] = useState(false);
   
   const conductoresPorPagina = 8;
@@ -52,6 +68,7 @@ const Conductores = () => {
         const response = await fetch('http://localhost:3001/api/drivers', {
           method: 'GET',
           headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json',
           },
         });
@@ -120,6 +137,26 @@ const Conductores = () => {
     setShowModal(true);
   };
 
+  // Función para abrir modal de edición
+  const handleEditDriver = (driver) => {
+    setEditDriver({
+      id_conductor: driver.id_conductor,
+      tipo_documento: driver.tipo_documento || '',
+      documento: driver.documento || '',
+      nombre_conductor: driver.nombre_conductor || '',
+      apellido_conductor: driver.apellido_conductor || '',
+      correo_conductor: driver.correo_conductor || '',
+      foto: driver.foto || '',
+      telefono: driver.telefono || '',
+      ciudad: driver.ciudad || '',
+      direccion: driver.direccion || '',
+      tipo_licencia: driver.tipo_licencia || '',
+      fecha_vencimiento: driver.fecha_vencimiento ? driver.fecha_vencimiento.split('T')[0] : '',
+      experiencia: driver.experiencia || '',
+    });
+    setShowUpdateDriverModal(true);
+  };
+
   // Manejar cambios en el formulario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -132,13 +169,15 @@ const Conductores = () => {
 const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
   // Mostrar ventana de confirmación con información del conductor
   const confirmDelete = window.confirm(
-    `¿Estás seguro de que quieres eliminar al conductor?\n\n` 
+    `¿Estás seguro de que quieres eliminar al conductor?\n\nNombre: ${nombre_conductor} ${apellido_conductor}\nDocumento: ${documento}` 
   );
   
   // Solo proceder si el usuario confirma
   if (confirmDelete) {
     try {
-      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, 
+        {
+        headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`},
         method: 'DELETE',
       });
       
@@ -160,167 +199,167 @@ const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_condu
   // Si el usuario cancela, no hacer nada
 };
 
-  const updateConductor = async(id_conductor, updatedData) => {
-    try {
-      setIsUpdating(true);
-      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type' : 'application/json'
-        },
-        body: JSON.stringify(updatedData)
-      });
-      if (!response.ok){
-        throw new Error('Error al actualizar el conductor')
-      }
-      const data = await response.json();
-      setConductores(data);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al crear el conductor');
-    } finally{
-      setIsUpdating(false)
-    }
-  }
-
-  const handleSubmit = (e) => {
+   // Función para actualizar conductor
+  const handleSubmitUpdateDriver = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const updateConductor = {
-      tipo_documento: formData.get('tipo_documento'),
-      documento: formData.get('documento'),
-      nombre_conductor: formData.get('nombre_conductor'),
-      apellido_conductor: formData.get('apellido_conductor'),
-      correo_conductor: formData.get('correo_conductor'),
-      foto: formData.get('foto'),
-      telefono: formData.get('telefono'),
-      ciudad: formData.get('ciudad'),
-      direccion: formData.get('direccion')
-    }
-    updateConductor(conductor.id_conductor, updateConductor);
-  }
-
- // Función mejorada para manejar el envío del formulario
-const handleSubmitNewDriver = async (e) => {
-  e.preventDefault();
-  const form = e.currentTarget;
-  
-  if (form.checkValidity() === false) {
-    e.stopPropagation();
-    setValidated(true);
-    return;
-  }
-
-  try {
-    setIsUpdating(true);
+    const form = e.currentTarget;
     
-    // Validar campos requeridos antes de enviar
-    if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
-      alert('Por favor complete todos los campos requeridos');
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
       return;
     }
 
-    const payload = {
-      tipo_documento: newDriver.tipo_documento || 'CC', // Valor por defecto
-      documento: parseInt(newDriver.documento, 10),
-      nombre_conductor: newDriver.nombre_conductor.trim(),
-      apellido_conductor: newDriver.apellido_conductor?.trim() || '',
-      correo_conductor: newDriver.correo_conductor.trim(),
-      foto: newDriver.foto || '', // Campo opcional
-      telefono: newDriver.telefono || '',
-      ciudad: newDriver.ciudad || '',
-      direccion: newDriver.direccion || '',
-      experiencia: parseInt(newDriver.experiencia, 10) || 0,
-      tipo_licencia: newDriver.tipo_licencia || '',
-      fecha_vencimiento: newDriver.fecha_vencimiento || null,
-      contraseña: newDriver.contraseña || 'defaultPassword123', // Agregar contraseña por defecto
-      estado: newDriver.estado || 'Activo'
-    };
+    try {
+      setIsUpdating(true);
+      
+      const payload = {
+        tipo_documento: editDriver.tipo_documento,
+        documento: parseInt(editDriver.documento, 10),
+        nombre_conductor: editDriver.nombre_conductor.trim(),
+        apellido_conductor: editDriver.apellido_conductor?.trim() || '',
+        correo_conductor: editDriver.correo_conductor.trim(),
+        foto: editDriver.foto || '',
+        telefono: editDriver.telefono || '',
+        ciudad: editDriver.ciudad || '',
+        direccion: editDriver.direccion || '',
+        tipo_licencia: editDriver.tipo_licencia || '',
+        fecha_vencimiento: editDriver.fecha_vencimiento || null,
+        experiencia: parseInt(editDriver.experiencia, 10) || 0,
+      };
 
-    console.log('Payload a enviar:', payload);
+      console.log('Payload a actualizar:', payload);
 
-    const response = await fetch('http://localhost:3001/api/drivers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+      const response = await fetch(`http://localhost:3001/api/drivers/${editDriver.id_conductor}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-    // Obtener el texto de la respuesta para debugging
-    const responseText = await response.text();
-    console.log('Respuesta del servidor:', responseText);
-
-    if (!response.ok) {
-      let errorMessage = 'Error al crear el Conductor';
-      try {
-        const errorData = JSON.parse(responseText);
-        errorMessage = errorData.message || errorMessage;
-      } catch (e) {
-        errorMessage = responseText || errorMessage;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
-      throw new Error(`Error ${response.status}: ${errorMessage}`);
+
+      alert('Conductor actualizado exitosamente');
+      setShowUpdateDriverModal(false);
+      
+      // Actualizar la lista de conductores
+      const updatedConductores = conductores.map(conductor => 
+        conductor.id_conductor === editDriver.id_conductor 
+          ? { ...conductor, ...payload }
+          : conductor
+      );
+      setConductores(updatedConductores);
+      
+      setValidated(false);
+      
+    } catch (error) {
+      console.error('Error completo:', error);
+      alert(`Hubo un error al actualizar el conductor: ${error.message}`);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleSubmitNewDriver = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
+      return;
     }
 
-    const data = JSON.parse(responseText);
-    console.log('Conductor creado:', data);
-    
-    alert('Conductor creado exitosamente');
-    setShowNewDriverModal(false);
-    
-    // Actualizar la lista de conductores
-    setConductores(prev => [...prev, data.driver || data]);
-    
-    // Limpiar el formulario
-    setNewDriver({
-      tipo_documento: '',
-      documento: '',
-      nombre_conductor: '',
-      apellido_conductor: '',
-      correo_conductor: '',
-      foto: '',
-      telefono: '',
-      ciudad: '',
-      direccion: '',
-      tipo_licencia: '',
-      fecha_vencimiento: '',
-      experiencia: '',
-      contraseña: '',
-      estado: 'Activo',
-    });
-    
-    setValidated(false);
-    
-  } catch (error) {
-    console.error('Error completo:', error);
-    alert(`Hubo un error al crear el conductor: ${error.message}`);
-  } finally {
-    setIsUpdating(false);
-  }
-};
+    try {
+      setIsUpdating(true);
+      
+      if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
+        alert('Por favor complete todos los campos requeridos');
+        return;
+      }
 
-// Función adicional para verificar la conexión con el backend
-const testBackendConnection = async () => {
-  try {
-    const response = await fetch('http://localhost:3001/api/drivers', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (response.ok) {
-      console.log('Conexión con backend exitosa');
-      return true;
-    } else {
-      console.log('Problema con backend:', response.status);
-      return false;
+      const payload = {
+        tipo_documento: newDriver.tipo_documento || 'CC',
+        documento: parseInt(newDriver.documento, 10),
+        nombre_conductor: newDriver.nombre_conductor.trim(),
+        apellido_conductor: newDriver.apellido_conductor?.trim() || '',
+        correo_conductor: newDriver.correo_conductor.trim(),
+        foto: newDriver.foto || '',
+        telefono: newDriver.telefono || '',
+        ciudad: newDriver.ciudad || '',
+        direccion: newDriver.direccion || '',
+        experiencia: parseInt(newDriver.experiencia, 10) || 0,
+        tipo_licencia: newDriver.tipo_licencia || '',
+        fecha_vencimiento: newDriver.fecha_vencimiento || null,
+        contraseña: newDriver.contraseña || 'defaultPassword123',
+        estado: newDriver.estado || 'Activo'
+      };
+
+      console.log('Payload a enviar:', payload);
+
+      const response = await fetch('http://localhost:3001/api/drivers', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseText = await response.text();
+      console.log('Respuesta del servidor:', responseText);
+
+      if (!response.ok) {
+        let errorMessage = 'Error al crear el Conductor';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = responseText || errorMessage;
+        }
+        throw new Error(`Error ${response.status}: ${errorMessage}`);
+      }
+
+      const data = JSON.parse(responseText);
+      console.log('Conductor creado:', data);
+      
+      alert('Conductor creado exitosamente');
+      setShowNewDriverModal(false);
+      
+      setConductores(prev => [...prev, data.driver || data]);
+      
+      setNewDriver({
+        tipo_documento: '',
+        documento: '',
+        nombre_conductor: '',
+        apellido_conductor: '',
+        correo_conductor: '',
+        foto: '',
+        telefono: '',
+        ciudad: '',
+        direccion: '',
+        tipo_licencia: '',
+        fecha_vencimiento: '',
+        experiencia: '',
+        contraseña: '',
+        estado: 'Activo',
+      });
+      
+      setValidated(false);
+      
+    } catch (error) {
+      console.error('Error completo:', error);
+      alert(`Hubo un error al crear el conductor: ${error.message}`);
+    } finally {
+      setIsUpdating(false);
     }
-  } catch (error) {
-    console.error('No se puede conectar con el backend:', error);
-    return false;
-  }
-};
+  };
+  
   
   // Componente de Paginación
   const renderPagination = () => {

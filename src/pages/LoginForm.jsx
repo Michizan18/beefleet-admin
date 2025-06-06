@@ -1,5 +1,3 @@
-// LoginForm.jsx
-
 import React , { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Alert, Button, Card, Form } from 'react-bootstrap';
@@ -13,8 +11,6 @@ const LoginForm = () => {
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
-    debugger
-    console.log('inicio')
     e.preventDefault();
     setLoading(true);
     setError('');

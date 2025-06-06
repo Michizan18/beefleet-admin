@@ -5,39 +5,10 @@ import { FaUsers, FaChartLine, FaCalendarAlt, FaBuilding, FaSearch, FaPlus, FaEd
 import LayoutBarButton from '../components/LayoutBarButton';
 import './Dashboard.css';
 
-
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
-  const [conductores, setConductores] = useState(null);
-  const [user, setUser ] = useState(null);
-
-  useEffect(() => {
-    const fetchData = () => {
-      const userStorage = localStorage.getItem('veterinario');
-      if (userStorage) {
-        setUser(JSON.parse(userStorage));
-      }
-      };
-    fetchData();
-    const fetchConductores = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/drivers', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        const driverData = await response.json();
-        console.log(driverData[0]);
-        
-        setConductores(driverData[0]);
-      } catch (error) {
-        console.error("Error al cargar datos de conductores:", error);
-=======
   const [conductores, setConductores] = useState([]);
   const [reportes, setReportes] = useState([]);
-  // const [userData, setUserData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,42 +35,55 @@ const Dashboard = () => {
         const reportesData = await reportesResponse.json();
         const conductoresData = await conductoresResponse.json();
 
-        setReportes(reportesData);
-        setConductores(conductoresData);
+        // Validar que los datos sean arrays y tengan la estructura esperada
+        setReportes(Array.isArray(reportesData) ? reportesData : []);
+        setConductores(Array.isArray(conductoresData) ? conductoresData : []);
 
-        // const parced = localStorage.getItem('usuario');
-        // if (parced) {
-        //   const parced2 = JSON.parse(parced);
-        //   const userStorage = parced2.user;
-        //   if (userStorage) {
-        //     setUserData(userStorage);
-        //   }
-        // }
-        // console.log(userStorage)
       } catch (error) {
         console.error('Error al obtener datos:', error);
->>>>>>> main
+        // En caso de error, establecer arrays vacíos para evitar errores de renderizado
+        setReportes([]);
+        setConductores([]);
       } finally {
-        setLoading(false); // Establece loading en false después de obtener los datos
+        setLoading(false);
       }
     };
-<<<<<<< HEAD
-    fetchConductores();
-  }, []);
-  
-=======
 
     fetchData();
   }, []);
 
-  // Formatear fecha a formato español
->>>>>>> main
+  // Formatear fecha a formato español con validación
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    if (!dateString) return 'Fecha no disponible';
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch (error) {
+      return 'Fecha inválida';
+    }
+  };
+
+  // Función para obtener clase de prioridad de forma segura
+  const getPriorityClass = (tipoEstado) => {
+    if (!tipoEstado) return 'default';
+    return tipoEstado.toLowerCase();
+  };
+
+  // Función para obtener clase de badge de forma segura
+  const getBadgeClass = (tipoEstado) => {
+    if (!tipoEstado) return 'secondary';
+    const estado = tipoEstado.toLowerCase();
+    switch (estado) {
+      case 'activo':
+        return 'danger';
+      case 'media':
+        return 'warning';
+      default:
+        return 'info';
+    }
   };
 
   if (loading) {
@@ -113,18 +97,11 @@ const Dashboard = () => {
     );
   }
 
-  // Contenido del Dashboard que irá dentro del Layout
   const dashboardContent = (
     <>
-<<<<<<< HEAD
-      <h1 className="mt-4 mb-4">Bienvenido, {userData?.adminName}</h1>
-      
-      {/* Tarjetas de estadísticas - Actualizadas con clientes */}
-=======
       <h1 className="mt-4 mb-4">Dashboard</h1>
 
       {/* Tarjetas de estadísticas */}
->>>>>>> main
       <Row className="stats-cards">
         <Col md={3} sm={6} className="mb-4">
           <Card className="stats-card">
@@ -134,180 +111,55 @@ const Dashboard = () => {
                   <FaUsers />
                 </div>
                 <div>
-<<<<<<< HEAD
-                  <h4 className="stats-number">{conductores.lenght}</h4>
-=======
                   <h4 className="stats-number">{conductores.length}</h4>
->>>>>>> main
                   <div className="stats-label">Empleados Activos</div>
                 </div>
               </div>
             </Card.Body>
           </Card>
         </Col>
-<<<<<<< HEAD
-        
-        <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
-            <Card.Body>
-              <div className="d-flex align-items-center">
-                <div className="stats-icon blue">
-                  <FaBuilding />
-                </div>
-                <div>
-                  <h4 className="stats-number">{conductores.lenght}</h4>
-                  <div className="stats-label">Tareas Pendientes</div>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        
-        <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
-            <Card.Body>
-              <div className="d-flex align-items-center">
-                <div className="stats-icon green">
-                  <FaChartLine />
-                </div>
-                <div>
-                  <h4 className="stats-number">{conductores.lenght}</h4>
-                  <div className="stats-label">Proyectos Activos</div>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        
-        <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
-            <Card.Body>
-              <div className="d-flex align-items-center">
-                <div className="stats-icon orange">
-                  <FaUsers />
-                </div>
-                <div>
-                  <h4 className="stats-number">{conductores.lenght}</h4>
-                  <div className="stats-label">Nuevos Empleados</div>
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-      
-      {/* Sección de Cargas (existente) */}
-      <Row className="mb-4">
-        <Col>
-          <Card>
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <h5>Listado de Cargas</h5>
-              <Button as={Link} to="/cargas" variant="outline-warning">Ver Todas</Button>
-            </Card.Header>
-            <Card.Body>
-              <Table responsive hover>
-                <thead>
-                  <tr>
-                    <th>Referencia</th>
-                    <th>Cliente</th>
-                    <th>Destino</th>
-                    <th>Vehículo</th>
-                    <th>Conductor</th>
-                    <th>Estado</th>
-                    <th>Valor/Peso</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userData?.cargasRecientes.map(carga => (
-                    <tr key={carga.id}>
-                      <td><strong>{carga.referencia}</strong></td>
-                      <td>{carga.cliente}</td>
-                      <td>{carga.destino}</td>
-                      <td>{carga.vehiculo}</td>
-                      <td>{carga.conductor}</td>
-                      <td>
-                        <Badge bg={
-                          carga.estado === 'Entregado' ? 'success' : 
-                          carga.estado === 'En tránsito' ? 'primary' : 'warning'
-                        }>
-                          {carga.estado}
-                        </Badge>
-                      </td>
-                      <td>{carga.valor} ▲ {carga.peso}</td>
-                      <td>
-                        <Button variant="outline-primary" size="sm" as={Link} to={`/cargas/${carga.id}`}>
-                          Ver
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-      
-      {/* Sección de Empleados Recientes */}
-      <Row className="mb-4">
-        <Col lg={6}>
-=======
-
-        {/* Otras tarjetas... */}
       </Row>
 
       <Row>
         {/* Lista de Empleados Recientes */}
         <Col lg={6} className="mb-4">
->>>>>>> main
           <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center">
               <h5>Empleados Recientes</h5>
               <Button as={Link} to="/conductores" variant="outline-warning" size="sm">Ver Todos</Button>
             </Card.Header>
             <Card.Body>
-              <Table responsive className="table-hover">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Fecha Ingreso</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {conductores.map(conductor => (
-                    <tr key={conductor.id_conductor}>
-<<<<<<< HEAD
-                      <td>{conductor.nombre}</td>
-                      <td>{formatDate(conductor.fechaIngreso)}</td>
-                      <td>
-                        <span className={`badge bg-${conductor.estado === 'Activo' ? 'success' : 'warning'} rounded-pill`}>
-=======
-                      <td>{conductor.nombre_conductor}</td>
-                      <td>{formatDate(conductor.fechaVencimiento)}</td>
-                      <td>
-                        <span className={`badge bg-${conductor.estado === 'activo' ? 'success' : 'warning'} rounded-pill`}>
->>>>>>> main
-                          {conductor.estado}
-                        </span>
-                      </td>
+              {conductores.length > 0 ? (
+                <Table responsive className="table-hover">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Fecha Ingreso</th>
+                      <th>Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </Table>
+                  </thead>
+                  <tbody>
+                    {conductores.map(conductor => (
+                      <tr key={conductor.id_conductor || Math.random()}>
+                        <td>{conductor.nombre_conductor || 'Sin nombre'}</td>
+                        <td>{formatDate(conductor.fechaVencimiento)}</td>
+                        <td>
+                          <span className={`badge bg-${conductor.estado === 'activo' ? 'success' : 'warning'} rounded-pill`}>
+                            {conductor.estado || 'Sin estado'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              ) : (
+                <p className="text-muted">No hay empleados para mostrar</p>
+              )}
             </Card.Body>
           </Card>
         </Col>
-<<<<<<< HEAD
-      </Row>
-      
-      {/* Sección existente de Reportes */}
-      <Row>
-=======
 
         {/* Reportes */}
->>>>>>> main
         <Col lg={6} className="mb-4">
           <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center">
@@ -316,30 +168,29 @@ const Dashboard = () => {
             </Card.Header>
             <Card.Body>
               <div className="task-list">
-<<<<<<< HEAD
-                {user.reportes.map(tarea => (
-                  <div key={tarea.id} className="task-item">
-=======
-                {reportes.map(reporte => (
-                  <div key={reporte.id_estado} className="task-item">
->>>>>>> main
-                    <div className="task-icon">
-                      <span className={`priority-dot priority-${reporte.tipo_estado.toLowerCase()}`}></span>
-                    </div>
-                    <div className="task-info">
-                      <h6 className="task-title">{reporte.descripcion}</h6>
-                      <div className="task-date">
-                        <FaCalendarAlt className="me-1" size={12} />
-                        {formatDate(reporte.fecha)}
+                {reportes.length > 0 ? (
+                  reportes.map(reporte => (
+                    <div key={reporte.id_estado || Math.random()} className="task-item">
+                      <div className="task-icon">
+                        <span className={`priority-dot priority-${getPriorityClass(reporte.tipo_estado)}`}></span>
+                      </div>
+                      <div className="task-info">
+                        <h6 className="task-title">{reporte.descripcion || 'Sin descripción'}</h6>
+                        <div className="task-date">
+                          <FaCalendarAlt className="me-1" size={12} />
+                          {formatDate(reporte.fecha)}
+                        </div>
+                      </div>
+                      <div className="task-priority">
+                        <span className={`badge bg-${getBadgeClass(reporte.tipo_estado)}`}>
+                          {reporte.tipo_estado || 'Sin estado'}
+                        </span>
                       </div>
                     </div>
-                    <div className="task-priority">
-                      <span className={`badge bg-${reporte.tipo_estado === 'activo' ? 'danger' : reporte.tipo_estado === 'Media' ? 'warning' : 'info'}`}>
-                        {reporte.tipo_estado}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-muted">No hay reportes para mostrar</p>
+                )}
               </div>
             </Card.Body>
           </Card>
@@ -349,11 +200,7 @@ const Dashboard = () => {
   );
 
   return (
-<<<<<<< HEAD
-    <LayoutBarButton user={user}>
-=======
     <LayoutBarButton>
->>>>>>> main
       {dashboardContent}
     </LayoutBarButton>
   );

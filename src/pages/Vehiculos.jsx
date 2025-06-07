@@ -11,13 +11,14 @@ import LayoutBarButton from '../components/LayoutBarButton';
 
 const Vehiculos = () => {
   const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [currentVehicle, setCurrentVehicle] = useState(null);
   const [showNewVehicleModal, setShowNewVehicleModal] = useState(false);
   const [vehiculos, setVehiculos] = useState([]);
+  const [conductores, setConductores] = useState([]); // Nuevo estado para conductores
   
   // Estado para nuevo vehículo
   const [newVehicle, setNewVehicle] = useState({
@@ -25,70 +26,133 @@ const Vehiculos = () => {
     modelo: '',
     año: new Date().getFullYear(),
     conductor: '',
-    estado: 'Activo',
-    ultimaRevision: '',
-    proximaRevision: '',
+    estado_vehiculo: 'Activo',
+    seguro: '',
     kilometraje: '',
     marca: '',
     color: '',
     capacidad: '',
     tipo: '',
-    asignado: false
+    peso: '',
+    matricula: '',
   });
   
   const [validated, setValidated] = useState(false);
 
-   useEffect(() => {
-    const fetchVehiculos = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/vehicles', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+  // Función para obtener el nombre del conductor por ID
+  const getConductorName = (conductorId) => {
+    if (!conductorId) return 'Sin asignar';
+    const conductor = conductores.find(c => c.id === conductorId || c.id_conductor === conductorId);
+    return conductor ? conductor.nombre : `Conductor ID: ${conductorId}`;
+  };
 
-        const vehicleData = await response.json();
+  // Función para eliminar vehículo
+  const handleDeleteVehicle = async (id_vehiculo) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este vehículo?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`http://localhost:3001/api/vehicles/${id_vehiculo}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Agregar token si es necesario
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al eliminar el vehículo');
+      }
+      
+      setVehiculos(vehiculos.filter(vehiculo => vehiculo.id_vehiculo !== id_vehiculo));
+      alert('Vehículo eliminado exitosamente');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Hubo un error al eliminar el vehículo');
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Obtener token del localStorage si existe
+        const token = localStorage.getItem('token');
+        const headers = {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        };
+        
+        // Agregar Authorization header si hay token
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // Fetch vehículos y conductores en paralelo
+        const [vehiclesResponse, conductoresResponse] = await Promise.all([
+          fetch('http://localhost:3001/api/vehicles', {
+            method: 'GET',
+            headers,
+          }),
+          fetch('http://localhost:3001/api/conductores', { // Ajusta esta URL según tu API
+            method: 'GET',
+            headers,
+          }).catch(error => {
+            console.warn('No se pudieron cargar los conductores:', error);
+            return { ok: false };
+          })
+        ]);
+
+        if (!vehiclesResponse.ok) {
+          throw new Error(`Error al cargar los vehículos: ${vehiclesResponse.status}`);
+        }
+
+        const vehicleData = await vehiclesResponse.json();
+        console.log('Datos de vehículos:', vehicleData);
         setVehiculos(vehicleData);
+
+        // Cargar conductores si la respuesta es exitosa
+        if (conductoresResponse.ok) {
+          const conductoresData = await conductoresResponse.json();
+          console.log('Datos de conductores:', conductoresData);
+          setConductores(conductoresData);
+        } else {
+          // Datos de conductores hardcodeados como fallback
+          setConductores([
+          ]);
+        }
+
       } catch (error) {
-        console.error("Error al cargar datos de Vehiculos:", error);
+        console.error("Error al cargar datos:", error);
+        alert(`Error al cargar los datos: ${error.message}`);
+        
+        // En caso de error, usar datos de ejemplo para conductores
+        setConductores([
+        ]);
       } finally {
         setLoading(false);
       }
     };
-    fetchVehiculos();
-    const handleDeleteVehicle = async (id_vehiculo) => {
-      try {
-        const response = await fetch(`http://localhost:3001/api/vehicles/${id_vehiculo}`, {
-          method: 'DELETE',
-        });
-        if (!response.ok) {
-          throw new Error('Error al eliminar el Vehiculo');
-        }
-        // setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Hubo un error al eliminar el conductor');
-      }
-    };
-
     
+    fetchData();
   }, []);
-  console.log(vehiculos);
 
-  // const filteredVehicles = vehiculos.filter((vehiculos) => {
-  //   // Filtrar por término de búsqueda
-  //   const matchesSearch = 
-  //     vehiculos.placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //     vehiculos.modelo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //     (vehiculos.conductor && vehiculos.conductor.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Filtrar vehículos
+  const filteredVehicles = vehiculos.filter((vehiculo) => {
+    const conductorName = getConductorName(vehiculo.conductor);
     
-  //   // Filtrar por estado
-  //   const matchesStatus = 
-  //     statusFilter === 'Todos' || vehiculos.estado === statusFilter;
+    const matchesSearch = 
+      vehiculo.placa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehiculo.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      conductorName.toLowerCase().includes(searchTerm.toLowerCase());
     
-  //   return matchesSearch && matchesStatus;
-  // });
+    const matchesStatus = 
+      statusFilter === 'Todos' || vehiculo.estado_vehiculo === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
   
   // Mostrar detalles del vehículo
   const handleShowDetails = (vehicle) => {
@@ -106,7 +170,7 @@ const Vehiculos = () => {
   };
   
   // Manejar envío del formulario
-  const handleSubmitNewVehicle = (e) => {
+  const handleSubmitNewVehicle = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
     
@@ -116,26 +180,52 @@ const Vehiculos = () => {
       return;
     }
     
-    // Aquí iría la lógica para guardar el nuevo vehículo
-    
-    // Cerrar modal y resetear form
-    setShowNewVehicleModal(false);
-    setNewVehicle({
-      placa: '',
-      modelo: '',
-      año: new Date().getFullYear(),
-      conductor: '',
-      estado: 'Activo',
-      ultimaRevision: '',
-      proximaRevision: '',
-      kilometraje: '',
-      marca: '',
-      color: '',
-      capacidad: '',
-      tipo: '',
-      asignado: false
-    });
-    setValidated(false);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('http://localhost:3001/api/vehicles', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(newVehicle),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al crear el vehículo');
+      }
+      
+      const nuevoVehiculo = await response.json();
+      setVehiculos([...vehiculos, nuevoVehiculo]);
+      
+      // Cerrar modal y resetear form
+      setShowNewVehicleModal(false);
+      setNewVehicle({
+        placa: '',
+        modelo: '',
+        año: new Date().getFullYear(),
+        conductor: '',
+        estado_vehiculo: 'Activo',
+        seguro: '',
+        kilometraje: '',
+        marca: '',
+        color: '',
+        capacidad: '',
+        tipo: '',
+        peso: '',
+        matricula: '',
+      });
+      setValidated(false);
+      alert('Vehículo creado exitosamente');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al crear el vehículo');
+    }
   };
   
   // Componente para el badge de estado
@@ -160,6 +250,18 @@ const Vehiculos = () => {
     
     return <span className={`badge bg-${variant} rounded-pill`}>{estado}</span>;
   };
+  
+  if (loading) {
+    return (
+      <LayoutBarButton userData={userData}>
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+          <div className="spinner-border text-warning" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+        </div>
+      </LayoutBarButton>
+    );
+  }
   
   return (
     <LayoutBarButton userData={userData}>
@@ -217,7 +319,7 @@ const Vehiculos = () => {
           <div className="d-flex justify-content-between align-items-center">
             <div className="d-flex align-items-center">
               <FaCarAlt className="text-warning me-2" size={20} />
-              <h5 className="mb-0">Listado de Vehículos</h5>
+              <h5 className="mb-0">Listado de Vehículos ({filteredVehicles.length})</h5>
             </div>
           </div>
         </Card.Header>
@@ -231,59 +333,61 @@ const Vehiculos = () => {
                   <th>Año</th>
                   <th>Conductor</th>
                   <th>Estado</th>
-                  <th>Última Revisión</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {vehiculos.map((vehiculo) => (
-                  <tr key={vehiculo.id_vehiculo}>
-                    <td>{vehicle.placa}</td>
-                    <td>{vehicle.modelo}</td>
-                    <td>{vehicle.matricula}</td>
-                    <td>
-                      {vehicle.asignado ? (
-                        <div className="d-flex align-items-center">
-                          <FaUserCircle className="me-2 text-warning" />
-                          {vehicle.conductor}
+                {filteredVehicles.map((vehiculo) => {
+                  const conductorName = getConductorName(vehiculo.conductor);
+                  return (
+                    <tr key={vehiculo.id_vehiculo}>
+                      <td>{vehiculo.placa}</td>
+                      <td>{vehiculo.modelo}</td>
+                      <td>{vehiculo.año}</td>
+                      <td>
+                        {vehiculo.conductor ? (
+                          <div className="d-flex align-items-center">
+                            <FaUserCircle className="me-2 text-warning" />
+                            {conductorName}
+                          </div>
+                        ) : (
+                          <span className="text-muted">Sin asignar</span>
+                        )}
+                      </td>
+                      <td>
+                        <EstadoBadge estado={vehiculo.estado_vehiculo || vehiculo.estado} />
+                      </td>
+                      <td>{vehiculo.seguro || 'N/A'}</td>
+                      <td>
+                        <div className="action-buttons">
+                          <Button 
+                            variant="outline-warning" 
+                            size="sm" 
+                            className="me-1"
+                            onClick={() => handleShowDetails(vehiculo)}
+                          >
+                            Ver
+                          </Button>
+                          <Button variant="outline-warning" size="sm" className="me-1">
+                            <FaEdit />
+                          </Button>
+                          <Button 
+                            variant="outline-danger" 
+                            size="sm"
+                            onClick={() => handleDeleteVehicle(vehiculo.id_vehiculo)}
+                          >
+                            <FaTrashAlt />
+                          </Button>
                         </div>
-                      ) : (
-                        <span className="text-muted">{vehicle.conductor}</span>
-                      )}
-                    </td>
-                    <td>
-                      <EstadoBadge estado={vehicle.estado_vehiculo} />
-                    </td>
-                    <td>{vehicle.seguro}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <Button 
-                          variant="outline-warning" 
-                          size="sm" 
-                          className="me-1"
-                          onClick={() => handleShowDetails(vehicle)}
-                        >
-                          Ver
-                        </Button>
-                        <Button variant="outline-warning" size="sm" className="me-1">
-                          <FaEdit />
-                        </Button>
-                        <Button 
-                          variant="outline-danger" 
-                          size="sm"
-                          onClick={() => handleDeleteVehicle(vehicle.id_vehiculo)}
-                        >
-                          <FaTrashAlt />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </Table>
           </div>
           
-          {filteredVehicles.length === 0 && (
+          {filteredVehicles.length === 0 && !loading && (
             <div className="text-center py-4">
               <p className="text-muted">No se encontraron vehículos con los criterios de búsqueda.</p>
             </div>
@@ -311,7 +415,7 @@ const Vehiculos = () => {
                   </div>
                   <h4>{currentVehicle.modelo}</h4>
                   <p className="mb-1">
-                    <EstadoBadge estado={currentVehicle.estado} />
+                    <EstadoBadge estado={currentVehicle.estado_vehiculo} />
                   </p>
                   <p className="text-muted">
                     <FaIdCard className="me-2" />
@@ -323,43 +427,49 @@ const Vehiculos = () => {
                   <Row className="mb-3">
                     <Col sm={6}>
                       <p className="mb-1"><strong>Marca:</strong></p>
-                      <p>{currentVehicle.marca}</p>
+                      <p>{currentVehicle.marca || 'N/A'}</p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Año:</strong></p>
-                      <p>{currentVehicle.año}</p>
+                      <p>{currentVehicle.año || 'N/A'}</p>
                     </Col>
                   </Row>
                   <Row className="mb-3">
                     <Col sm={6}>
                       <p className="mb-1"><strong>Color:</strong></p>
-                      <p>{currentVehicle.color}</p>
+                      <p>{currentVehicle.color || 'N/A'}</p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Tipo:</strong></p>
-                      <p>{currentVehicle.tipo}</p>
+                      <p>{currentVehicle.tipo || 'N/A'}</p>
+                    </Col>
+                  </Row>
+                  <Row className="mb-3">
+                    <Col sm={6}>
+                      <p className="mb-1"><strong>Matrícula:</strong></p>
+                      <p>{currentVehicle.matricula || 'N/A'}</p>
+                    </Col>
+                    <Col sm={6}>
+                      <p className="mb-1"><strong>Peso:</strong></p>
+                      <p>{currentVehicle.peso ? `${currentVehicle.peso} kg` : 'N/A'}</p>
                     </Col>
                   </Row>
                   
                   <h5 className="mb-3 mt-4">Mantenimiento</h5>
                   <Row className="mb-3">
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Última Revisión:</strong></p>
-                      <p>{currentVehicle.ultimaRevision}</p>
+                      <p className="mb-1"><strong>Seguro:</strong></p>
+                      <p>{currentVehicle.seguro || 'N/A'}</p>
                     </Col>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Próxima Revisión:</strong></p>
-                      <p>{currentVehicle.proximaRevision}</p>
+                      <p className="mb-1"><strong>Kilometraje:</strong></p>
+                      <p>{currentVehicle.kilometraje ? `${currentVehicle.kilometraje} km` : 'N/A'}</p>
                     </Col>
                   </Row>
                   <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Kilometraje:</strong></p>
-                      <p>{currentVehicle.kilometraje} km</p>
-                    </Col>
-                    <Col sm={6}>
+                    <Col sm={12}>
                       <p className="mb-1"><strong>Capacidad:</strong></p>
-                      <p>{currentVehicle.capacidad}</p>
+                      <p>{currentVehicle.capacidad || 'N/A'}</p>
                     </Col>
                   </Row>
                   
@@ -367,10 +477,10 @@ const Vehiculos = () => {
                   <Row className="mb-3">
                     <Col sm={12}>
                       <p className="mb-1"><strong>Conductor Asignado:</strong></p>
-                      {currentVehicle.asignado ? (
+                      {currentVehicle.conductor ? (
                         <p className="d-flex align-items-center">
                           <FaUserCircle className="me-2 text-warning" />
-                          {currentVehicle.conductor}
+                          {getConductorName(currentVehicle.conductor)}
                         </p>
                       ) : (
                         <p className="text-muted">Sin asignar</p>
@@ -544,39 +654,6 @@ const Vehiculos = () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Última Revisión</Form.Label>
-                    <Form.Control
-                      type="date"
-                      name="ultimaRevision"
-                      value={newVehicle.ultimaRevision}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La fecha de última revisión es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Próxima Revisión</Form.Label>
-                    <Form.Control
-                      type="date"
-                      name="proximaRevision"
-                      value={newVehicle.proximaRevision}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La fecha de próxima revisión es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
                     <Form.Label>Kilometraje</Form.Label>
                     <InputGroup>
                       <Form.Control
@@ -598,8 +675,8 @@ const Vehiculos = () => {
                   <Form.Group className="mb-3">
                     <Form.Label>Estado</Form.Label>
                     <Form.Select
-                      name="estado"
-                      value={newVehicle.estado}
+                      name="estado_vehiculo"
+                      value={newVehicle.estado_vehiculo}
                       onChange={handleInputChange}
                       required
                     >
@@ -623,10 +700,12 @@ const Vehiculos = () => {
                       value={newVehicle.conductor}
                       onChange={handleInputChange}
                     >
-                      <option value="Sin asignar">Sin asignar</option>
-                      <option value="Luis Martínez">Luis Martínez</option>
-                      <option value="Pablo Cárdenas">Pablo Cárdenas</option>
-                      <option value="Ana López">Ana López</option>
+                      <option value="">Sin asignar</option>
+                      {conductores.map((conductor) => (
+                        <option key={conductor.id || conductor.id_conductor} value={conductor.id || conductor.id_conductor}>
+                          {conductor.nombre}
+                        </option>
+                      ))}
                     </Form.Select>
                     <Form.Text className="text-muted">
                       Puede dejar sin asignar y seleccionar un conductor más tarde

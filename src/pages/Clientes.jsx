@@ -14,7 +14,6 @@ const Clientes = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [documentFilter, setDocumentFilter] = useState('Todos');
   const [showClientModal, setShowClientModal] = useState(false);
   const [currentClient, setCurrentClient] = useState(null);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
@@ -23,10 +22,7 @@ const Clientes = () => {
   
   // Estado para nuevo cliente
   const [newClient, setNewClient] = useState({
-    tipo_documento: 'Cédula',
-    documento: '',
-    nombre_cliente: '',
-    apellido_cliente: '',
+    nit: '',
     direccion: '',
     ciudad: '',
     telefono: '',
@@ -37,32 +33,82 @@ const Clientes = () => {
 
   // Función para obtener el token de autenticación
   const getAuthToken = () => {
-    return localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    return token ? `Bearer ${token}` : null;
+  };
+
+  // Función mejorada para procesar la respuesta de MySQL
+  const processMySQLResponse = (rawData) => {
+    try {
+      // Si no hay datos, retornar array vacío
+      if (!rawData) return [];
+      
+      // Si es un array de arrays (resultado directo de MySQL)
+      if (Array.isArray(rawData) && rawData.length > 0 && Array.isArray(rawData[0])) {
+        return rawData[0].filter(item => item && typeof item === 'object' && item.id_cliente);
+      }
+      
+      // Si es un array simple de objetos cliente
+      if (Array.isArray(rawData)) {
+        return rawData.filter(item => item && typeof item === 'object' && item.id_cliente);
+      }
+      
+      // Si es un solo objeto cliente
+      if (typeof rawData === 'object' && rawData.id_cliente) {
+        return [rawData];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error processing MySQL response:', error);
+      return [];
+    }
   };
 
   // Función para obtener todos los clientes
   const fetchClients = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
       const token = getAuthToken();
-      const response = await fetch('/api/clients', {
+      if (!token) {
+        setError('No hay token de autenticación');
+        setLoading(false);
+        return;
+      }
+      
+      const response = await fetch('http://localhost:3001/api/clients', {
         method: 'GET',
         headers: {
           'Authorization': token,
           'Content-Type': 'application/json'
         }
       });
-
+      
       if (!response.ok) {
-        throw new Error('Error al obtener los clientes');
+        const errorText = await response.text();
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('token');
+          setError('Sesión expirada. Por favor, inicie sesión nuevamente.');
+          return;
+        }
+        throw new Error(errorText || 'Error al obtener los clientes');
       }
 
       const data = await response.json();
-      setClients(data);
-      setError(null);
+      const processedData = processMySQLResponse(data);
+      
+      if (!processedData.length) {
+        setError('No se encontraron clientes');
+      }
+      
+      setClients(processedData);
+      
     } catch (error) {
       console.error('Error fetching clients:', error);
-      setError('Error al cargar los clientes');
+      setError(`Error al cargar los clientes: ${error.message}`);
+      setClients([]);
     } finally {
       setLoading(false);
     }
@@ -72,7 +118,7 @@ const Clientes = () => {
   const createNewClient = async (clientData) => {
     try {
       const token = getAuthToken();
-      const response = await fetch('/api/clients', {
+      const response = await fetch('http://localhost:3001/api/clients', {
         method: 'POST',
         headers: {
           'Authorization': token,
@@ -82,11 +128,11 @@ const Clientes = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Error al crear el cliente');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error al crear el cliente');
       }
 
-      const result = await response.json();
-      return result;
+      return await response.json();
     } catch (error) {
       console.error('Error creating client:', error);
       throw error;
@@ -97,7 +143,7 @@ const Clientes = () => {
   const deleteClient = async (clientId) => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`/api/clients/${clientId}`, {
+      const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': token,
@@ -106,7 +152,8 @@ const Clientes = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Error al eliminar el cliente');
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error al eliminar el cliente');
       }
 
       return true;
@@ -116,26 +163,23 @@ const Clientes = () => {
     }
   };
 
-  // useEffect para cargar los clientes al montar el componente
+  // Cargar clientes al montar el componente
   useEffect(() => {
     fetchClients();
   }, []);
 
   // Filtrar clientes
   const filteredClients = clients.filter((client) => {
-    // Filtrar por término de búsqueda
+    if (!client || typeof client !== 'object' || !client.id_cliente) {
+      return false;
+    }
+    
     const matchesSearch = 
-      client.documento?.toString().includes(searchTerm) ||
-      client.nombre_cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.apellido_cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.empresa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.ciudad?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Filtrar por tipo de documento
-    const matchesDocument = 
-      documentFilter === 'Todos' || client.tipo_documento === documentFilter;
-    
-    return matchesSearch && matchesDocument;
+      (client.nit?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.empresa?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (client.ciudad?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      
+    return matchesSearch;
   });
   
   // Mostrar detalles del cliente
@@ -167,17 +211,11 @@ const Clientes = () => {
     try {
       setLoading(true);
       await createNewClient(newClient);
-      
-      // Recargar la lista de clientes
       await fetchClients();
       
-      // Cerrar modal y resetear form
       setShowNewClientModal(false);
       setNewClient({
-        tipo_documento: 'Cédula',
-        documento: '',
-        nombre_cliente: '',
-        apellido_cliente: '',
+        nit: '',
         direccion: '',
         ciudad: '',
         telefono: '',
@@ -185,9 +223,8 @@ const Clientes = () => {
       });
       setValidated(false);
       
-      alert('Cliente creado exitosamente');
     } catch (error) {
-      alert('Error al crear el cliente');
+      setError(`Error al crear el cliente: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -200,9 +237,8 @@ const Clientes = () => {
         setLoading(true);
         await deleteClient(clientId);
         await fetchClients();
-        alert('Cliente eliminado exitosamente');
       } catch (error) {
-        alert('Error al eliminar el cliente');
+        setError(`Error al eliminar el cliente: ${error.message}`);
       } finally {
         setLoading(false);
       }
@@ -243,23 +279,6 @@ const Clientes = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-              </InputGroup>
-            </Col>
-            <Col md={6} lg={4} className="mt-3 mt-md-0">
-              <InputGroup>
-                <InputGroup.Text id="filter-addon" className="bg-warning text-white">
-                  <FaFilter />
-                </InputGroup.Text>
-                <Form.Select 
-                  value={documentFilter}
-                  onChange={(e) => setDocumentFilter(e.target.value)}
-                >
-                  <option value="Todos">Todos los documentos</option>
-                  <option value="Cédula">Cédula</option>
-                  <option value="NIT">NIT</option>
-                  <option value="Pasaporte">Pasaporte</option>
-                  <option value="Tarjeta de Identidad">Tarjeta de Identidad</option>
-                </Form.Select>
               </InputGroup>
             </Col>
           </Row>
@@ -304,27 +323,27 @@ const Clientes = () => {
                     <tr key={client.id_cliente}>
                       <td>
                         <div>
-                          <small className="text-muted">{client.tipo_documento}</small>
+                          <small className="text-muted">NIT</small>
                           <br />
-                          <strong>{client.documento}</strong>
+                          <strong>{client.nit || 'N/A'}</strong>
                         </div>
                       </td>
                       <td>
                         <div className="d-flex align-items-center">
                           <FaUserCircle className="me-2 text-warning" />
-                          {client.nombre_cliente} {client.apellido_cliente}
+                          {client.empresa || 'Sin empresa'}
                         </div>
                       </td>
                       <td>
                         <div className="d-flex align-items-center">
                           <FaMapMarkerAlt className="me-2 text-muted" />
-                          {client.ciudad}
+                          {client.ciudad || 'Sin ciudad'}
                         </div>
                       </td>
                       <td>
                         <div className="d-flex align-items-center">
                           <FaPhone className="me-2 text-muted" />
-                          {client.telefono}
+                          {client.telefono || 'Sin teléfono'}
                         </div>
                       </td>
                       <td>
@@ -390,31 +409,15 @@ const Clientes = () => {
             <div className="client-detail">
               <Row>
                 <Col md={4} className="text-center mb-4 mb-md-0">
-                  <div className="client-avatar mb-3">
-                    <FaUserCircle size={100} className="text-warning" />
-                  </div>
-                  <h4>{currentClient.nombre_cliente} {currentClient.apellido_cliente}</h4>
                   <p className="mb-1">
-                    <Badge bg="info">{currentClient.tipo_documento}</Badge>
+                    <Badge bg="info">NIT</Badge>
                   </p>
                   <p className="text-muted">
                     <FaIdCard className="me-2" />
-                    {currentClient.documento}
+                    {currentClient.nit}
                   </p>
                 </Col>
                 <Col md={8}>
-                  <h5 className="mb-3">Información Personal</h5>
-                  <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Nombre:</strong></p>
-                      <p>{currentClient.nombre_cliente}</p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Apellido:</strong></p>
-                      <p>{currentClient.apellido_cliente}</p>
-                    </Col>
-                  </Row>
-                  
                   <h5 className="mb-3 mt-4">Información de Contacto</h5>
                   <Row className="mb-3">
                     <Col sm={6}>
@@ -485,81 +488,26 @@ const Clientes = () => {
           </Modal.Header>
           <Modal.Body>
             <div className="new-client-form">
-              {/* Información del documento */}
               <h5 className="border-bottom pb-2 mb-3">Información de Identificación</h5>
               <Row className="mb-3">
-                <Col md={6}>
+                <Col md={12}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Tipo de Documento</Form.Label>
-                    <Form.Select
-                      name="tipo_documento"
-                      value={newClient.tipo_documento}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="Cédula">Cédula</option>
-                      <option value="NIT">NIT</option>
-                      <option value="Pasaporte">Pasaporte</option>
-                      <option value="Tarjeta de Identidad">Tarjeta de Identidad</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Número de Documento</Form.Label>
+                    <Form.Label>NIT</Form.Label>
                     <Form.Control
                       type="text"
-                      name="documento"
-                      value={newClient.documento}
+                      name="nit"
+                      value={newClient.nit}
                       onChange={handleInputChange}
                       required
-                      placeholder="Ingrese el número de documento"
+                      placeholder="Ingrese el NIT"
                     />
                     <Form.Control.Feedback type="invalid">
-                      El número de documento es obligatorio
+                      El NIT es obligatorio
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
               </Row>
               
-              {/* Información personal */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Información Personal</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Nombre</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="nombre_cliente"
-                      value={newClient.nombre_cliente}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Ingrese el nombre"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El nombre es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Apellido</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="apellido_cliente"
-                      value={newClient.apellido_cliente}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Ingrese el apellido"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El apellido es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              {/* Información de contacto */}
               <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Contacto</h5>
               <Row className="mb-3">
                 <Col md={6}>
@@ -615,22 +563,18 @@ const Clientes = () => {
                 </Col>
               </Row>
               
-              {/* Información empresarial */}
               <h5 className="border-bottom pb-2 mb-3 mt-4">Información Empresarial</h5>
               <Row className="mb-3">
                 <Col md={12}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Empresa (Opcional)</Form.Label>
+                    <Form.Label>Empresa</Form.Label>
                     <Form.Control
                       type="text"
                       name="empresa"
                       value={newClient.empresa}
                       onChange={handleInputChange}
-                      placeholder="Ingrese el nombre de la empresa (opcional)"
+                      placeholder="Ingrese el nombre de la empresa o del cliente"
                     />
-                    <Form.Text className="text-muted">
-                      Este campo es opcional
-                    </Form.Text>
                   </Form.Group>
                 </Col>
               </Row>

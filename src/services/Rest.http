@@ -25,12 +25,12 @@ content-type: application/json
 
 {
     "correo_conductor": "ana@gmail.com",
-    "contraseña": "1234"
+    "contraseña": "12345"
 }
 
 ###
 GET http://localhost:3001/api/conductores/
-Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzQ4NDAwMzc5LCJleHAiOjE3NDg0MDM5Nzl9.61KHmQe7dpK6Rs0IlytnJorEbmd3U8YsK4YHLjdIgbo"
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzQ4NDAwMzc5LCJleHAiOjE3NDg0MDM5Nzl9.61KHmQe7dpK6Rs0IlytnJorEbmd3U8YsK4YHLjdIgbo
 
 ###
 POST http://localhost:3001/api/conductores/
@@ -51,3 +51,8 @@ content-type: application/json
   "fecha_vencimiento": "2025-05-31",
   "experiencia": "15"
 }
+
+###
+//Probar sin comillas//
+GET http://localhost:3001/api/vehicles/
+Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwiaWF0IjoxNzQ5MTc5MDc2LCJleHAiOjE3NDkxODk4NzZ9.NUDB_Uw9kP6O2mdXavcsmKQkbriiVAZqe350Ne8dgmU

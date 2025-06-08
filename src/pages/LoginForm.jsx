@@ -1,5 +1,3 @@
-// LoginForm.jsx
-
 import React , { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Alert, Button, Card, Form } from 'react-bootstrap';
@@ -32,6 +30,8 @@ const LoginForm = () => {
       if (response.ok){
         setSuccess(true)
         await localStorage.setItem('token', data.token);
+        await localStorage.setItem('usuario', data.user)
+        console.log(data.user);
         await localStorage.setItem('usuario', JSON.stringify(data))
         setTimeout(()=>{
           window.location.href = '/dashboard';

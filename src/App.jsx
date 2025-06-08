@@ -8,6 +8,7 @@ import Vehiculos from './pages/Vehiculos';
 import Cargas from './pages/Cargas';
 import Clientes from './pages/Clientes';
 import Ventas from './pages/Ventas';
+import RecuperarContraseña from './components/RecuperarContraseña';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/cargas" element={<Cargas/>} /> 
         <Route path="/clientes" element={<Clientes/>} />
         <Route path="/ventas" element={<Ventas/>} />
+        <Route path="/recuperar-password" element={<RecuperarContraseña/>} />
       </Routes>
     </Router>
   )

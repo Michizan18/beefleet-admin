@@ -121,7 +121,10 @@ const LayoutBarButton = ({ children} ) => {
             className={`header-button ${currentPath === '/ventas' ? 'active' : ''}`}
           >
             <FaMoneyBillWave  className="icon" /> Ventas
+<<<<<<< HEAD
+=======
             
+>>>>>>> Michelle
           </Link>
           <Link 
             to="/profile" 

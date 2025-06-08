@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { Navbar, Container, Dropdown } from 'react-bootstrap';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -121,7 +120,6 @@ const LayoutBarButton = ({ children} ) => {
             className={`header-button ${currentPath === '/ventas' ? 'active' : ''}`}
           >
             <FaMoneyBillWave  className="icon" /> Ventas
-            
           </Link>
           <Link 
             to="/profile" 

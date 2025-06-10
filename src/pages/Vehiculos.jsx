@@ -18,7 +18,7 @@ const Vehiculos = () => {
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [currentVehicle, setCurrentVehicle] = useState(null);
   const [showNewVehicleModal, setShowNewVehicleModal] = useState(false);
-  const [vehiculos, setVehiculos] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
   
   // Estado para nuevo vehículo
   const [newVehicle, setNewVehicle] = useState({
@@ -50,7 +50,8 @@ const Vehiculos = () => {
         });
 
         const vehicleData = await response.json();
-        setVehiculos(vehicleData);
+        setVehicles(vehicleData);
+        console.log(vehicleData);
       } catch (error) {
         console.error("Error al cargar datos de Vehiculos:", error);
       } finally {
@@ -58,7 +59,10 @@ const Vehiculos = () => {
       }
     };
     fetchVehiculos();
-    const handleDeleteVehicle = async (id_vehiculo) => {
+  }, []);
+  console.log(vehicles);
+
+  const handleDeleteVehicle = async (id_vehiculo) => {
       try {
         const response = await fetch(`http://localhost:3001/api/vehicles/${id_vehiculo}`, {
           method: 'DELETE',
@@ -71,11 +75,7 @@ const Vehiculos = () => {
         console.error('Error:', error);
         alert('Hubo un error al eliminar el conductor');
       }
-    };
-
-    
-  }, []);
-  console.log(vehiculos);
+  };
 
   // const filteredVehicles = vehiculos.filter((vehiculos) => {
   //   // Filtrar por término de búsqueda
@@ -237,8 +237,8 @@ const Vehiculos = () => {
                 </tr>
               </thead>
               <tbody>
-                {vehiculos.map((vehiculo) => (
-                  <tr key={vehiculo.id_vehiculo}>
+                {vehicles.map((vehicle) => (
+                  <tr key={vehicle.id_vehiculo}>
                     <td>{vehicle.placa}</td>
                     <td>{vehicle.modelo}</td>
                     <td>{vehicle.matricula}</td>

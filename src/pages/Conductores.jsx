@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { Card, Table, Button, Dropdown, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { 
-  FaUsers, FaPhone, FaEnvelope, FaMapMarkerAlt, FaIdCard, FaBell, 
-  FaUserPlus, FaUserCircle, FaCog, FaSignOutAlt, FaChartLine, 
-  FaClipboardList, FaCalendarAlt, FaSearch, FaFilter, FaCarAlt, 
+  FaUsers, FaPhone, FaEnvelope, FaMapMarkerAlt, FaIdCard, 
+  FaUserPlus, FaUserCircle, FaSearch, FaFilter, FaCarAlt, 
   FaEdit, FaTrashAlt, FaPlus, FaSave 
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
+import apiRequest from '../services/api';
 import './Conductores.css';
 
 const Conductores = () => {
@@ -38,59 +38,51 @@ const Conductores = () => {
     experiencia: '',
     contraseña: '',
     estado: 'Activo',
-    calificacion: 0,
-    vehiculoAsignado: '',
-    modeloVehiculo: '',
-    viajesCompletados: 0
   });
   const [validated, setValidated] = useState(false);
   
   const conductoresPorPagina = 8;
 
-  const [driverStep, setDriverStep] = useState(1);
-const totalDriverSteps = 4;
-
-// Funciones para navegación de pasos
-const nextDriverStep = () => {
-  if (driverStep < totalDriverSteps) {
-    setDriverStep(driverStep + 1);
-  }
-};
-
-const prevDriverStep = () => {
-  if (driverStep > 1) {
-    setDriverStep(driverStep - 1);
-  }
-};
-
-const resetDriverForm = () => {
-  setDriverStep(1);
-  setShowNewDriverModal(false);
-};
-
-  useEffect(() => {
-    const fetchConductores = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/drivers', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const driverData = await response.json();
-        console.log(driverData);
-        setConductores(driverData);
-        setFilteredConductores(driverData);
-      } catch (error) {
-        console.error("Error al cargar datos de conductores:", error);
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  const fetchConductores = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('No hay token disponible');
+        return;
       }
-    };
-    
-    fetchConductores();
-  }, []);
+
+      const response = await fetch('http://localhost:3001/api/drivers', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      // Debug: ver qué devuelve el servidor
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const driverData = await response.json();
+      setConductores(driverData);
+      setFilteredConductores(driverData);
+    } catch (error) {
+      console.error("Error al cargar datos de conductores:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchConductores();
+}, []);
   
   useEffect(() => {
     // Filtrar conductores según búsqueda y estado
@@ -100,8 +92,7 @@ const resetDriverForm = () => {
     if (searchTerm) {
       filtered = filtered.filter(conductor => 
         conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conductor.documento?.includes(searchTerm) ||
-        conductor.vehiculoAsignado?.toLowerCase().includes(searchTerm.toLowerCase())
+        conductor.documento?.includes(searchTerm)
       );
     }
     
@@ -145,146 +136,207 @@ const resetDriverForm = () => {
   // Manejar cambios en el formulario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    // Manejar campos numéricos específicamente
+    let processedValue = value;
+    
+    if (name === 'documento') {
+      // Solo permitir números para documento
+      processedValue = value.replace(/\D/g, '');
+    } else if (name === 'experiencia') {
+      // Solo permitir números para experiencia
+      processedValue = value.replace(/\D/g, '');
+    }
+    
     setNewDriver({
       ...newDriver,
-      [name]: value
+      [name]: processedValue
     });
   };
 
-  const handleDeleteDriver = async (id_conductor) => {
-  try {
-    const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      throw new Error('Error al eliminar el Conductor');
-    }
-    // Actualiza la lista de conductores después de eliminar
-    setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Hubo un error al eliminar el conductor');
-  }
-};
-
-  const updateConductor = async(id_conductor, updatedData) => {
-    try {
-      setIsUpdating(true);
-      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type' : 'application/json'
-        },
-        body: JSON.stringify(updatedData)
-      });
-      if (!response.ok){
-        throw new Error('Error al actualizar el conductor')
-      }
-      const data = await response.json();
-      setConductores(data);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al crear el conductor');
-    } finally{
-      setIsUpdating(false)
-    }
-  }
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const updateConductor = {
-      tipo_documento: formData.get('tipo_documento'),
-      documento: formData.get('documento'),
-      nombre_conductor: formData.get('nombre_conductor'),
-      apellido_conductor: formData.get('apellido_conductor'),
-      correo_conductor: formData.get('correo_conductor'),
-      foto: formData.get('foto'),
-      telefono: formData.get('telefono'),
-      ciudad: formData.get('ciudad'),
-      direccion: formData.get('direccion')
-    }
-    updateConductor(conductor.id_conductor, updateConductor);
-  }
-
-  // Manejar envío del formulario
-  const handleSubmitNewDriver = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
+  const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que quieres eliminar al conductor?\n\n` +
+      `Nombre: ${nombre_conductor} ${apellido_conductor}\n` +
+      `Documento: ${documento}`
+    );
     
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setValidated(true);
+    if (confirmDelete) {
+      try {
+        await apiRequest(`/drivers/${id_conductor}`, {
+          method: 'DELETE'
+        });
+        
+        // Actualiza la lista de conductores después de eliminar
+        setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
+        
+        // Mostrar mensaje de éxito
+        alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert(`Hubo un error al eliminar el conductor: ${error.message}`);
+      }
+    }
+  };
+
+  // const updateConductor = async(id_conductor, updatedData) => {
+  //   try {
+  //     setIsUpdating(true);
+  //     const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type' : 'application/json'
+  //       },
+  //       body: JSON.stringify(updatedData)
+  //     });
+  //     if (!response.ok){
+  //       throw new Error('Error al actualizar el conductor')
+  //     }
+  //     const data = await response.json();
+  //     setConductores(data);
+  //   } catch (error) {
+  //     console.error('Error:', error);
+  //     alert('Hubo un error al crear el conductor');
+  //   } finally{
+  //     setIsUpdating(false)
+  //   }
+  // }
+
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   const formData = new FormData(e.target);
+  //   const updateConductor = {
+  //     tipo_documento: formData.get('tipo_documento'),
+  //     documento: formData.get('documento'),
+  //     nombre_conductor: formData.get('nombre_conductor'),
+  //     apellido_conductor: formData.get('apellido_conductor'),
+  //     correo_conductor: formData.get('correo_conductor'),
+  //     foto: formData.get('foto'),
+  //     telefono: formData.get('telefono'),
+  //     ciudad: formData.get('ciudad'),
+  //     direccion: formData.get('direccion')
+  //   }
+  //   updateConductor(conductor.id_conductor, updateConductor);
+  // }
+
+// Función corregida para manejar el envío del formulario
+const handleSubmitNewDriver = async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setValidated(true);
+    return;
+  }
+
+  try {
+    setIsUpdating(true);
+    
+    // Validar campos requeridos antes de enviar
+    if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
+      alert('Por favor complete todos los campos requeridos');
       return;
     }
 
-    // const formData = new FormData();
-    // Object.entries(newDriver).forEach(([key, value]) => {
-    //   if (value !== '') {
-    //     formData.append(key, value);
-    //   }
-    // });
+    // CORREGIR EL PAYLOAD - Asegurar tipos de datos correctos
+    const payload = {
+      tipo_documento: newDriver.tipo_documento || 'CC',
+      documento: newDriver.documento.toString(), // Asegurar que sea string
+      nombre_conductor: newDriver.nombre_conductor.trim(),
+      apellido_conductor: newDriver.apellido_conductor?.trim() || '',
+      correo_conductor: newDriver.correo_conductor.trim(),
+      foto: newDriver.foto || null, // Enviar null en lugar de string vacío
+      telefono: newDriver.telefono || null,
+      ciudad: newDriver.ciudad || null,
+      direccion: newDriver.direccion || null,
+      tipo_licencia: newDriver.tipo_licencia || null,
+      fecha_vencimiento: newDriver.fecha_vencimiento || null,
+      experiencia: newDriver.experiencia ? parseInt(newDriver.experiencia, 10) : null,
+      estado: newDriver.estado || 'Activo'
+    };
 
-    try {
-      setIsUpdating(true);
-      const payload = {
-        tipo_documento: newDriver.tipo_documento,
-        documento: parseInt(newDriver.documento, 10),
-        nombre_conductor: newDriver.nombre_conductor,
-        apellido_conductor: newDriver.apellido_conductor,
-        correo_conductor: newDriver.correo_conductor,
-        foto: newDriver.foto,
-        telefono: newDriver.telefono,
-        ciudad: newDriver.ciudad,
-        direccion: newDriver.direccion,
-        experiencia: parseInt(newDriver.experiencia, 10),
-        tipo_licencia: newDriver.tipo_licencia,
-        fecha_vencimiento: newDriver.fecha_vencimiento,
-        estado: newDriver.estado
-      }
-      const response = await fetch('http://localhost:3001/api/drivers',{
-        method: 'POST',
-        headers:{
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-      
-      if (!response.ok){
-        throw new Error('Error al crear el Conductor');
-      }
+    console.log('Payload a enviar:', payload);
 
-      const data = await response.json();
-      console.log('Conductor creado:', data);
-      alert('Conductor creado Exitosamente');
-      setShowNewDriverModal(false);
-      setConductores(prev => [...prev, data.driver]);
-      setNewDriver({
-        tipo_documento: '',
-        documento: '',
-        nombre_conductor: '',
-        apellido_conductor: '',
-        correo_conductor: '',
-        foto: '',
-        telefono: '',
-        ciudad: '',
-        direccion: '',
-        tipo_licencia: '',
-        fecha_vencimiento: '',
-        experiencia: '',
-        contraseña: '',
-        estado: 'Activo',
-      });
-    setValidated(false);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al crear el conductor');
+    // USAR FETCH DIRECTAMENTE EN LUGAR DE apiRequest para mejor control de errores
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch('http://localhost:3001/api/drivers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify(payload)
+    });
+
+    // Manejar respuesta del servidor
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Error del servidor:', errorData);
+      throw new Error(`Error ${response.status}: ${errorData}`);
     }
-    
-    
-  };
 
-  
+    const data = await response.json();
+    console.log('Conductor creado exitosamente:', data);
+    
+    alert('Conductor creado exitosamente');
+    setShowNewDriverModal(false);
+    
+    // Actualizar la lista de conductores
+    setConductores(prev => [...prev, data.driver || data]);
+    
+    // Limpiar el formulario
+    setNewDriver({
+      tipo_documento: '',
+      documento: '',
+      nombre_conductor: '',
+      apellido_conductor: '',
+      correo_conductor: '',
+      foto: '',
+      telefono: '',
+      ciudad: '',
+      direccion: '',
+      tipo_licencia: '',
+      fecha_vencimiento: '',
+      experiencia: '',
+      contraseña: '',
+      estado: 'Activo',
+    });
+    
+    setValidated(false);
+    
+  } catch (error) {
+    console.error('Error completo:', error);
+    alert(`Hubo un error al crear el conductor: ${error.message}`);
+  } finally {
+    setIsUpdating(false);
+  }
+};
+
+// Función adicional para verificar la conexión con el backend
+const testBackendConnection = async () => {
+  try {
+    const response = await fetch('http://localhost:3001/api/drivers', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (response.ok) {
+      console.log('Conexión con backend exitosa');
+      return true;
+    } else {
+      console.log('Problema con backend:', response.status);
+      return false;
+    }
+  } catch (error) {
+    console.error('No se puede conectar con el backend:', error);
+    return false;
+  }
+};
   
   // Componente de Paginación
   const renderPagination = () => {
@@ -342,19 +394,10 @@ const resetDriverForm = () => {
     return <span className={`badge bg-${variant} rounded-pill`}>{estado}</span>;
   };
   
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner-grow text-warning" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
-        <p>Cargando conductores...</p>
-      </div>
-    );
-  }
   
   const conductoresContent = (
     <>
+      
       <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
         <h1>Gestión de Conductores</h1>
         <Button 
@@ -376,7 +419,7 @@ const resetDriverForm = () => {
                   <FaSearch />
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Buscar por nombre, cédula o vehículo"
+                  placeholder="Buscar por nombre o cédula"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -420,40 +463,19 @@ const resetDriverForm = () => {
                 <tr>
                   <th>Nombre</th>
                   <th>Cédula</th>
-                  <th>Vehículo</th>
                   <th>Ciudad</th>
                   <th>Estado</th>
-                  <th>Calificación</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {currentConductores.map(conductor => (
-                  <tr key={conductor.id_conductor}>
-                    <td>{conductor.nombre_conductor}</td>
+                {filteredConductores.map((conductor, index) => (
+                  <tr key={conductor.id_conductor || conductor.id || index}>
+                    <td>{conductor.nombre_conductor} {conductor.apellido_conductor}</td>
                     <td>{conductor.documento}</td>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <FaCarAlt className="me-2 text-warning" />
-                        {conductor.vehiculoAsignado}
-                      </div>
-                    </td>
                     <td>{conductor.ciudad}</td>
                     <td>
                       <EstadoBadge estado={conductor.estado} />
-                    </td>
-                    <td>
-                      <div className="rating">
-                        <span className="rating-value">{conductor.calificacion}</span>
-                        <div className="rating-stars">
-                          {[...Array(5)].map((_, i) => (
-                            <span 
-                              key={i}
-                              className={`star ${i < Math.floor(conductor.calificacion) ? 'filled' : ''}`}
-                            >★</span>
-                          ))}
-                        </div>
-                      </div>
                     </td>
                     <td>
                       <div className="action-buttons">
@@ -471,7 +493,12 @@ const resetDriverForm = () => {
                         <Button 
                           variant="outline-danger" 
                           size="sm"
-                          onClick={() => handleDeleteDriver(conductor.id_conductor)}
+                          onClick={() => handleDeleteDriver(
+                            conductor.id_conductor, 
+                            conductor.nombre_conductor, 
+                            conductor.apellido_conductor, 
+                            conductor.documento
+                          )}
                           >
                           <FaTrashAlt />
                         </Button>
@@ -550,14 +577,6 @@ const resetDriverForm = () => {
                         {currentDriver.ciudad}
                       </p>
                     </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Licencia:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <Badge bg="warning" className="me-2">
-                          {currentDriver.tipo_licencia}
-                        </Badge>
-                      </p>
-                    </Col>
                   </Row>
                   
                   <h5 className="mb-3 mt-4">Información Laboral</h5>
@@ -574,34 +593,15 @@ const resetDriverForm = () => {
                   <Row className="mb-3">
                     <Col sm={6}>
                       <p className="mb-1"><strong>Licencia:</strong></p>
-                      <p>{formatDate(currentDriver.tipo_licencia)}</p>
+                      <p className="d-flex align-items-center">
+                        <Badge bg="warning" className="me-2">
+                          {currentDriver.tipo_licencia}
+                        </Badge>
+                      </p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Fecha de vencimiento:</strong></p>
                       <p>{formatDate(currentDriver.fecha_vencimiento)}</p>
-                    </Col>
-                  </Row>
-                  
-                  <h5 className="mb-3 mt-4">Vehículo</h5>
-                  <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Placa:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <FaCarAlt className="me-2 text-warning" />
-                        {currentDriver.vehiculoAsignado}
-                      </p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Modelo:</strong></p>
-                      <p>{currentDriver.modeloVehiculo}</p>
-                    </Col>
-                  </Row>
-                  
-                  <h5 className="mb-3 mt-4">Estadísticas</h5>
-                  <Row>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Viajes Completados:</strong></p>
-                      <h3 className="text-warning">{currentDriver.viajesCompletados}</h3>
                     </Col>
                   </Row>
                 </Col>
@@ -662,11 +662,13 @@ const resetDriverForm = () => {
                   <Form.Group className="mb-3">
                     <Form.Label>Número de Documento</Form.Label>
                     <Form.Control
-                      type="text"
+                      type="text"  // Cambiar de "text" a "text" pero con validación
                       name="documento"
                       value={newDriver.documento}
                       onChange={handleInputChange}
                       required
+                      pattern="[0-9]+"  // Solo números
+                      title="Solo se permiten números"
                     />
                     <Form.Control.Feedback type="invalid">
                       El número de documento es obligatorio
@@ -864,12 +866,13 @@ const resetDriverForm = () => {
                   <Form.Group className="mb-3">
                     <Form.Label>Años de Experiencia</Form.Label>
                     <Form.Control
-                      type="number"
+                      type="text"  // Cambiar de "number" a "text" para mejor control
                       name="experiencia"
                       value={newDriver.experiencia}
                       onChange={handleInputChange}
-                      min="0"
-                      max="50"
+                      pattern="[0-9]*"
+                      title="Solo números"
+                      placeholder="Años de experiencia"
                     />
                   </Form.Group>
                 </Col>

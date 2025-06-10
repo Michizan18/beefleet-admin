@@ -36,14 +36,11 @@ const Conductores = () => {
     tipo_licencia: '',
     fecha_vencimiento: '',
     experiencia: '',
-    contraseña: '',
     estado: 'Activo',
   });
   const [validated, setValidated] = useState(false);
   
   const conductoresPorPagina = 8;
-
-useEffect(() => {
   const fetchConductores = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -60,10 +57,6 @@ useEffect(() => {
           'Authorization': `Bearer ${token}`,
         },
       });
-
-      // Debug: ver qué devuelve el servidor
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -80,10 +73,6 @@ useEffect(() => {
       setLoading(false);
     }
   };
-
-  fetchConductores();
-}, []);
-  
   useEffect(() => {
     // Filtrar conductores según búsqueda y estado
     let filtered = conductores;
@@ -103,6 +92,7 @@ useEffect(() => {
     
     setFilteredConductores(filtered);
     setCurrentPage(1); // Resetear a primera página al filtrar
+    fetchConductores();
   }, [searchTerm, filterStatus, conductores]);
   
   // Formatear fecha a formato español
@@ -154,6 +144,11 @@ useEffect(() => {
     });
   };
 
+  const getAuthToken = () => {
+    const token = localStorage.getItem('token');
+    return token ? `Bearer ${token}` : null; // Agregar Bearer prefix
+  };
+
   const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
     const confirmDelete = window.confirm(
       `¿Estás seguro de que quieres eliminar al conductor?\n\n` +
@@ -163,13 +158,24 @@ useEffect(() => {
     
     if (confirmDelete) {
       try {
-        await apiRequest(`/drivers/${id_conductor}`, {
-          method: 'DELETE'
+        const token = getAuthToken(); 
+        if (!token) {
+          throw new Error('No hay token de autenticación');
+        }
+        const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+          }
         });
-        
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Error al eliminar el cliente');
+        }
         // Actualiza la lista de conductores después de eliminar
         setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
-        
         // Mostrar mensaje de éxito
         alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
         
@@ -257,9 +263,6 @@ const handleSubmitNewDriver = async (e) => {
       estado: newDriver.estado || 'Activo'
     };
 
-    console.log('Payload a enviar:', payload);
-
-    // USAR FETCH DIRECTAMENTE EN LUGAR DE apiRequest para mejor control de errores
     const token = localStorage.getItem('token');
     
     const response = await fetch('http://localhost:3001/api/drivers', {
@@ -301,7 +304,6 @@ const handleSubmitNewDriver = async (e) => {
       tipo_licencia: '',
       fecha_vencimiento: '',
       experiencia: '',
-      contraseña: '',
       estado: 'Activo',
     });
     
@@ -312,29 +314,6 @@ const handleSubmitNewDriver = async (e) => {
     alert(`Hubo un error al crear el conductor: ${error.message}`);
   } finally {
     setIsUpdating(false);
-  }
-};
-
-// Función adicional para verificar la conexión con el backend
-const testBackendConnection = async () => {
-  try {
-    const response = await fetch('http://localhost:3001/api/drivers', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (response.ok) {
-      console.log('Conexión con backend exitosa');
-      return true;
-    } else {
-      console.log('Problema con backend:', response.status);
-      return false;
-    }
-  } catch (error) {
-    console.error('No se puede conectar con el backend:', error);
-    return false;
   }
 };
   

@@ -45,44 +45,43 @@ const Conductores = () => {
     const token = localStorage.getItem('token');
     return token ? `Bearer ${token}` : null;
   };
+
+
   const fetchConductores = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          console.error('No hay token disponible');
-          return;
-        }
-
-        const response = await fetch('http://localhost:3001/api/drivers', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}, ${errorText}`);
-        }
-
-        const driverData = await response.json();
-        setConductores(driverData);
-        setFilteredConductores(driverData);
-      } catch (error) {
-        console.error("Error al cargar datos de conductores:", error);
-        alert(`Error al cargar conductores: ${error.message}`);
-      } finally {
-        setLoading(false);
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('No hay token disponible');
+        return;
       }
 
-    
-  fetchConductores();
-}, []);
-  
+      const response = await fetch('http://localhost:3001/api/drivers', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const driverData = await response.json();
+      setConductores(driverData);
+      setFilteredConductores(driverData);
+    } catch (error) {
+      console.error("Error al cargar datos de conductores:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   useEffect(() => {
-    // Filtrar conductores según búsqueda y estado
     let filtered = conductores;
       
     
@@ -102,6 +101,7 @@ const Conductores = () => {
     setCurrentPage(1);
     fetchConductores();
     setCurrentPage(1); // Resetear a primera página al filtrar
+    fetchConductores();
   }, [searchTerm, filterStatus, conductores]);
   
   // Formatear fecha a formato español
@@ -176,6 +176,8 @@ const handleInputChange = (e) => {
           const errorText = await response.text();
           throw new Error(errorText || 'Error al eliminar el Conductor');
         }
+        
+        // Actualiza la lista de conductores después de eliminar
         setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
         
         // Mostrar mensaje de éxito
@@ -188,86 +190,50 @@ const handleInputChange = (e) => {
     }
   };
 
-  const updateConductor = async(id_conductor, updatedData) => {
-    try {
-      setIsUpdating(true);
-      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type' : 'application/json'
-        },
-        body: JSON.stringify(updatedData)
-      });
-      if (!response.ok){
-        throw new Error('Error al actualizar el conductor')
-      }
-      const data = await response.json();
-      setConductores(data);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al crear el conductor');
-    } finally{
-      setIsUpdating(false)
-    }
-  }
+  // const updateConductor = async(id_conductor, updatedData) => {
+  //   try {
+  //     setIsUpdating(true);
+  //     const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type' : 'application/json'
+  //       },
+  //       body: JSON.stringify(updatedData)
+  //     });
+  //     if (!response.ok){
+  //       throw new Error('Error al actualizar el conductor')
+  //     }
+  //     const data = await response.json();
+  //     setConductores(data);
+  //   } catch (error) {
+  //     console.error('Error:', error);
+  //     alert('Hubo un error al crear el conductor');
+  //   } finally{
+  //     setIsUpdating(false)
+  //   }
+  // }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const updateConductor = {
-      tipo_documento: formData.get('tipo_documento'),
-      documento: formData.get('documento'),
-      nombre_conductor: formData.get('nombre_conductor'),
-      apellido_conductor: formData.get('apellido_conductor'),
-      correo_conductor: formData.get('correo_conductor'),
-      foto: formData.get('foto'),
-      telefono: formData.get('telefono'),
-      ciudad: formData.get('ciudad'),
-      direccion: formData.get('direccion')
-    }
-    updateConductor(conductor.id_conductor, updateConductor);
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/drivers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   const formData = new FormData(e.target);
+  //   const updateConductor = {
+  //     tipo_documento: formData.get('tipo_documento'),
+  //     documento: formData.get('documento'),
+  //     nombre_conductor: formData.get('nombre_conductor'),
+  //     apellido_conductor: formData.get('apellido_conductor'),
+  //     correo_conductor: formData.get('correo_conductor'),
+  //     foto: formData.get('foto'),
+  //     telefono: formData.get('telefono'),
+  //     ciudad: formData.get('ciudad'),
+  //     direccion: formData.get('direccion')
+  //   }
+  //   updateConductor(conductor.id_conductor, updateConductor);
+  // }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al crear el conductor');
-      }
-
-      const data = await response.json();
-      
-      alert('Conductor creado exitosamente');
-      setShowNewDriverModal(false);
-      setConductores(prev => [...prev, data.driver || data]);
-      setNewDriver(initialDriverState);
-      setValidated(false);
-      
-    } catch (error) {
-      console.error('Error:', error);
-      alert(`Hubo un error al crear el conductor: ${error.message}`);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const EstadoBadge = ({ estado }) => {
-    const variants = {
-      Activo: 'success',
-      'En ruta': 'primary',
-      Descanso: 'warning',
-      Entrenamiento: 'warning',
-      Inactivo: 'danger'
-    };
-    
-    return <Badge bg={variants[estado] || 'secondary'}>{estado}</Badge>;
-  };
+// Función corregida para manejar el envío del formulario
+const handleSubmitNewDriver = async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
   
   if (form.checkValidity() === false) {
     e.stopPropagation();
@@ -320,8 +286,19 @@ const handleInputChange = (e) => {
     setIsUpdating(false);
   }
 };
+
+  // const EstadoBadge = ({ estado }) => {
+  //   const variants = {
+  //     Activo: 'success',
+  //     'En ruta': 'primary',
+  //     Descanso: 'warning',
+  //     Entrenamiento: 'warning',
+  //     Inactivo: 'danger'
+  // };
+    
+  //   return <Badge bg={variants[estado] || 'secondary'}>{estado}</Badge>;
+  // };
   
-  // Componente de Paginación
   const renderPagination = () => {
     if (totalPages <= 1) return null;
     

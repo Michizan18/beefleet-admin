@@ -8,7 +8,6 @@ import {
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 import './Conductores.css';
-import api from '../api';
 
 const Conductores = () => {
   const [loading, setLoading] = useState(true);
@@ -38,7 +37,6 @@ const Conductores = () => {
     tipo_licencia: '',
     fecha_vencimiento: '',
     experiencia: '',
-    contraseña: 'defaultPassword123',
     estado: 'Activo',
   };
 
@@ -47,8 +45,11 @@ const Conductores = () => {
 
   const conductoresPorPagina = 8;
 
-  useEffect(() => {
-    const fetchConductores = async () => {
+  const getAuthToken = () => {
+    const token = localStorage.getItem('token');
+    return token ? `Bearer ${token}` : null;
+  };
+  const fetchConductores = async () => {
       try {
         const token = localStorage.getItem('token');
         
@@ -81,25 +82,22 @@ const Conductores = () => {
       }
     };
 
-    fetchConductores();
-  }, []);
-
+    
   useEffect(() => {
     let filtered = conductores;
-    
+      
     if (searchTerm) {
       filtered = filtered.filter(conductor => 
         (conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         conductor.documento?.toString().includes(searchTerm))
       );
     }
-    
     if (filterStatus !== 'todos') {
       filtered = filtered.filter(conductor => conductor.estado === filterStatus);
     }
-    
     setFilteredConductores(filtered);
     setCurrentPage(1);
+    fetchConductores();
   }, [searchTerm, filterStatus, conductores]);
   
   const formatDate = (dateString) => {
@@ -169,13 +167,20 @@ const Conductores = () => {
       `Nombre: ${nombre_conductor} ${apellido_conductor}\n` +
       `Documento: ${documento}`
     );
-    
     if (confirmDelete) {
       try {
-        await api(`/drivers/${id_conductor}`, {
-          method: 'DELETE'
+        const token = getAuthToken();
+        const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+          }
         });
-        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Error al eliminar el Conductor');
+        }
         setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
         alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
       } catch (error) {
@@ -243,44 +248,6 @@ const Conductores = () => {
       alert(`Hubo un error al crear el conductor: ${error.message}`);
     } finally {
       setIsUpdating(false);
-    }
-  };
-
-  const testCreateDriver = async () => {
-    try {
-      const testPayload = {
-        tipo_documento: 'CC',
-        documento: '12345678',
-        nombre_conductor: 'Test',
-        apellido_conductor: 'Driver',
-        correo_conductor: 'test@example.com',
-        telefono: '1234567890',
-        ciudad: 'Bogotá',
-        direccion: 'Calle Test 123',
-        tipo_licencia: 'B1',
-        experiencia: 5,
-        estado: 'Activo'
-      };
-
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/drivers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(testPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error('Error en la prueba del backend');
-      }
-
-      const result = await response.json();
-      alert('Prueba exitosa: ' + JSON.stringify(result));
-    } catch (error) {
-      console.error('Error en la prueba:', error);
-      alert('Error en la prueba: ' + error.message);
     }
   };
 

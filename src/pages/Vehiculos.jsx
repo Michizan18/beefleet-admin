@@ -581,13 +581,14 @@ const handleUpdateVehicle = async (e) => {
       <Row className="mb-3">
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Placa</Form.Label>
-            <Form.Control
-              type="text"
-              value={editFormData.placa || ''}
-              onChange={(e) => setEditFormData({...editFormData, placa: e.target.value})}
-            />
-          </Form.Group>
+          <Form.Label>Placa</Form.Label>
+          <Form.Control
+          type="text"
+          value={editFormData.placa || ''}
+          readOnly
+          className="bg-light"
+          />
+        </Form.Group>
         </Col>
         <Col md={6}>
           <Form.Group className="mb-3">

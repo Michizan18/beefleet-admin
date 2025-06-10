@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Navbar, Container, Dropdown } from 'react-bootstrap';
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import MenuNotificaciones from './MenuNotificaciones';
 import { 
@@ -110,18 +109,17 @@ const LayoutBarButton = ({ children} ) => {
             
           </Link>
           <Link 
-            to="/cargas" 
+            to="/clientes" 
             className={`header-button ${currentPath === '/clientes' ? 'active' : ''}`}
           >
             <FaPeopleCarryBox className="icon" /> Clientes
             
           </Link>
           <Link 
-            to="/cargas" 
+            to="/ventas" 
             className={`header-button ${currentPath === '/ventas' ? 'active' : ''}`}
           >
             <FaMoneyBillWave  className="icon" /> Ventas
-            
           </Link>
           <Link 
             to="/profile" 

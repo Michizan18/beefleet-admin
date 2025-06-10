@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Row, Col, Card, Button, Table, Modal, Form } from 'react-bootstrap';
+import { Row, Col, Card, Button, Table, Modal, Form, Spinner, Alert } from 'react-bootstrap';
 import { FaRoute, FaPlus, FaEdit, FaTrash, FaSearch, FaMapMarkerAlt } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 
@@ -7,19 +7,22 @@ const Rutas = () => {
   const [rutasData, setRutasData] = useState([]);
   const [filteredRutas, setFilteredRutas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
   const [selectedRuta, setSelectedRuta] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [userData, setUserData] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Estado para el formulario
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     origen: '',
     destino: '',
     distancia: '',
     carga: ''
-  });
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
 
   useEffect(() => {
     fetchRutas();
@@ -27,26 +30,26 @@ const Rutas = () => {
 
   useEffect(() => {
     // Filtrar rutas basado en el término de búsqueda
-    if (searchTerm.trim() === '') {
-      setFilteredRutas(rutasData);
-    } else {
-      const filtered = rutasData.filter(ruta => 
-        ruta.origen.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ruta.destino.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const filtered = rutasData.filter(ruta => {
+      const searchTermLower = searchTerm.toLowerCase();
+      return (
+        ruta.origen.toLowerCase().includes(searchTermLower) ||
+        ruta.destino.toLowerCase().includes(searchTermLower) ||
+        ruta.distancia.toString().includes(searchTerm) ||
         ruta.carga.toString().includes(searchTerm)
       );
-      setFilteredRutas(filtered);
-    }
+    });
+    setFilteredRutas(filtered);
   }, [searchTerm, rutasData]);
 
   const fetchRutas = async () => {
     setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('token');
       
       if (!token) {
-        alert('No se encontró token de autenticación');
-        return;
+        throw new Error('No se encontró token de autenticación');
       }
 
       const response = await fetch('http://localhost:3001/api/routes', {
@@ -57,39 +60,33 @@ const Rutas = () => {
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Rutas recibidas:', data); // Para debug
-        
-        // Tu backend devuelve un array de arrays, necesitamos aplanar los datos
-        let normalizedData = [];
-        if (Array.isArray(data)) {
-          // Aplanar el array de arrays a un array simple de objetos
-          const flatData = data.flat();
-          // Limpiar los datos, manteniendo solo las propiedades necesarias
-          normalizedData = flatData.map(ruta => ({
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+        }
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al cargar rutas');
+      }
+
+      const data = await response.json();
+      
+      // Normalizar datos del backend
+      const normalizedData = Array.isArray(data) 
+        ? data.flat().map(ruta => ({
             id_ruta: ruta.id_ruta,
-            origen: ruta.origen,
-            destino: ruta.destino,
+            origen: ruta.origen || 'Sin origen',
+            destino: ruta.destino || 'Sin destino',
             distancia: parseFloat(ruta.distancia) || 0,
             carga: parseInt(ruta.carga) || 0
-          }));
-        }
-        
-        console.log('Datos normalizados:', normalizedData); // Para debug adicional
-        setRutasData(normalizedData);
-        setFilteredRutas(normalizedData);
-      } else if (response.status === 401) {
-        alert('Token expirado o inválido. Por favor, inicia sesión nuevamente.');
-        localStorage.removeItem('token');
-      } else {
-        const errorData = await response.json();
-        console.error("Error del servidor:", errorData);
-        alert(`Error al cargar rutas: ${errorData.message || 'Error desconocido'}`);
-      }
-    } catch (error) {
-      console.error("Error al cargar rutas:", error);
-      alert('Error de conexión al servidor. Verifica que el backend esté ejecutándose.');
+          }))
+        : [];
+      
+      setRutasData(normalizedData);
+      setFilteredRutas(normalizedData);
+    } catch (err) {
+      console.error("Error al cargar rutas:", err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -98,12 +95,7 @@ const Rutas = () => {
   const handleCreateRuta = () => {
     setModalMode('create');
     setSelectedRuta(null);
-    setFormData({
-      origen: '',
-      destino: '',
-      distancia: '',
-      carga: ''
-    });
+    setFormData(initialFormState);
     setShowModal(true);
   };
 
@@ -120,121 +112,103 @@ const Rutas = () => {
   };
 
   const handleDeleteRuta = async (id_ruta) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar esta ruta?')) {
-      try {
-        const token = localStorage.getItem('token');
-        
-        // Usar 'id' en lugar de 'id_ruta' según tu ruta del backend
-        const response = await fetch(`http://localhost:3001/api/routes/${id_ruta}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+    if (!window.confirm('¿Estás seguro de que deseas eliminar esta ruta?')) return;
 
-        if (response.ok) {
-          // Actualizar la lista eliminando la ruta
-          const updatedRutas = rutasData.filter(ruta => ruta.id_ruta !== id_ruta);
-          setRutasData(updatedRutas);
-          setFilteredRutas(updatedRutas);
-          alert('Ruta eliminada exitosamente');
-        } else {
-          const errorData = await response.json();
-          alert(`Error al eliminar la ruta: ${errorData.message || 'Error desconocido'}`);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/routes/${id_ruta}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      } catch (error) {
-        console.error("Error al eliminar ruta:", error);
-        alert('Error de conexión al eliminar la ruta');
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar la ruta');
       }
+
+      // Actualizar el estado local
+      setRutasData(prev => prev.filter(ruta => ruta.id_ruta !== id_ruta));
+    } catch (err) {
+      console.error("Error al eliminar ruta:", err);
+      setError(err.message);
     }
+  };
+
+  const validateForm = () => {
+    const errors = [];
+    
+    if (!formData.origen.trim()) errors.push('El origen es requerido');
+    if (!formData.destino.trim()) errors.push('El destino es requerido');
+    if (formData.origen.length > 45) errors.push('El origen no puede exceder 45 caracteres');
+    if (formData.destino.length > 45) errors.push('El destino no puede exceder 45 caracteres');
+    
+    const distancia = parseFloat(formData.distancia);
+    if (isNaN(distancia) || distancia <= 0) errors.push('La distancia debe ser un número mayor a 0');
+    
+    const carga = parseInt(formData.carga);
+    if (isNaN(carga) || carga <= 0) errors.push('La carga debe ser un número mayor a 0');
+
+    return errors;
   };
 
   const handleSubmitForm = async (e) => {
     e.preventDefault();
-    const rutaData = {
-      origen: formData.origen.trim(),
-      destino: formData.destino.trim(),
-      distancia: parseFloat(formData.distancia),
-      carga: parseInt(formData.carga)
-    };
-
-    // Validaciones del cliente
-    if (!rutaData.origen || !rutaData.destino) {
-      alert('Origen y destino son requeridos');
+    
+    const errors = validateForm();
+    if (errors.length > 0) {
+      setError(errors.join('\n'));
       return;
     }
 
-    if (rutaData.origen.length > 45 || rutaData.destino.length > 45) {
-      alert('Origen y destino no pueden exceder 45 caracteres');
-      return;
-    }
-
-    if (isNaN(rutaData.distancia) || rutaData.distancia <= 0) {
-      alert('La distancia debe ser un número mayor a 0');
-      return;
-    }
-
-    if (isNaN(rutaData.carga) || rutaData.carga <= 0) {
-      alert('La carga debe ser un número mayor a 0');
-      return;
-    }
+    setIsSubmitting(true);
+    setError(null);
 
     try {
       const token = localStorage.getItem('token');
-      let response;
-      let url = 'http://localhost:3001/api/routes';
-      let method = 'POST';
-      let body = JSON.stringify(rutaData);
+      const rutaData = {
+        origen: formData.origen.trim(),
+        destino: formData.destino.trim(),
+        distancia: parseFloat(formData.distancia),
+        carga: parseInt(formData.carga)
+      };
 
-      if (modalMode === 'edit') {
-        // Para editar, usar el id_ruta en la URL y en el body
-        url = `http://localhost:3001/api/routes/${selectedRuta.id_ruta}`;
-        method = 'PUT';
-        body = JSON.stringify({
-          id_ruta: selectedRuta.id_ruta,
-          ...rutaData
-        });
-      }
+      const isEdit = modalMode === 'edit';
+      const url = `http://localhost:3001/api/routes${isEdit ? `/${selectedRuta.id_ruta}` : ''}`;
+      const method = isEdit ? 'PUT' : 'POST';
+      const body = isEdit ? { id_ruta: selectedRuta.id_ruta, ...rutaData } : rutaData;
 
-      response = await fetch(url, {
-        method: method,
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: body
+        body: JSON.stringify(body)
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Respuesta del servidor:', result); // Para debug
-        
-        if (modalMode === 'create') {
-          // Para crear, el backend devuelve { route: {...} }
-          const newRuta = result.route;
-          const updatedRutas = [...rutasData, newRuta];
-          setRutasData(updatedRutas);
-          setFilteredRutas(updatedRutas);
-        } else {
-          // Para actualizar, necesitamos actualizar la ruta existente
-          const updatedRutas = rutasData.map(ruta => 
-            ruta.id_ruta === selectedRuta.id_ruta 
-              ? { ...ruta, ...rutaData, id_ruta: selectedRuta.id_ruta }
-              : ruta
-          );
-          setRutasData(updatedRutas);
-          setFilteredRutas(updatedRutas);
-        }
-        
-        setShowModal(false);
-        alert(result.message || (modalMode === 'create' ? 'Ruta creada exitosamente' : 'Ruta actualizada exitosamente'));
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        alert(`Error: ${errorData.message || 'Error desconocido'}`);
+        throw new Error(errorData.message || `Error al ${isEdit ? 'actualizar' : 'crear'} la ruta`);
       }
-    } catch (error) {
-      console.error("Error al guardar ruta:", error);
-      alert('Error de conexión al guardar la ruta');
+
+      const result = await response.json();
+      const newRuta = isEdit ? null : result.route;
+      
+      // Actualizar estado local
+      setRutasData(prev => 
+        isEdit
+          ? prev.map(r => r.id_ruta === selectedRuta.id_ruta ? { ...r, ...rutaData } : r)
+          : [...prev, newRuta]
+      );
+
+      setShowModal(false);
+    } catch (err) {
+      console.error("Error al guardar ruta:", err);
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -246,8 +220,30 @@ const Rutas = () => {
     }));
   };
 
-  const rutasContent = (
-    <>
+  const calculateStats = () => {
+    const totalRutas = rutasData.length;
+    const totalDistancia = rutasData.reduce((sum, ruta) => sum + ruta.distancia, 0);
+    const totalCarga = rutasData.reduce((sum, ruta) => sum + ruta.carga, 0);
+    const distanciaPromedio = totalRutas > 0 ? totalDistancia / totalRutas : 0;
+
+    return { totalRutas, totalDistancia, totalCarga, distanciaPromedio };
+  };
+
+  const { totalRutas, totalDistancia, totalCarga, distanciaPromedio } = calculateStats();
+
+  if (loading) {
+    return (
+      <LayoutBarButton>
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '60vh' }}>
+          <Spinner animation="border" variant="warning" />
+          <span className="ms-3">Cargando rutas...</span>
+        </div>
+      </LayoutBarButton>
+    );
+  }
+
+  return (
+    <LayoutBarButton>
       <div className="d-flex justify-content-between align-items-center mt-4 mb-4">
         <h1>Gestión de Rutas</h1>
         <Button variant="warning" onClick={handleCreateRuta}>
@@ -256,17 +252,23 @@ const Rutas = () => {
         </Button>
       </div>
 
+      {error && (
+        <Alert variant="danger" onClose={() => setError(null)} dismissible className="mb-4">
+          {error}
+        </Alert>
+      )}
+
       {/* Estadísticas de rutas */}
       <Row className="stats-cards mb-4">
         <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
+          <Card className="stats-card h-100">
             <Card.Body>
               <div className="d-flex align-items-center">
                 <div className="stats-icon orange">
                   <FaRoute />
                 </div>
                 <div>
-                  <h4 className="stats-number">{rutasData.length}</h4>
+                  <h4 className="stats-number">{totalRutas}</h4>
                   <div className="stats-label">Total Rutas</div>
                 </div>
               </div>
@@ -275,16 +277,14 @@ const Rutas = () => {
         </Col>
         
         <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
+          <Card className="stats-card h-100">
             <Card.Body>
               <div className="d-flex align-items-center">
                 <div className="stats-icon orange">
                   <FaMapMarkerAlt />
                 </div>
                 <div>
-                  <h4 className="stats-number">
-                    {rutasData.reduce((sum, ruta) => sum + (ruta.distancia || 0), 0).toFixed(1)} km
-                  </h4>
+                  <h4 className="stats-number">{totalDistancia.toFixed(1)} km</h4>
                   <div className="stats-label">Distancia Total</div>
                 </div>
               </div>
@@ -293,16 +293,14 @@ const Rutas = () => {
         </Col>
         
         <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
+          <Card className="stats-card h-100">
             <Card.Body>
               <div className="d-flex align-items-center">
                 <div className="stats-icon orange">
                   <FaRoute />
                 </div>
                 <div>
-                  <h4 className="stats-number">
-                    {rutasData.reduce((sum, ruta) => sum + (ruta.carga || 0), 0).toLocaleString()} kg
-                  </h4>
+                  <h4 className="stats-number">{totalCarga.toLocaleString()} kg</h4>
                   <div className="stats-label">Carga Total</div>
                 </div>
               </div>
@@ -311,16 +309,14 @@ const Rutas = () => {
         </Col>
         
         <Col md={3} sm={6} className="mb-4">
-          <Card className="stats-card">
+          <Card className="stats-card h-100">
             <Card.Body>
               <div className="d-flex align-items-center">
                 <div className="stats-icon orange">
                   <FaMapMarkerAlt />
                 </div>
                 <div>
-                  <h4 className="stats-number">
-                    {rutasData.length > 0 ? (rutasData.reduce((sum, ruta) => sum + (ruta.distancia || 0), 0) / rutasData.length).toFixed(1) : 0} km
-                  </h4>
+                  <h4 className="stats-number">{distanciaPromedio.toFixed(1)} km</h4>
                   <div className="stats-label">Distancia Promedio</div>
                 </div>
               </div>
@@ -330,97 +326,102 @@ const Rutas = () => {
       </Row>
 
       {/* Tabla de rutas */}
-      <Card>
-        <Card.Header className="d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">Lista de Rutas ({filteredRutas.length})</h5>
-          <div className="search-container">
-            <Form.Control
-              type="text"
-              placeholder="Buscar rutas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '250px' }}
-            />
-          </div>
+      <Card className="mb-4">
+        <Card.Header className="d-flex flex-column flex-md-row justify-content-between align-items-center">
+          <h5 className="mb-3 mb-md-0">Lista de Rutas ({filteredRutas.length})</h5>
+          <Form.Control
+            type="search"
+            placeholder="Buscar rutas..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%', maxWidth: '300px' }}
+          />
         </Card.Header>
         <Card.Body>
           {rutasData.length === 0 ? (
             <div className="text-center py-5">
               <FaRoute size={64} className="text-muted mb-3" />
               <h5 className="text-muted">No hay rutas registradas</h5>
-              <p className="text-muted">Haz clic en "Nueva Ruta" para agregar la primera ruta</p>
+              <Button variant="warning" onClick={handleCreateRuta} className="mt-3">
+                <FaPlus className="me-2" />
+                Crear primera ruta
+              </Button>
             </div>
           ) : (
-            <Table responsive className="table-hover">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Origen</th>
-                  <th>Destino</th>
-                  <th>Distancia (km)</th>
-                  <th>Carga (kg)</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRutas.length === 0 ? (
+            <div className="table-responsive">
+              <Table hover className="align-middle">
+                <thead>
                   <tr>
-                    <td colSpan="6" className="text-center py-4">
-                      <div className="text-muted">
-                        <FaSearch size={32} className="mb-2 opacity-50" />
-                        <p>No se encontraron rutas que coincidan con tu búsqueda</p>
-                      </div>
-                    </td>
+                    <th>ID</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th className="text-end">Distancia (km)</th>
+                    <th className="text-end">Carga (kg)</th>
+                    <th>Acciones</th>
                   </tr>
-                ) : (
-                  filteredRutas.map((ruta, index) => (
-                    <tr key={`ruta-${ruta.id_ruta}-${index}`}>
-                      <td>#{ruta.id_ruta}</td>
-                      <td>
-                        <div className="d-flex align-items-center">
-                          <FaMapMarkerAlt className="text-success me-2" />
-                          {ruta.origen}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center">
-                          <FaMapMarkerAlt className="text-danger me-2" />
-                          {ruta.destino}
-                        </div>
-                      </td>
-                      <td>{(ruta.distancia || 0).toFixed(1)}</td>
-                      <td>{(ruta.carga || 0).toLocaleString()}</td>
-                      <td>
-                        <div className="d-flex gap-2">
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            onClick={() => handleEditRuta(ruta)}
-                            title="Editar ruta"
-                          >
-                            <FaEdit />
-                          </Button>
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            onClick={() => handleDeleteRuta(ruta.id_ruta)}
-                            title="Eliminar ruta"
-                          >
-                            <FaTrash />
-                          </Button>
+                </thead>
+                <tbody>
+                  {filteredRutas.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="text-center py-4">
+                        <div className="text-muted">
+                          <FaSearch size={32} className="mb-2 opacity-50" />
+                          <p>No se encontraron rutas que coincidan con tu búsqueda</p>
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+                  ) : (
+                    filteredRutas.map(ruta => (
+                      <tr key={`ruta-${ruta.id_ruta}`}>
+                        <td>#{ruta.id_ruta}</td>
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <FaMapMarkerAlt className="text-success me-2" />
+                            {ruta.origen}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <FaMapMarkerAlt className="text-danger me-2" />
+                            {ruta.destino}
+                          </div>
+                        </td>
+                        <td className="text-end">{ruta.distancia.toFixed(1)}</td>
+                        <td className="text-end">{ruta.carga.toLocaleString()}</td>
+                        <td>
+                          <div className="d-flex gap-2">
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={() => handleEditRuta(ruta)}
+                              title="Editar ruta"
+                              disabled={isSubmitting}
+                            >
+                              <FaEdit />
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDeleteRuta(ruta.id_ruta)}
+                              title="Eliminar ruta"
+                              disabled={isSubmitting}
+                            >
+                              <FaTrash />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+            </div>
           )}
         </Card.Body>
       </Card>
 
       {/* Modal para crear/editar ruta */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+      <Modal show={showModal} onHide={() => !isSubmitting && setShowModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
             <FaRoute className="me-2" />
@@ -429,6 +430,11 @@ const Rutas = () => {
         </Modal.Header>
         <Form onSubmit={handleSubmitForm}>
           <Modal.Body>
+            {error && (
+              <Alert variant="danger" className="mb-4">
+                {error}
+              </Alert>
+            )}
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
@@ -444,6 +450,7 @@ const Rutas = () => {
                     required
                     placeholder="Ciudad de origen"
                     maxLength={45}
+                    disabled={isSubmitting}
                   />
                   <Form.Text className="text-muted">
                     Máximo 45 caracteres
@@ -464,6 +471,7 @@ const Rutas = () => {
                     required
                     placeholder="Ciudad de destino"
                     maxLength={45}
+                    disabled={isSubmitting}
                   />
                   <Form.Text className="text-muted">
                     Máximo 45 caracteres
@@ -484,6 +492,7 @@ const Rutas = () => {
                     onChange={handleInputChange}
                     required
                     placeholder="0.0"
+                    disabled={isSubmitting}
                   />
                 </Form.Group>
               </Col>
@@ -498,27 +507,37 @@ const Rutas = () => {
                     onChange={handleInputChange}
                     required
                     placeholder="0"
+                    disabled={isSubmitting}
                   />
                 </Form.Group>
               </Col>
             </Row>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowModal(false)}
+              disabled={isSubmitting}
+            >
               Cancelar
             </Button>
-            <Button variant="warning" type="submit">
-              {modalMode === 'create' ? 'Crear Ruta' : 'Actualizar Ruta'}
+            <Button 
+              variant="warning" 
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Spinner as="span" animation="border" size="sm" className="me-2" />
+                  {modalMode === 'create' ? 'Creando...' : 'Actualizando...'}
+                </>
+              ) : (
+                modalMode === 'create' ? 'Crear Ruta' : 'Actualizar Ruta'
+              )}
             </Button>
           </Modal.Footer>
         </Form>
       </Modal>
-    </>
-  );
-
-  return (
-    <LayoutBarButton userData={userData}>
-      {rutasContent}
     </LayoutBarButton>
   );
 };

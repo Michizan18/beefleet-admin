@@ -19,12 +19,28 @@ const Vehiculos = () => {
   const [showNewVehicleModal, setShowNewVehicleModal] = useState(false);
   const [vehiculos, setVehiculos] = useState([]);
   const [conductores, setConductores] = useState([]); // Nuevo estado para conductores
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+
   
+   // Funciónpara mapear números a texto
+  const mapearEstado = (estado) => {
+  const estadosMap = {
+    1: 'Activo',
+    2: 'En mantenimiento', 
+    3: 'Disponible',
+    4: 'Fuera de servicio'
+  };
+  return estadosMap[estado] || 'Desconocido';
+
+
+  };
+
   // Estado para nuevo vehículo
   const [newVehicle, setNewVehicle] = useState({
     placa: '',
     modelo: '',
-    año: new Date().getFullYear(),
     conductor: '',
     estado_vehiculo: 'Activo',
     seguro: '',
@@ -120,8 +136,7 @@ const Vehiculos = () => {
           setConductores(conductoresData);
         } else {
           // Datos de conductores hardcodeados como fallback
-          setConductores([
-          ]);
+          setConductores([]);
         }
 
       } catch (error) {
@@ -139,21 +154,80 @@ const Vehiculos = () => {
     fetchData();
   }, []);
 
+  // Función para abrir modal de edición
+  const handleEditVehicle = (vehiculo) => {
+  setEditingVehicle(vehiculo);
+  setEditFormData({
+    placa: vehiculo.placa || '',
+    modelo: vehiculo.modelo || '',
+    conductor: vehiculo.conductor || '',
+    estado_vehiculo: vehiculo.estado_vehiculo || 1,
+    seguro: vehiculo.seguro || '',
+    kilometraje: vehiculo.kilometraje || '',
+    marca: vehiculo.marca || '',
+    color: vehiculo.color || '',
+    capacidad: vehiculo.capacidad || '',
+    tipo: vehiculo.tipo || '',
+    peso: vehiculo.peso || '',
+    matricula: vehiculo.matricula || '',
+  });
+  setShowEditModal(true);
+};
+ //Función para guardar cambios
+const handleUpdateVehicle = async (e) => {
+  e.preventDefault();
+  
+  console.log('Datos a enviar:', editFormData);
+  try {
+
+     // Asegurar que estado_vehiculo sea un número
+    const dataToSend = {
+      ...editFormData,
+      estado_vehiculo: parseInt(editFormData.estado_vehiculo) || 1
+    };
+
+    const response = await fetch(`http://localhost:3001/api/vehicles/${editingVehicle.id_vehiculo}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify(editFormData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al actualizar el vehículo');
+    }
+    
+    const updatedVehicle = await response.json();
+    const vehicleWithId = { ...editFormData, id_vehiculo: editingVehicle.id_vehiculo };
+    
+    // Actualizar la lista de vehículos
+    setVehiculos(vehiculos.map(v => 
+    v.id_vehiculo === editingVehicle.id_vehiculo ? vehicleWithId : v
+    ));
+    
+    setShowEditModal(false);
+    alert('Vehículo actualizado exitosamente');
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error al actualizar el vehículo');
+  }
+};
+
   // Filtrar vehículos
   const filteredVehicles = vehiculos.filter((vehiculo) => {
     const conductorName = getConductorName(vehiculo.conductor);
-    
-    const matchesSearch = 
-      vehiculo.placa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehiculo.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      conductorName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = 
-      statusFilter === 'Todos' || vehiculo.estado_vehiculo === statusFilter;
+    const matchesSearch = searchTerm === '' ||
+    vehiculo.placa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehiculo.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    conductorName.toLowerCase().includes(searchTerm.toLowerCase());
+    console.log('Estado original:', vehiculo.estado_vehiculo, 'Tipo:', typeof vehiculo.estado_vehiculo);
+    const matchesStatus = statusFilter === 'Todos' || mapearEstado(vehiculo.estado_vehiculo) === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
-  
+
   // Mostrar detalles del vehículo
   const handleShowDetails = (vehicle) => {
     setCurrentVehicle(vehicle);
@@ -164,69 +238,62 @@ const Vehiculos = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewVehicle({
-      ...newVehicle,
-      [name]: value
-    });
+  ...newVehicle,
+  [name]: value 
+  });
   };
   
   // Manejar envío del formulario
   const handleSubmitNewVehicle = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setValidated(true);
-      return;
-    }
-    
-    try {
-      const token = localStorage.getItem('token');
-      const headers = {
+  e.preventDefault();
+  const form = e.currentTarget;
+  
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setValidated(true);
+    return;
+  }
+  
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:3001/api/vehicles', {
+      method: 'POST',
+      headers: {
         'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(newVehicle),
+    });
 
-      const response = await fetch('http://localhost:3001/api/vehicles', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(newVehicle),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error al crear el vehículo');
-      }
-      
-      const nuevoVehiculo = await response.json();
-      setVehiculos([...vehiculos, nuevoVehiculo]);
-      
-      // Cerrar modal y resetear form
-      setShowNewVehicleModal(false);
-      setNewVehicle({
-        placa: '',
-        modelo: '',
-        año: new Date().getFullYear(),
-        conductor: '',
-        estado_vehiculo: 'Activo',
-        seguro: '',
-        kilometraje: '',
-        marca: '',
-        color: '',
-        capacidad: '',
-        tipo: '',
-        peso: '',
-        matricula: '',
-      });
-      setValidated(false);
-      alert('Vehículo creado exitosamente');
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al crear el vehículo');
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(responseData.message || 'Error al crear vehículo');
     }
-  };
+
+    setVehiculos([...vehiculos, responseData.vehicle]);
+    setShowNewVehicleModal(false);
+    setNewVehicle({
+      placa: '',
+      modelo: '',
+      conductor: '',
+      estado_vehiculo: 1,
+      seguro: '',
+      kilometraje: '',
+      marca: '',
+      color: '',
+      capacidad: '',
+      tipo: '',
+      peso: '',
+      matricula: '',
+    });
+    setValidated(false);
+    alert('Vehículo creado exitosamente');
+  } catch (error) {
+    console.error('Error:', error);
+    alert(`Error al crear el vehículo: ${error.message}`);
+  }
+};
   
   // Componente para el badge de estado
   const EstadoBadge = ({ estado }) => {
@@ -299,13 +366,13 @@ const Vehiculos = () => {
                 </InputGroup.Text>
                 <Form.Select 
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="Todos">Todos</option>
-                  <option value="Activo">Activo</option>
-                  <option value="En mantenimiento">En mantenimiento</option>
-                  <option value="Disponible">Disponible</option>
-                  <option value="Fuera de servicio">Fuera de servicio</option>
+                   onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                <option value="Todos">Todos</option>
+                <option value="Activo">Activo</option>
+                <option value="En mantenimiento">En mantenimiento</option>
+                <option value="Disponible">Disponible</option>
+                <option value="Fuera de servicio">Fuera de servicio</option> 
                 </Form.Select>
               </InputGroup>
             </Col>
@@ -330,7 +397,6 @@ const Vehiculos = () => {
                 <tr>
                   <th>Placa</th>
                   <th>Modelo</th>
-                  <th>Año</th>
                   <th>Conductor</th>
                   <th>Estado</th>
                   <th>Acciones</th>
@@ -343,7 +409,6 @@ const Vehiculos = () => {
                     <tr key={vehiculo.id_vehiculo}>
                       <td>{vehiculo.placa}</td>
                       <td>{vehiculo.modelo}</td>
-                      <td>{vehiculo.año}</td>
                       <td>
                         {vehiculo.conductor ? (
                           <div className="d-flex align-items-center">
@@ -355,9 +420,8 @@ const Vehiculos = () => {
                         )}
                       </td>
                       <td>
-                        <EstadoBadge estado={vehiculo.estado_vehiculo || vehiculo.estado} />
+                        <EstadoBadge estado={mapearEstado(vehiculo.estado_vehiculo)} />
                       </td>
-                      <td>{vehiculo.seguro || 'N/A'}</td>
                       <td>
                         <div className="action-buttons">
                           <Button 
@@ -368,8 +432,13 @@ const Vehiculos = () => {
                           >
                             Ver
                           </Button>
-                          <Button variant="outline-warning" size="sm" className="me-1">
-                            <FaEdit />
+                          <Button 
+                          variant="outline-warning" 
+                          size="sm" 
+                          className="me-1"
+                          onClick={() => handleEditVehicle(vehiculo)}
+                          >
+                          <FaEdit />
                           </Button>
                           <Button 
                             variant="outline-danger" 
@@ -415,7 +484,7 @@ const Vehiculos = () => {
                   </div>
                   <h4>{currentVehicle.modelo}</h4>
                   <p className="mb-1">
-                    <EstadoBadge estado={currentVehicle.estado_vehiculo} />
+                    <EstadoBadge estado={mapearEstado(currentVehicle.estado_vehiculo)} />
                   </p>
                   <p className="text-muted">
                     <FaIdCard className="me-2" />
@@ -428,10 +497,6 @@ const Vehiculos = () => {
                     <Col sm={6}>
                       <p className="mb-1"><strong>Marca:</strong></p>
                       <p>{currentVehicle.marca || 'N/A'}</p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Año:</strong></p>
-                      <p>{currentVehicle.año || 'N/A'}</p>
                     </Col>
                   </Row>
                   <Row className="mb-3">
@@ -468,14 +533,6 @@ const Vehiculos = () => {
                   </Row>
                   <Row className="mb-3">
                     <Col sm={12}>
-                      <p className="mb-1"><strong>Capacidad:</strong></p>
-                      <p>{currentVehicle.capacidad || 'N/A'}</p>
-                    </Col>
-                  </Row>
-                  
-                  <h5 className="mb-3 mt-4">Asignación</h5>
-                  <Row className="mb-3">
-                    <Col sm={12}>
                       <p className="mb-1"><strong>Conductor Asignado:</strong></p>
                       {currentVehicle.conductor ? (
                         <p className="d-flex align-items-center">
@@ -483,7 +540,7 @@ const Vehiculos = () => {
                           {getConductorName(currentVehicle.conductor)}
                         </p>
                       ) : (
-                        <p className="text-muted">Sin asignar</p>
+                        <option value="" disabled>Seleccionar conductor...</option>
                       )}
                     </Col>
                   </Row>
@@ -496,235 +553,328 @@ const Vehiculos = () => {
           <Button variant="secondary" onClick={() => setShowVehicleModal(false)}>
             Cerrar
           </Button>
-          <Button variant="warning">
-            <FaEdit className="me-2" /> Editar Información
-          </Button>
+          <Button 
+    variant="warning"
+    onClick={() => {
+    setShowVehicleModal(false);
+    handleEditVehicle(currentVehicle);
+    }}
+      >
+  <FaEdit className="me-2" /> Editar Información
+  </Button>
         </Modal.Footer>
       </Modal>
+            {/* Modal de edición */}
+<Modal
+  show={showEditModal}
+  onHide={() => setShowEditModal(false)}
+  size="lg"
+  centered
+>
+  <Form onSubmit={handleUpdateVehicle}>
+    <Modal.Header closeButton>
+      <Modal.Title>Editar Vehículo</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+      {/* Información básica */}
+      <h5 className="border-bottom pb-2 mb-3">Información Básica</h5>
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Placa</Form.Label>
+            <Form.Control
+              type="text"
+              value={editFormData.placa || ''}
+              onChange={(e) => setEditFormData({...editFormData, placa: e.target.value})}
+            />
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Marca</Form.Label>
+            <Form.Control
+              type="text"
+              value={editFormData.marca || ''}
+              onChange={(e) => setEditFormData({...editFormData, marca: e.target.value})}
+            />
+          </Form.Group>
+        </Col>
+      </Row>
       
-      {/* Modal para crear nuevo vehículo */}
-      <Modal
-        show={showNewVehicleModal}
-        onHide={() => setShowNewVehicleModal(false)}
-        size="lg"
-        centered
-        backdrop="static"
-      >
-        <Form noValidate validated={validated} onSubmit={handleSubmitNewVehicle}>
-          <Modal.Header closeButton className="border-bottom border-warning">
-            <Modal.Title>
-              <FaCarAlt className="me-2 text-warning" />
-              Registrar Nuevo Vehículo
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <div className="new-vehicle-form">
-              {/* Información básica */}
-              <h5 className="border-bottom pb-2 mb-3">Información Básica</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Placa</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="placa"
-                      value={newVehicle.placa}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Ej: ABC-123"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La placa es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Marca</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="marca"
-                      value={newVehicle.marca}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La marca es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Modelo</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="modelo"
-                      value={newVehicle.modelo}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El modelo es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Año</Form.Label>
-                    <Form.Control
-                      type="number"
-                      name="año"
-                      value={newVehicle.año}
-                      onChange={handleInputChange}
-                      required
-                      min="1900"
-                      max={new Date().getFullYear() + 1}
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El año debe ser válido
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Color</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="color"
-                      value={newVehicle.color}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El color es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Tipo</Form.Label>
-                    <Form.Select
-                      name="tipo"
-                      value={newVehicle.tipo}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">Seleccionar...</option>
-                      <option value="Automóvil">Automóvil</option>
-                      <option value="Camioneta">Camioneta</option>
-                      <option value="Camión">Camión</option>
-                      <option value="Van">Van</option>
-                      <option value="Bus">Bus</option>
-                      <option value="Motocicleta">Motocicleta</option>
-                    </Form.Select>
-                    <Form.Control.Feedback type="invalid">
-                      Seleccione un tipo de vehículo
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Row className="mb-3">
-                <Col md={12}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Capacidad</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="capacidad"
-                      value={newVehicle.capacidad}
-                      onChange={handleInputChange}
-                      placeholder="Ej: 5 pasajeros, 2.5 toneladas, etc."
-                      required
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La capacidad es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              {/* Mantenimiento */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Mantenimiento</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Kilometraje</Form.Label>
-                    <InputGroup>
-                      <Form.Control
-                        type="number"
-                        name="kilometraje"
-                        value={newVehicle.kilometraje}
-                        onChange={handleInputChange}
-                        min="0"
-                        required
-                      />
-                      <InputGroup.Text>km</InputGroup.Text>
-                      <Form.Control.Feedback type="invalid">
-                        El kilometraje es obligatorio
-                      </Form.Control.Feedback>
-                    </InputGroup>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Estado</Form.Label>
-                    <Form.Select
-                      name="estado_vehiculo"
-                      value={newVehicle.estado_vehiculo}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="Activo">Activo</option>
-                      <option value="En mantenimiento">En mantenimiento</option>
-                      <option value="Disponible">Disponible</option>
-                      <option value="Fuera de servicio">Fuera de servicio</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              {/* Asignación */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Asignación</h5>
-              <Row className="mb-3">
-                <Col md={12}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Conductor</Form.Label>
-                    <Form.Select
-                      name="conductor"
-                      value={newVehicle.conductor}
-                      onChange={handleInputChange}
-                    >
-                      <option value="">Sin asignar</option>
-                      {conductores.map((conductor) => (
-                        <option key={conductor.id || conductor.id_conductor} value={conductor.id || conductor.id_conductor}>
-                          {conductor.nombre}
-                        </option>
-                      ))}
-                    </Form.Select>
-                    <Form.Text className="text-muted">
-                      Puede dejar sin asignar y seleccionar un conductor más tarde
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-              </Row>
-            </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowNewVehicleModal(false)}>
-              Cancelar
-            </Button>
-            <Button variant="warning" type="submit">
-              <FaSave className="me-2" /> Guardar Vehículo
-            </Button>
-          </Modal.Footer>
-        </Form>
-      </Modal>
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Modelo</Form.Label>
+            <Form.Control
+              type="text"
+              value={editFormData.modelo || ''}
+              onChange={(e) => setEditFormData({...editFormData, modelo: e.target.value})}
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+      
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Color</Form.Label>
+            <Form.Control
+              type="text"
+              value={editFormData.color || ''}
+              onChange={(e) => setEditFormData({...editFormData, color: e.target.value})}
+            />
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Tipo</Form.Label>
+            <Form.Select
+              value={editFormData.tipo || ''}
+              onChange={(e) => setEditFormData({...editFormData, tipo: e.target.value})}
+            >
+              <option value="">Seleccionar...</option>
+              <option value="Rabón">Rabón</option>
+              <option value="Tornon">Tornon</option>
+              <option value="Tolva">Tolva</option>
+              <option value="Caja Cerrada">Caja Cerrada</option>
+              <option value="Caja refrigerada">Caja refrigerada</option>
+              <option value="Doble semirremolque">Doble semirremolque</option>
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
+      
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Capacidad</Form.Label>
+            <Form.Control
+              type="text"
+              value={editFormData.capacidad || ''}
+              onChange={(e) => setEditFormData({...editFormData, capacidad: e.target.value})}
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+      
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Kilometraje</Form.Label>
+            <Form.Control
+              type="number"
+              value={editFormData.kilometraje || ''}
+              onChange={(e) => setEditFormData({...editFormData, kilometraje: e.target.value})}
+            />
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Estado</Form.Label>
+            <Form.Select
+              value={editFormData.estado_vehiculo || ''}
+              onChange={(e) => setEditFormData({...editFormData, estado_vehiculo: e.target.value})}
+            > 
+              <option value="1">Activo</option> 
+              <option value="2">En mantenimiento</option>
+              <option value="3">Disponible</option>
+              <option value="4">Fuera de servicio</option> 
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
+      
+      <Row className="mb-3">
+        <Col md={12}>
+          <Form.Group className="mb-3">
+            <Form.Label>Conductor</Form.Label>
+            <Form.Select
+              value={editFormData.conductor || ''}
+              onChange={(e) => setEditFormData({...editFormData, conductor: e.target.value})}
+            >
+              <option value="">Sin asignar</option>
+              {conductores.map((conductor, index) => (
+              <option 
+              key={`conductor-${conductor.id || conductor.id_conductor || index}`} 
+              value={conductor.id || conductor.id_conductor}
+              >
+            {conductor.nombre}
+            </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
+    </Modal.Body>
+    <Modal.Footer>
+      <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+        Cancelar
+      </Button>
+      <Button variant="warning" type="submit">
+        Guardar Cambios
+      </Button>
+    </Modal.Footer>
+  </Form>
+    </Modal>
+    {/* Modal de Nuevo Vehículo */}
+<Modal
+  show={showNewVehicleModal}
+  onHide={() => setShowNewVehicleModal(false)}
+  size="lg"
+  centered
+>
+  <Form noValidate validated={validated} onSubmit={handleSubmitNewVehicle}>
+    <Modal.Header closeButton>
+      <Modal.Title>Nuevo Vehículo</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+      <h5 className="border-bottom pb-2 mb-3">Información Básica</h5>
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Placa *</Form.Label>
+            <Form.Control
+              type="text"
+              name="placa"
+              value={newVehicle.placa}
+              onChange={handleInputChange}
+            />
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Marca *</Form.Label>
+            <Form.Control
+              type="text"
+              name="marca"
+              value={newVehicle.marca}
+              onChange={handleInputChange}
+              required
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+      
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Modelo *</Form.Label>
+            <Form.Control
+              type="text"
+              name="modelo"
+              value={newVehicle.modelo}
+              onChange={handleInputChange}
+              required
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+      
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Color</Form.Label>
+            <Form.Control
+              type="text"
+              name="color"
+              value={newVehicle.color}
+              onChange={handleInputChange}
+            />
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Tipo</Form.Label>
+            <Form.Select
+              name="tipo"
+              value={newVehicle.tipo}
+              onChange={handleInputChange}
+            >
+              <option value="">Seleccionar...</option>
+              <option value="Rabón">Rabón</option>
+              <option value="Tornon">Tornon</option>
+              <option value="Tolva">Tolva</option>
+              <option value="Caja Cerrada">Caja Cerrada</option>
+              <option value="Caja refrigerada">Caja refrigerada</option>
+              <option value="Doble semirremolque">Doble semirremolque</option>
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
+      
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Capacidad</Form.Label>
+            <Form.Control
+              type="text"
+              name="capacidad"
+              value={newVehicle.capacidad}
+              onChange={handleInputChange}
+            />
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Kilometraje</Form.Label>
+            <Form.Control
+              type="number"
+              name="kilometraje"
+              value={newVehicle.kilometraje}
+              onChange={handleInputChange}
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+      
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Estado</Form.Label>
+            <Form.Select
+              name="estado_vehiculo"
+              value={newVehicle.estado_vehiculo}
+              onChange={handleInputChange}
+            >
+              <option value="Activo">Activo</option>
+              <option value="En mantenimiento">En mantenimiento</option>
+              <option value="Disponible">Disponible</option>
+              <option value="Fuera de servicio">Fuera de servicio</option>
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group className="mb-3">
+            <Form.Label>Conductor</Form.Label>
+            <Form.Select
+              name="conductor"
+              value={newVehicle.conductor}
+              onChange={handleInputChange}
+            >
+              <option value="">Sin asignar</option>
+              {conductores.map((conductor, index) => (
+                <option 
+                  key={`conductor-${conductor.id || conductor.id_conductor || index}`} 
+                  value={conductor.id || conductor.id_conductor}
+                >
+                  {conductor.nombre}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
+    </Modal.Body>
+    <Modal.Footer>
+      <Button variant="secondary" onClick={() => setShowNewVehicleModal(false)}>
+        Cancelar
+      </Button>
+      <Button variant="warning" type="submit">
+        <FaSave className="me-2" /> Crear Vehículo
+      </Button>
+    </Modal.Footer>
+  </Form>
+</Modal>
     </LayoutBarButton>
   );
 };

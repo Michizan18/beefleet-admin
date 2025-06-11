@@ -13,7 +13,6 @@ const Rutas = () => {
   const [selectedRuta, setSelectedRuta] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [cargasDisponibles, setCargasDisponibles] = useState([]);
 
   // Estado para el formulario
   const initialFormState = {
@@ -27,7 +26,6 @@ const Rutas = () => {
 
   useEffect(() => {
     fetchRutas();
-    fetchCargas(); 
   }, []);
 
   useEffect(() => {
@@ -43,21 +41,6 @@ const Rutas = () => {
     });
     setFilteredRutas(filtered);
   }, [searchTerm, rutasData]);
-
-  const fetchCargas = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/cargas', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const cargas = await response.json();
-        setCargasDisponibles(cargas);
-      }
-    } catch (err) {
-      console.error("Error al cargar cargas:", err);
-    }
-  };
 
   const fetchRutas = async () => {
     setLoading(true);
@@ -90,12 +73,12 @@ const Rutas = () => {
       
       // Normalizar datos del backend
       const normalizedData = Array.isArray(data) 
-        ? data.map(ruta => ({
+        ? data.flat().map(ruta => ({
             id_ruta: ruta.id_ruta,
             origen: ruta.origen || 'Sin origen',
             destino: ruta.destino || 'Sin destino',
             distancia: parseFloat(ruta.distancia) || 0,
-            carga: ruta.carga || null // Cambiar a ID
+            carga: parseInt(ruta.carga) || 0
           }))
         : [];
       
@@ -164,8 +147,8 @@ const Rutas = () => {
     const distancia = parseFloat(formData.distancia);
     if (isNaN(distancia) || distancia <= 0) errors.push('La distancia debe ser un número mayor a 0');
     
-    // Cambiar validación de carga
-    if (!formData.carga || formData.carga === '') errors.push('Debe seleccionar una carga');
+    const carga = parseInt(formData.carga);
+    if (isNaN(carga) || carga <= 0) errors.push('La carga debe ser un número mayor a 0');
 
     return errors;
   };
@@ -188,7 +171,7 @@ const Rutas = () => {
         origen: formData.origen.trim(),
         destino: formData.destino.trim(),
         distancia: parseFloat(formData.distancia),
-        carga: parseInt(formData.carga) // Enviar como ID
+        carga: parseInt(formData.carga)
       };
 
       const isEdit = modalMode === 'edit';
@@ -212,11 +195,12 @@ const Rutas = () => {
 
       const result = await response.json();
       const newRuta = isEdit ? null : result.route;
-
+      
+      // Actualizar estado local
       setRutasData(prev => 
         isEdit
           ? prev.map(r => r.id_ruta === selectedRuta.id_ruta ? { ...r, ...rutaData } : r)
-          : [...prev, { id_ruta: newRuta.id_ruta, ...rutaData }]
+          : [...prev, newRuta]
       );
 
       setShowModal(false);
@@ -236,18 +220,13 @@ const Rutas = () => {
     }));
   };
 
-  const getCargaInfo = (cargaId) => {
-    const carga = cargasDisponibles.find(c => c.id_carga === cargaId);
-    return carga ? carga.descripcion || `Carga #${cargaId}` : `ID: ${cargaId}`;
-  };
-  
   const calculateStats = () => {
     const totalRutas = rutasData.length;
     const totalDistancia = rutasData.reduce((sum, ruta) => sum + ruta.distancia, 0);
+    const totalCarga = rutasData.reduce((sum, ruta) => sum + ruta.carga, 0);
     const distanciaPromedio = totalRutas > 0 ? totalDistancia / totalRutas : 0;
-    // Remover totalCarga ya que ahora son IDs, no pesos
 
-    return { totalRutas, totalDistancia, distanciaPromedio };
+    return { totalRutas, totalDistancia, totalCarga, distanciaPromedio };
   };
 
   const { totalRutas, totalDistancia, totalCarga, distanciaPromedio } = calculateStats();
@@ -408,7 +387,7 @@ const Rutas = () => {
                           </div>
                         </td>
                         <td className="text-end">{ruta.distancia.toFixed(1)}</td>
-                        <td className="text-end">{getCargaInfo(ruta.carga)}</td>
+                        <td className="text-end">{ruta.carga.toLocaleString()}</td>
                         <td>
                           <div className="d-flex gap-2">
                             <Button
@@ -519,21 +498,17 @@ const Rutas = () => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Carga *</Form.Label>
-                  <Form.Select
+                  <Form.Label>Carga (kg) *</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="1"
                     name="carga"
                     value={formData.carga}
                     onChange={handleInputChange}
                     required
+                    placeholder="0"
                     disabled={isSubmitting}
-                  >
-                    <option value="">Seleccionar carga...</option>
-                    {cargasDisponibles.map(carga => (
-                      <option key={carga.id_carga} value={carga.id_carga}>
-                        {carga.descripcion || `Carga #${carga.id_carga}`}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  />
                 </Form.Group>
               </Col>
             </Row>

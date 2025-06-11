@@ -10,7 +10,6 @@ import LayoutBarButton from '../components/LayoutBarButton';
 import './Conductores.css';
 
 const Conductores = () => {
-  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [conductores, setConductores] = useState([]);
   const [filteredConductores, setFilteredConductores] = useState([]);
@@ -19,11 +18,14 @@ const Conductores = () => {
   const [showModal, setShowModal] = useState(false);
   const [currentDriver, setCurrentDriver] = useState(null);
   const [filterStatus, setFilterStatus] = useState('todos');
-  const [isUpdating, setIsUpdating] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
   const [showNewDriverModal, setShowNewDriverModal] = useState(false);
-  const [showUpdateDriverModal, setShowUpdateDrivermodal] = useState(false);
-  const [newDriver, setNewDriver] = useState({
-    tipo_documento: '',
+  const [showUpdateDriverModal, setShowUpdateDriverModal] = useState(false);
+  const [validated, setValidated] = useState(false);
+  
+  // Estado para nuevo conductor
+  const initialDriverState = {
+    tipo_documento: 'CC',
     documento: '',
     nombre_conductor: '',
     apellido_conductor: '',
@@ -35,17 +37,17 @@ const Conductores = () => {
     tipo_licencia: '',
     fecha_vencimiento: '',
     experiencia: '',
+    contraseña: 'defaultPassword123',
     estado: 'Activo',
-  });
-  const [validated, setValidated] = useState(false);
-  
+  };
+
+  const [newDriver, setNewDriver] = useState(initialDriverState);
+  const [editDriver, setEditDriver] = useState(initialDriverState);
+
   const conductoresPorPagina = 8;
 
-  const getAuthToken = () => {
-    const token = localStorage.getItem('token');
-    return token ? `Bearer ${token}` : null;
-  };
-  const fetchConductores = async () => {
+  useEffect(() => {
+    const fetchConductores = async () => {
       try {
         const token = localStorage.getItem('token');
         
@@ -76,85 +78,88 @@ const Conductores = () => {
       } finally {
         setLoading(false);
       }
+    };
 
-    
-  fetchConductores();
-}, []);
-  
+    fetchConductores();
+  }, []);
+
   useEffect(() => {
-    // Filtrar conductores según búsqueda y estado
     let filtered = conductores;
-      
     
-    // Aplicar filtro por término de búsqueda
     if (searchTerm) {
       filtered = filtered.filter(conductor => 
-        conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conductor.documento?.includes(searchTerm)
+        (conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conductor.documento?.toString().includes(searchTerm))
       );
     }
     
-    // Aplicar filtro por estado
     if (filterStatus !== 'todos') {
       filtered = filtered.filter(conductor => conductor.estado === filterStatus);
     }
     setFilteredConductores(filtered);
     setCurrentPage(1);
-    fetchConductores();
-    setCurrentPage(1); // Resetear a primera página al filtrar
   }, [searchTerm, filterStatus, conductores]);
   
-  // Formatear fecha a formato español
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
+    if (!dateString) return 'No especificada';
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch {
+      return dateString;
+    }
   };
   
-  // Gestionar el cambio de página
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
   
-  // Calcular índices para paginación
   const indexOfLastConductor = currentPage * conductoresPorPagina;
   const indexOfFirstConductor = indexOfLastConductor - conductoresPorPagina;
   const currentConductores = filteredConductores.slice(indexOfFirstConductor, indexOfLastConductor);
-  
-  // Calcular total de páginas
   const totalPages = Math.ceil(filteredConductores.length / conductoresPorPagina);
   
-  // Mostrar detalles de conductor
   const handleShowDetails = (driver) => {
     setCurrentDriver(driver);
     setShowModal(true);
   };
 
-  // Manejar cambios en el formulario
-const handleInputChange = (e) => {
-  const { name, value } = e.target;
-  
-  // Manejar campos numéricos específicamente
-  let processedValue = value;
-  
-  if (name === 'documento') {
-    // Solo permitir números para documento
-    processedValue = value.replace(/\D/g, '');
-  } else if (name === 'experiencia') {
-    // Solo permitir números para experiencia
-    processedValue = value.replace(/\D/g, '');
-  } else if (name === 'telefono') {
-    // Solo permitir números para teléfono
-    processedValue = value.replace(/\D/g, '');
-  }
-  
-  setNewDriver({
-    ...newDriver,
-    [name]: processedValue
-  });
-};
+  const handleEditDriver = (driver) => {
+    setEditDriver({
+      id_conductor: driver.id_conductor,
+      tipo_documento: driver.tipo_documento || 'CC',
+      documento: driver.documento || '',
+      nombre_conductor: driver.nombre_conductor || '',
+      apellido_conductor: driver.apellido_conductor || '',
+      correo_conductor: driver.correo_conductor || '',
+      foto: driver.foto || '',
+      telefono: driver.telefono || '',
+      ciudad: driver.ciudad || '',
+      direccion: driver.direccion || '',
+      tipo_licencia: driver.tipo_licencia || '',
+      fecha_vencimiento: driver.fecha_vencimiento ? driver.fecha_vencimiento.split('T')[0] : '',
+      experiencia: driver.experiencia || '',
+    });
+    setShowUpdateDriverModal(true);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    let processedValue = value;
+    
+    if (name === 'documento' || name === 'experiencia' || name === 'telefono') {
+      processedValue = value.replace(/\D/g, '');
+    }
+    
+    setNewDriver({
+      ...newDriver,
+      [name]: processedValue
+    });
+  };
 
   const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
     const confirmDelete = window.confirm(
@@ -164,23 +169,12 @@ const handleInputChange = (e) => {
     );
     if (confirmDelete) {
       try {
-        const token = getAuthToken();
-        const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          }
+        await api(`/drivers/${id_conductor}`, {
+          method: 'DELETE'
         });
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || 'Error al eliminar el Conductor');
-        }
+        
         setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
-        
-        // Mostrar mensaje de éxito
         alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
-        
       } catch (error) {
         console.error('Error:', error);
         alert(`Hubo un error al eliminar el conductor: ${error.message}`);
@@ -188,44 +182,36 @@ const handleInputChange = (e) => {
     }
   };
 
-  const updateConductor = async(id_conductor, updatedData) => {
+  const handleSubmitNewDriver = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
+      return;
+    }
+
     try {
       setIsUpdating(true);
-      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type' : 'application/json'
-        },
-        body: JSON.stringify(updatedData)
-      });
-      if (!response.ok){
-        throw new Error('Error al actualizar el conductor')
-      }
-      const data = await response.json();
-      setConductores(data);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al crear el conductor');
-    } finally{
-      setIsUpdating(false)
-    }
-  }
+      
+      const payload = {
+        tipo_documento: newDriver.tipo_documento,
+        documento: parseInt(newDriver.documento, 10),
+        nombre_conductor: newDriver.nombre_conductor.trim(),
+        apellido_conductor: newDriver.apellido_conductor.trim(),
+        correo_conductor: newDriver.correo_conductor.trim().toLowerCase(),
+        foto: newDriver.foto || null,
+        telefono: newDriver.telefono || null,
+        ciudad: newDriver.ciudad || null,
+        direccion: newDriver.direccion || null,
+        tipo_licencia: newDriver.tipo_licencia,
+        fecha_vencimiento: newDriver.fecha_vencimiento || null,
+        experiencia: parseInt(newDriver.experiencia, 10) || 0,
+        contraseña: newDriver.contraseña,
+        estado: newDriver.estado
+      };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const updateConductor = {
-      tipo_documento: formData.get('tipo_documento'),
-      documento: formData.get('documento'),
-      nombre_conductor: formData.get('nombre_conductor'),
-      apellido_conductor: formData.get('apellido_conductor'),
-      correo_conductor: formData.get('correo_conductor'),
-      foto: formData.get('foto'),
-      telefono: formData.get('telefono'),
-      ciudad: formData.get('ciudad'),
-      direccion: formData.get('direccion')
-    }
-    updateConductor(conductor.id_conductor, updateConductor);
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3001/api/drivers', {
         method: 'POST',
@@ -257,6 +243,44 @@ const handleInputChange = (e) => {
     }
   };
 
+  const testCreateDriver = async () => {
+    try {
+      const testPayload = {
+        tipo_documento: 'CC',
+        documento: '12345678',
+        nombre_conductor: 'Test',
+        apellido_conductor: 'Driver',
+        correo_conductor: 'test@example.com',
+        telefono: '1234567890',
+        ciudad: 'Bogotá',
+        direccion: 'Calle Test 123',
+        tipo_licencia: 'B1',
+        experiencia: 5,
+        estado: 'Activo'
+      };
+
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/drivers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(testPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error('Error en la prueba del backend');
+      }
+
+      const result = await response.json();
+      alert('Prueba exitosa: ' + JSON.stringify(result));
+    } catch (error) {
+      console.error('Error en la prueba:', error);
+      alert('Error en la prueba: ' + error.message);
+    }
+  };
+
   const EstadoBadge = ({ estado }) => {
     const variants = {
       Activo: 'success',
@@ -269,61 +293,13 @@ const handleInputChange = (e) => {
     return <Badge bg={variants[estado] || 'secondary'}>{estado}</Badge>;
   };
   
-  if (form.checkValidity() === false) {
-    e.stopPropagation();
-    setValidated(true);
-    return;
-  }
-
-  try {
-    setIsUpdating(true);
-    
-    // PAYLOAD ULTRA MINIMALISTA - Solo los campos absolutamente necesarios
-    const payload = {
-      documento: newDriver.documento.trim(),
-      nombre_conductor: newDriver.nombre_conductor.trim(),
-      correo_conductor: newDriver.correo_conductor.trim().toLowerCase()
-    };
-
-    console.log('=== MINIMAL TEST: Payload ===', payload);
-
-    const token = localStorage.getItem('token');
-    
-    const response = await fetch('http://localhost:3001/api/drivers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const responseText = await response.text();
-    
-    console.log('=== MINIMAL TEST: Response ===', {
-      status: response.status,
-      statusText: response.statusText,
-      body: responseText
-    });
-
-    if (!response.ok) {
-      throw new Error(`Status ${response.status}: ${responseText}`);
-    }
-
-    // Si llegamos aquí, el payload mínimo funciona
-    alert('¡Payload mínimo funciona! Ahora vamos agregando campos...');
-    
-  } catch (error) {
-    console.error('=== MINIMAL TEST: Error ===', error);
-    alert(`Error con payload mínimo: ${error.message}`);
-  } finally {
-    setIsUpdating(false);
-  }
-};
-  
-  // Componente de Paginación
   const renderPagination = () => {
     if (totalPages <= 1) return null;
+    
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i);
+    }
     
     return (
       <div className="pagination-container d-flex justify-content-between align-items-center mt-3">
@@ -332,118 +308,61 @@ const handleInputChange = (e) => {
         </div>
         <ul className="pagination mb-0">
           <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-            <a className="page-link" href="#!" onClick={() => handlePageChange(Math.max(1, currentPage - 1))}>
+            <button className="page-link" onClick={() => handlePageChange(currentPage - 1)}>
               Anterior
-            </a>
+            </button>
           </li>
-          {[...Array(totalPages)].map((_, i) => (
-            <li key={i} className={`page-item ${i + 1 === currentPage ? 'active' : ''}`}>
-              <a className="page-link" href="#!" onClick={() => handlePageChange(i + 1)}>
-                {i + 1}
-              </a>
+          {pageNumbers.map(number => (
+            <li key={number} className={`page-item ${number === currentPage ? 'active' : ''}`}>
+              <button className="page-link" onClick={() => handlePageChange(number)}>
+                {number}
+              </button>
             </li>
           ))}
           <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-            <a className="page-link" href="#!" onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}>
+            <button className="page-link" onClick={() => handlePageChange(currentPage + 1)}>
               Siguiente
-            </a>
+            </button>
           </li>
         </ul>
       </div>
     );
   };
-  
-  const testCreateDriver = async () => {
-  try {
-    const testPayload = {
-      tipo_documento: 'CC',
-      documento: '12345678',
-      nombre_conductor: 'Test',
-      apellido_conductor: 'Driver',
-      correo_conductor: 'test@example.com',
-      telefono: '1234567890',
-      ciudad: 'Bogotá',
-      direccion: 'Calle Test 123',
-      tipo_licencia: 'B1',
-      experiencia: 5,
-      estado: 'Activo'
-    };
 
-    console.log('=== TEST: Enviando payload de prueba ===');
-    const response = await fetch('http://localhost:3001/api/drivers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(testPayload)
-    });
-
-    const responseText = await response.text();
-    console.log('=== TEST: Response ===', {
-      status: response.status,
-      headers: [...response.headers.entries()],
-      body: responseText
-    });
-
-  } catch (error) {
-    console.error('=== TEST: Error ===', error);
+  if (loading) {
+    return (
+      <LayoutBarButton>
+        <Container className="text-center py-5">
+          <div className="spinner-border text-warning" role="status">
+            <span className="visually-hidden">Cargando...</span>
+          </div>
+          <p className="mt-3">Cargando conductores...</p>
+        </Container>
+      </LayoutBarButton>
+    );
   }
-};
 
-  // Componente para el badge de estado
-  const EstadoBadge = ({ estado }) => {
-    let variant;
-    switch (estado) {
-      case 'Activo':
-        variant = 'success';
-        break;
-      case 'En ruta':
-        variant = 'primary';
-        break;
-      case 'Descanso':
-      case 'Entrenamiento':
-        variant = 'warning';
-        break;
-      case 'Inactivo':
-        variant = 'danger';
-        break;
-      default:
-        variant = 'secondary';
-    }
-    
-    return <span className={`badge bg-${variant} rounded-pill`}>{estado}</span>;
-  };
-  
-  
-  const conductoresContent = (
-    <>
-      
+  return (
+    <LayoutBarButton>
       <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
         <h1>Gestión de Conductores</h1>
-        <Button 
-          variant="warning" 
-          className="d-flex align-items-center"
-          onClick={() => setShowNewDriverModal(true)}
-        >
-          <FaPlus className="me-2" /> Nuevo Conductor
-        </Button>
-        <Button 
-  variant="info" 
-  className="ms-2"
-  onClick={testCreateDriver}
->
-  Test Backend
-</Button>
+        <div>
+          <Button 
+            variant="warning" 
+            className="d-flex align-items-center me-2"
+            onClick={() => setShowNewDriverModal(true)}
+          >
+            <FaPlus className="me-2" /> Nuevo Conductor
+          </Button>
+        </div>
       </div>
       
-      {/* Filtros y búsqueda */}
       <Card className="mb-4">
         <Card.Body>
           <Row>
             <Col md={6} lg={8}>
               <InputGroup>
-                <InputGroup.Text id="basic-addon1" className="bg-warning text-white">
+                <InputGroup.Text className="bg-warning text-white">
                   <FaSearch />
                 </InputGroup.Text>
                 <Form.Control
@@ -455,7 +374,7 @@ const handleInputChange = (e) => {
             </Col>
             <Col md={6} lg={4} className="mt-3 mt-md-0">
               <InputGroup>
-                <InputGroup.Text id="filter-addon" className="bg-warning text-white">
+                <InputGroup.Text className="bg-warning text-white">
                   <FaFilter />
                 </InputGroup.Text>
                 <Form.Select 
@@ -474,7 +393,6 @@ const handleInputChange = (e) => {
         </Card.Body>
       </Card>
       
-      {/* Listado de conductores */}
       <Card>
         <Card.Header className="bg-white">
           <div className="d-flex justify-content-between align-items-center">
@@ -497,11 +415,11 @@ const handleInputChange = (e) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredConductores.map((conductor, index) => (
-                  <tr key={conductor.id_conductor || conductor.id || index}>
+                {currentConductores.map((conductor) => (
+                  <tr key={conductor.id_conductor}>
                     <td>{conductor.nombre_conductor} {conductor.apellido_conductor}</td>
                     <td>{conductor.documento}</td>
-                    <td>{conductor.ciudad}</td>
+                    <td>{conductor.ciudad || 'No especificada'}</td>
                     <td>
                       <EstadoBadge estado={conductor.estado} />
                     </td>
@@ -515,7 +433,12 @@ const handleInputChange = (e) => {
                         >
                           Ver
                         </Button>
-                        <Button variant="outline-warning" size="sm" className="me-1">
+                        <Button 
+                          variant="outline-warning" 
+                          size="sm" 
+                          className="me-1"
+                          onClick={() => handleEditDriver(conductor)}
+                        >
                           <FaEdit />
                         </Button>
                         <Button 
@@ -527,7 +450,7 @@ const handleInputChange = (e) => {
                             conductor.apellido_conductor, 
                             conductor.documento
                           )}
-                          >
+                        >
                           <FaTrashAlt />
                         </Button>
                       </div>
@@ -544,12 +467,10 @@ const handleInputChange = (e) => {
             </div>
           )}
           
-          {/* Paginación */}
           {renderPagination()}
         </Card.Body>
       </Card>
       
-      {/* Modal de detalles del conductor */}
       <Modal 
         show={showModal} 
         onHide={() => setShowModal(false)}
@@ -567,16 +488,13 @@ const handleInputChange = (e) => {
                   <div className="driver-avatar mb-3">
                     <FaUserCircle size={100} className="text-warning" />
                   </div>
-                  <h4>{currentDriver.nombre_conductor}</h4>
+                  <h4>{currentDriver.nombre_conductor} {currentDriver.apellido_conductor}</h4>
                   <p className="mb-1">
                     <EstadoBadge estado={currentDriver.estado} />
                   </p>
                   <p className="text-muted">
                     <FaIdCard className="me-2" />
-                    {currentDriver.documento}
-                  </p>
-                  <p className="text-muted">
-                    {currentDriver.tipo_documento}
+                    {currentDriver.documento} ({currentDriver.tipo_documento})
                   </p>
                 </Col>
                 <Col md={8}>
@@ -586,14 +504,14 @@ const handleInputChange = (e) => {
                       <p className="mb-1"><strong>Teléfono:</strong></p>
                       <p className="d-flex align-items-center">
                         <FaPhone className="me-2 text-warning" />
-                        {currentDriver.telefono}
+                        {currentDriver.telefono || 'No especificado'}
                       </p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Email:</strong></p>
                       <p className="d-flex align-items-center">
                         <FaEnvelope className="me-2 text-warning" />
-                        {currentDriver.correo_conductor}
+                        {currentDriver.correo_conductor || 'No especificado'}
                       </p>
                     </Col>
                   </Row>
@@ -602,7 +520,13 @@ const handleInputChange = (e) => {
                       <p className="mb-1"><strong>Ciudad:</strong></p>
                       <p className="d-flex align-items-center">
                         <FaMapMarkerAlt className="me-2 text-warning" />
-                        {currentDriver.ciudad}
+                        {currentDriver.ciudad || 'No especificada'}
+                      </p>
+                    </Col>
+                    <Col sm={6}>
+                      <p className="mb-1"><strong>Dirección:</strong></p>
+                      <p>
+                        {currentDriver.direccion || 'No especificada'}
                       </p>
                     </Col>
                   </Row>
@@ -611,24 +535,20 @@ const handleInputChange = (e) => {
                   <Row className="mb-3">
                     <Col sm={6}>
                       <p className="mb-1"><strong>Experiencia:</strong></p>
-                      <p>{formatDate(currentDriver.experiencia)}</p>
+                      <p>{currentDriver.experiencia ? `${currentDriver.experiencia} años` : 'No especificada'}</p>
                     </Col>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Último Reporte:</strong></p>
-                      <p>{formatDate(currentDriver.ultimoReporte)}</p>
+                      <p className="mb-1"><strong>Tipo de licencia:</strong></p>
+                      <p>
+                        <Badge bg="warning" className="me-2">
+                          {currentDriver.tipo_licencia || 'No especificada'}
+                        </Badge>
+                      </p>
                     </Col>
                   </Row>
                   <Row className="mb-3">
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Licencia:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <Badge bg="warning" className="me-2">
-                          {currentDriver.tipo_licencia}
-                        </Badge>
-                      </p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Fecha de vencimiento:</strong></p>
+                      <p className="mb-1"><strong>Fecha vencimiento licencia:</strong></p>
                       <p>{formatDate(currentDriver.fecha_vencimiento)}</p>
                     </Col>
                   </Row>
@@ -641,16 +561,25 @@ const handleInputChange = (e) => {
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Cerrar
           </Button>
-          <Button variant="warning">
-            <FaEdit className="me-2" /> Editar Información
+          <Button 
+            variant="warning"
+            onClick={() => {
+              setShowModal(false);
+              handleEditDriver(currentDriver);
+            }}
+          >
+            <FaEdit className="me-2" /> Editar
           </Button>
         </Modal.Footer>
       </Modal>
       
-      {/* Modal para crear nuevo conductor */}
       <Modal
         show={showNewDriverModal}
-        onHide={() => setShowNewDriverModal(false)}
+        onHide={() => {
+          setShowNewDriverModal(false);
+          setNewDriver(initialDriverState);
+          setValidated(false);
+        }}
         size="lg"
         centered
         backdrop="static"
@@ -664,7 +593,6 @@ const handleInputChange = (e) => {
           </Modal.Header>
           <Modal.Body>
             <div className="new-driver-form">
-              {/* Información personal */}
               <h5 className="border-bottom pb-2 mb-3">Información Personal</h5>
               <Row className="mb-3">
                 <Col md={6}>
@@ -690,16 +618,18 @@ const handleInputChange = (e) => {
                   <Form.Group className="mb-3">
                     <Form.Label>Número de Documento</Form.Label>
                     <Form.Control
-                      type="text"  // Cambiar de "text" a "text" pero con validación
+                      type="text"
                       name="documento"
                       value={newDriver.documento}
                       onChange={handleInputChange}
                       required
-                      pattern="[0-9]+"  // Solo números
-                      title="Solo se permiten números"
+                      pattern="[0-9]+"
+                      minLength="8"
+                      maxLength="12"
+                      title="Solo se permiten números (8-12 dígitos)"
                     />
                     <Form.Control.Feedback type="invalid">
-                      El número de documento es obligatorio
+                      Documento requerido (8-12 dígitos)
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
@@ -757,7 +687,7 @@ const handleInputChange = (e) => {
                         maxLength={45}
                       />
                       <Form.Control.Feedback type="invalid">
-                        Ingrese un correo electrónico válido
+                        Ingrese un correo válido
                       </Form.Control.Feedback>
                     </InputGroup>
                   </Form.Group>
@@ -780,7 +710,7 @@ const handleInputChange = (e) => {
                         title="Solo números"
                       />
                       <Form.Control.Feedback type="invalid">
-                        El teléfono es obligatorio
+                        Teléfono requerido
                       </Form.Control.Feedback>
                     </InputGroup>
                   </Form.Group>
@@ -792,20 +722,17 @@ const handleInputChange = (e) => {
                   <Form.Group className="mb-3">
                     <Form.Label>URL de Foto</Form.Label>
                     <Form.Control
-                      type="text"
+                      type="url"
                       name="foto"
                       value={newDriver.foto}
                       onChange={handleInputChange}
                       maxLength={200}
+                      placeholder="https://ejemplo.com/foto.jpg"
                     />
-                    <Form.Text className="text-muted">
-                      Opcional: URL de la imagen del conductor
-                    </Form.Text>
                   </Form.Group>
                 </Col>
               </Row>
               
-              {/* Dirección y ubicación */}
               <h5 className="border-bottom pb-2 mb-3 mt-4">Ubicación</h5>
               <Row className="mb-3">
                 <Col md={6}>
@@ -824,7 +751,7 @@ const handleInputChange = (e) => {
                         maxLength={100}
                       />
                       <Form.Control.Feedback type="invalid">
-                        La ciudad es obligatoria
+                        Ciudad requerida
                       </Form.Control.Feedback>
                     </InputGroup>
                   </Form.Group>
@@ -841,13 +768,12 @@ const handleInputChange = (e) => {
                       maxLength={250}
                     />
                     <Form.Control.Feedback type="invalid">
-                      La dirección es obligatoria
+                      Dirección requerida
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
               </Row>
               
-              {/* Información de licencia */}
               <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Licencia</h5>
               <Row className="mb-3">
                 <Col md={6}>
@@ -885,7 +811,7 @@ const handleInputChange = (e) => {
                       required
                     />
                     <Form.Control.Feedback type="invalid">
-                      La fecha de vencimiento es obligatoria
+                      Fecha de vencimiento requerida
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
@@ -896,19 +822,18 @@ const handleInputChange = (e) => {
                   <Form.Group className="mb-3">
                     <Form.Label>Años de Experiencia</Form.Label>
                     <Form.Control
-                      type="text"  // Cambiar de "number" a "text" para mejor control
+                      type="text"
                       name="experiencia"
                       value={newDriver.experiencia}
                       onChange={handleInputChange}
                       pattern="[0-9]*"
                       title="Solo números"
-                      placeholder="Años de experiencia"
+                      placeholder="Ej: 5"
                     />
                   </Form.Group>
                 </Col>
               </Row>
               
-              {/* Información de cuenta */}
               <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Cuenta</h5>
               <Row className="mb-3">
                 <Col md={6}>
@@ -931,22 +856,64 @@ const handleInputChange = (e) => {
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowNewDriverModal(false)}>
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setShowNewDriverModal(false);
+                setNewDriver(initialDriverState);
+                setValidated(false);
+              }}
+              disabled={isUpdating}
+            >
               Cancelar
             </Button>
-            <Button variant="warning" type="submit">
-              <FaSave className="me-2" /> Guardar Conductor
+            <Button 
+              variant="warning" 
+              type="submit"
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <FaSave className="me-2" /> Guardar Conductor
+                </>
+              )}
             </Button>
           </Modal.Footer>
         </Form>
       </Modal>
       
-    </>
-  );
-
-  return (
-    <LayoutBarButton>
-      {conductoresContent}
+      {/* Modal para editar conductor (similar al de nuevo conductor) */}
+      <Modal
+        show={showUpdateDriverModal}
+        onHide={() => setShowUpdateDriverModal(false)}
+        size="lg"
+        centered
+        backdrop="static"
+      >
+        <Modal.Header closeButton className="border-bottom border-warning">
+          <Modal.Title>
+            <FaEdit className="me-2 text-warning" />
+            Editar Conductor
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {/* Formulario similar al de nuevo conductor pero con datos de editDriver */}
+          <p>Formulario de edición aquí...</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowUpdateDriverModal(false)}>
+            Cancelar
+          </Button>
+          <Button variant="warning">
+            <FaSave className="me-2" /> Guardar Cambios
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </LayoutBarButton>
   );
 };

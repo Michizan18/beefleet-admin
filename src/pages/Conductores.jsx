@@ -8,35 +8,21 @@ import {
   FaEdit, FaTrashAlt, FaPlus, FaSave,
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
-import './Conductores.css';
 
 const Vehiculos = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showModal, setShowModal] = useState(false);
-  const [currentDriver, setCurrentDriver] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('todos');
-  const [isUpdating, setIsUpdating] = useState('');
-  const [showNewDriverModal, setShowNewDriverModal] = useState(false);
-  const [showUpdateDriverModal, setShowUpdateDrivermodal] = useState(false);
-  const [newDriver, setNewDriver] = useState({
-    tipo_documento: '',
-    documento: '',
-    nombre_conductor: '',
-    apellido_conductor: '',
-    correo_conductor: '',
-    foto: '',
-    telefono: '',
-    ciudad: '',
-    direccion: '',
-    tipo_licencia: '',
-    fecha_vencimiento: '',
-    experiencia: '',
-    estado: 'Activo',
-  });
-  const [validated, setValidated] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('Todos');
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [currentVehicle, setCurrentVehicle] = useState(null);
+  const [showNewVehicleModal, setShowNewVehicleModal] = useState(false);
+  const [vehiculos, setVehiculos] = useState([]);
+  const [conductores, setConductores] = useState([]); // Nuevo estado para conductores
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+
   
    // Funciónpara mapear números a texto
   const mapearEstado = (estado) => {
@@ -48,13 +34,40 @@ const Vehiculos = () => {
   };
   return estadosMap[estado] || 'Desconocido';
 
-  const getAuthToken = () => {
-    const token = localStorage.getItem('token');
-    return token ? `Bearer ${token}` : null;
+
   };
 
+  // Estado para nuevo vehículo
+  const [newVehicle, setNewVehicle] = useState({
+    placa: '',
+    modelo: '',
+    conductor: '',
+    estado_vehiculo: 'Activo',
+    seguro: '',
+    kilometraje: '',
+    marca: '',
+    color: '',
+    capacidad: '',
+    tipo: '',
+    peso: '',
+    matricula: '',
+  });
+  
+  const [validated, setValidated] = useState(false);
 
-  const fetchConductores = async () => {
+  // Función para obtener el nombre del conductor por ID
+  const getConductorName = (conductorId) => {
+    if (!conductorId) return 'Sin asignar';
+    const conductor = conductores.find(c => c.id === conductorId || c.id_conductor === conductorId);
+    return conductor ? conductor.nombre : `Conductor ID: ${conductorId}`;
+  };
+
+  // Función para eliminar vehículo
+  const handleDeleteVehicle = async (id_vehiculo) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este vehículo?')) {
+      return;
+    }
+    
     try {
       const response = await fetch(`http://localhost:3001/api/vehicles/${id_vehiculo}`, {
         method: 'DELETE',
@@ -76,57 +89,22 @@ const Vehiculos = () => {
     }
   };
 
-
   useEffect(() => {
-    let filtered = conductores;
-      
-    
-    // Aplicar filtro por término de búsqueda
-    if (searchTerm) {
-      filtered = filtered.filter(conductor => 
-        conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conductor.documento?.includes(searchTerm)
-      );
-    }
-    
-    // Aplicar filtro por estado
-    if (filterStatus !== 'todos') {
-      filtered = filtered.filter(conductor => conductor.estado === filterStatus);
-    }
-    setFilteredConductores(filtered);
-    setCurrentPage(1);
-    fetchConductores();
-    setCurrentPage(1); // Resetear a primera página al filtrar
-    fetchConductores();
-  }, [searchTerm, filterStatus, conductores]);
-  
-  // Formatear fecha a formato español
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-  
-  // Gestionar el cambio de página
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-  
-  // Calcular índices para paginación
-  const indexOfLastConductor = currentPage * conductoresPorPagina;
-  const indexOfFirstConductor = indexOfLastConductor - conductoresPorPagina;
-  const currentConductores = filteredConductores.slice(indexOfFirstConductor, indexOfLastConductor);
-  
-  // Calcular total de páginas
-  const totalPages = Math.ceil(filteredConductores.length / conductoresPorPagina);
-  
-  // Mostrar detalles de conductor
-  const handleShowDetails = (driver) => {
-    setCurrentDriver(driver);
-    setShowModal(true);
-  };
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Obtener token del localStorage si existe
+        const token = localStorage.getItem('token');
+        const headers = {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        };
+        
+        // Agregar Authorization header si hay token
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
 
         // Fetch vehículos y conductores en paralelo
         const [vehiclesResponse, conductoresResponse] = await Promise.all([
@@ -237,38 +215,23 @@ const handleUpdateVehicle = async (e) => {
   }
 };
 
-  const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
-    const confirmDelete = window.confirm(
-      `¿Estás seguro de que quieres eliminar al conductor?\n\n` +
-      `Nombre: ${nombre_conductor} ${apellido_conductor}\n` +
-      `Documento: ${documento}`
-    );
-    if (confirmDelete) {
-      try {
-        const token = getAuthToken();
-        const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || 'Error al eliminar el Conductor');
-        }
-        
-        // Actualiza la lista de conductores después de eliminar
-        setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
-        
-        // Mostrar mensaje de éxito
-        alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
-        
-      } catch (error) {
-        console.error('Error:', error);
-        alert(`Hubo un error al eliminar el conductor: ${error.message}`);
-      }
-    }
+  // Filtrar vehículos
+  const filteredVehicles = vehiculos.filter((vehiculo) => {
+    const conductorName = getConductorName(vehiculo.conductor);
+    const matchesSearch = searchTerm === '' ||
+    vehiculo.placa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehiculo.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    conductorName.toLowerCase().includes(searchTerm.toLowerCase());
+    console.log('Estado original:', vehiculo.estado_vehiculo, 'Tipo:', typeof vehiculo.estado_vehiculo);
+    const matchesStatus = statusFilter === 'Todos' || mapearEstado(vehiculo.estado_vehiculo) === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Mostrar detalles del vehículo
+  const handleShowDetails = (vehicle) => {
+    setCurrentVehicle(vehicle);
+    setShowVehicleModal(true);
   };
   
   // Manejar cambios en el formulario
@@ -308,98 +271,30 @@ const handleUpdateVehicle = async (e) => {
       throw new Error(responseData.message || 'Error al crear vehículo');
     }
 
-    // Si llegamos aquí, el payload mínimo funciona
-    alert('¡Payload mínimo funciona! Ahora vamos agregando campos...');
-    
+    setVehiculos([...vehiculos, responseData.vehicle]);
+    setShowNewVehicleModal(false);
+    setNewVehicle({
+      placa: '',
+      modelo: '',
+      conductor: '',
+      estado_vehiculo: 1,
+      seguro: '',
+      kilometraje: '',
+      marca: '',
+      color: '',
+      capacidad: '',
+      tipo: '',
+      peso: '',
+      matricula: '',
+    });
+    setValidated(false);
+    alert('Vehículo creado exitosamente');
   } catch (error) {
-    console.error('=== MINIMAL TEST: Error ===', error);
-    alert(`Error con payload mínimo: ${error.message}`);
-  } finally {
-    setIsUpdating(false);
+    console.error('Error:', error);
+    alert(`Error al crear el vehículo: ${error.message}`);
   }
 };
-
-  // const EstadoBadge = ({ estado }) => {
-  //   const variants = {
-  //     Activo: 'success',
-  //     'En ruta': 'primary',
-  //     Descanso: 'warning',
-  //     Entrenamiento: 'warning',
-  //     Inactivo: 'danger'
-  // };
-    
-  //   return <Badge bg={variants[estado] || 'secondary'}>{estado}</Badge>;
-  // };
   
-  const renderPagination = () => {
-    if (totalPages <= 1) return null;
-    
-    return (
-      <div className="pagination-container d-flex justify-content-between align-items-center mt-3">
-        <div className="showing-entries">
-          Mostrando {indexOfFirstConductor + 1} a {Math.min(indexOfLastConductor, filteredConductores.length)} de {filteredConductores.length} registros
-        </div>
-        <ul className="pagination mb-0">
-          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-            <a className="page-link" href="#!" onClick={() => handlePageChange(Math.max(1, currentPage - 1))}>
-              Anterior
-            </a>
-          </li>
-          {[...Array(totalPages)].map((_, i) => (
-            <li key={i} className={`page-item ${i + 1 === currentPage ? 'active' : ''}`}>
-              <a className="page-link" href="#!" onClick={() => handlePageChange(i + 1)}>
-                {i + 1}
-              </a>
-            </li>
-          ))}
-          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-            <a className="page-link" href="#!" onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}>
-              Siguiente
-            </a>
-          </li>
-        </ul>
-      </div>
-    );
-  };
-  
-  const testCreateDriver = async () => {
-  try {
-    const testPayload = {
-      tipo_documento: 'CC',
-      documento: '12345678',
-      nombre_conductor: 'Test',
-      apellido_conductor: 'Driver',
-      correo_conductor: 'test@example.com',
-      telefono: '1234567890',
-      ciudad: 'Bogotá',
-      direccion: 'Calle Test 123',
-      tipo_licencia: 'B1',
-      experiencia: 5,
-      estado: 'Activo'
-    };
-
-    console.log('=== TEST: Enviando payload de prueba ===');
-    const response = await fetch('http://localhost:3001/api/drivers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify(testPayload)
-    });
-
-    const responseText = await response.text();
-    console.log('=== TEST: Response ===', {
-      status: response.status,
-      headers: [...response.headers.entries()],
-      body: responseText
-    });
-
-  } catch (error) {
-    console.error('=== TEST: Error ===', error);
-  }
-};
-
   // Componente para el badge de estado
   const EstadoBadge = ({ estado }) => {
     let variant;
@@ -984,4 +879,5 @@ const handleUpdateVehicle = async (e) => {
     </LayoutBarButton>
   );
 };
+
 export default Vehiculos;

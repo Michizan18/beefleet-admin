@@ -10,19 +10,24 @@ const Dashboard = () => {
   const [conductores, setConductores] = useState([]);
   const [reportes, setReportes] = useState([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const getAuthToken = useCallback(() => {
+      const token = localStorage.getItem('token');
+      return token ? `Bearer ${token}` : null;
+  }, []);
+  const fetchData = async () => {
       try {
         const [reportesResponse, conductoresResponse] = await Promise.all([
           fetch('http://localhost:3001/api/reports', {
             method: 'GET',
             headers: {
+              'Authorization': token,
               'Content-Type': 'application/json',
             },
           }),
           fetch('http://localhost:3001/api/drivers', {
             method: 'GET',
             headers: {
+              'Authorization': token,
               'Content-Type': 'application/json',
             },
           }),
@@ -40,7 +45,7 @@ const Dashboard = () => {
         setConductores(Array.isArray(conductoresData) ? conductoresData : []);
 
       } catch (error) {
-        console.error('Error al obtener datos:', error);
+        console.error('Error al obtener datos:', error.message);
         // En caso de error, establecer arrays vacíos para evitar errores de renderizado
         setReportes([]);
         setConductores([]);
@@ -48,7 +53,7 @@ const Dashboard = () => {
         setLoading(false);
       }
     };
-
+  useEffect(() => {
     fetchData();
   }, []);
 

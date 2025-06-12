@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, Table, Button, Dropdown, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { 
@@ -10,51 +10,75 @@ import {
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 
+// Constantes para mensajes de validación
+const VALIDATION_MESSAGES = {
+  REQUIRED: 'Este campo es obligatorio',
+  NIT_FORMAT: 'El NIT debe tener un formato válido',
+  PHONE_FORMAT: 'El teléfono debe tener un formato válido'
+};
+
 const Clientes = () => {
+  // Estados principales
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showClientModal, setShowClientModal] = useState(false);
-  const [currentClient, setCurrentClient] = useState(null);
-  const [showNewClientModal, setShowNewClientModal] = useState(false);
-  const [clients, setClients] = useState([]);
   const [error, setError] = useState(null);
+  const [clients, setClients] = useState([]);
   
-  // Estado para nuevo cliente
+  // Estados para modales
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [showNewClientModal, setShowNewClientModal] = useState(false);
+  const [showEditClientModal, setShowEditClientModal] = useState(false);
+  
+  // Estados para clientes
+  const [currentClient, setCurrentClient] = useState(null);
   const [newClient, setNewClient] = useState({
     nit: '',
     direccion: '',
     ciudad: '',
     telefono: '',
-    empresa: ''
+    empresa: '',
+    email: '',
+    nombre: ''
   });
   
+  const [editClient, setEditClient] = useState({
+    id_cliente: '',
+    nit: '',
+    direccion: '',
+    ciudad: '',
+    telefono: '',
+    empresa: '',
+    email: '',
+    nombre: ''
+  });
+  
+  // Estados de validación
   const [validated, setValidated] = useState(false);
+  const [editValidated, setEditValidated] = useState(false);
 
   // Función para obtener el token de autenticación
-  const getAuthToken = () => {
+  const getAuthToken = useCallback(() => {
     const token = localStorage.getItem('token');
     return token ? `Bearer ${token}` : null;
-  };
+  }, []);
 
   // Función mejorada para procesar la respuesta de MySQL
-  const processMySQLResponse = (rawData) => {
+  const processMySQLResponse = useCallback((rawData) => {
     try {
-      // Si no hay datos, retornar array vacío
       if (!rawData) return [];
       
-      // Si es un array de arrays (resultado directo de MySQL)
-      if (Array.isArray(rawData) && rawData.length > 0 && Array.isArray(rawData[0])) {
-        return rawData[0].filter(item => item && typeof item === 'object' && item.id_cliente);
-      }
-      
-      // Si es un array simple de objetos cliente
       if (Array.isArray(rawData)) {
-        return rawData.filter(item => item && typeof item === 'object' && item.id_cliente);
+        // Si es un array de arrays (resultado directo de MySQL)
+        if (rawData.length > 0 && Array.isArray(rawData[0])) {
+          return rawData[0].filter(item => item?.id_cliente);
+        }
+        // Si es un array simple de objetos cliente
+        return rawData.filter(item => item?.id_cliente);
       }
       
       // Si es un solo objeto cliente
-      if (typeof rawData === 'object' && rawData.id_cliente) {
+      if (rawData?.id_cliente) {
         return [rawData];
       }
       
@@ -63,10 +87,10 @@ const Clientes = () => {
       console.error('Error processing MySQL response:', error);
       return [];
     }
-  };
+  }, []);
 
   // Función para obtener todos los clientes
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -112,10 +136,10 @@ const Clientes = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthToken, processMySQLResponse]);
 
   // Función para crear un nuevo cliente
-  const createNewClient = async (clientData) => {
+  const createNewClient = useCallback(async (clientData) => {
     try {
       const token = getAuthToken();
       const response = await fetch('http://localhost:3001/api/clients', {
@@ -137,10 +161,35 @@ const Clientes = () => {
       console.error('Error creating client:', error);
       throw error;
     }
-  };
+  }, [getAuthToken]);
+
+  // Función para editar un cliente
+  const updateClient = useCallback(async (clientId, clientData) => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(clientData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error al actualizar el cliente');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating client:', error);
+      throw error;
+    }
+  }, [getAuthToken]);
 
   // Función para eliminar un cliente
-  const deleteClient = async (clientId) => {
+  const deleteClient = useCallback(async (clientId) => {
     try {
       const token = getAuthToken();
       const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
@@ -161,43 +210,47 @@ const Clientes = () => {
       console.error('Error deleting client:', error);
       throw error;
     }
-  };
+  }, [getAuthToken]);
 
-  // Cargar clientes al montar el componente
+  // Helper functions
+  const checkNitExists = useCallback((nit) => {
+    return clients.some(client => client.nit === nit);
+  }, [clients]);
+
+  // Efecto para cargar clientes al montar el componente
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [fetchClients]);
 
   // Filtrar clientes
   const filteredClients = clients.filter((client) => {
-    if (!client || typeof client !== 'object' || !client.id_cliente) {
-      return false;
-    }
+    if (!client?.id_cliente) return false;
     
-    const matchesSearch = 
-      (client.nit?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (client.empresa?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (client.ciudad?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-      
-    return matchesSearch;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (client.nit?.toString() || '').toLowerCase().includes(searchLower) ||
+      (client.empresa?.toLowerCase() || '').includes(searchLower) ||
+      (client.ciudad?.toLowerCase() || '').includes(searchLower) ||
+      (client.nombre?.toLowerCase() || '').includes(searchLower)
+    );
   });
   
-  // Mostrar detalles del cliente
+  // Handlers
   const handleShowDetails = (client) => {
     setCurrentClient(client);
     setShowClientModal(true);
   };
   
-  // Manejar cambios en el formulario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewClient({
-      ...newClient,
-      [name]: value
-    });
+    setNewClient(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditClient(prev => ({ ...prev, [name]: value }));
   };
   
-  // Manejar envío del formulario
   const handleSubmitNewClient = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -205,6 +258,11 @@ const Clientes = () => {
     if (form.checkValidity() === false) {
       e.stopPropagation();
       setValidated(true);
+      return;
+    }
+    
+    if (checkNitExists(newClient.nit)) {
+      setError(`Ya existe un cliente con el NIT: ${newClient.nit}`);
       return;
     }
     
@@ -219,10 +277,12 @@ const Clientes = () => {
         direccion: '',
         ciudad: '',
         telefono: '',
-        empresa: ''
+        empresa: '',
+        email: '',
+        nombre: ''
       });
       setValidated(false);
-      
+      setError(null);
     } catch (error) {
       setError(`Error al crear el cliente: ${error.message}`);
     } finally {
@@ -230,13 +290,57 @@ const Clientes = () => {
     }
   };
 
-  // Manejar eliminación de cliente
+  const handleSubmitEditClient = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setEditValidated(true);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const { id_cliente, ...clientData } = editClient;
+      await updateClient(id_cliente, clientData);
+      await fetchClients();
+      
+      setShowEditClientModal(false);
+      setEditValidated(false);
+      setError(null);
+    } catch (error) {
+      setError(`Error al actualizar el cliente: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditClient = (client) => {
+    setShowClientModal(false);
+    
+    setTimeout(() => {
+      setEditClient({
+        id_cliente: client.id_cliente,
+        nit: client.nit || '',
+        ciudad: client.ciudad || '',
+        nombre: client.nombre || '',
+        telefono: client.telefono || '',
+        direccion: client.direccion || '',
+        email: client.email || '',
+        empresa: client.empresa || ''
+      });
+      setShowEditClientModal(true);
+    }, 100);
+  };
+
   const handleDeleteClient = async (clientId) => {
     if (window.confirm('¿Está seguro de que desea eliminar este cliente?')) {
       try {
         setLoading(true);
         await deleteClient(clientId);
         await fetchClients();
+        setError(null);
       } catch (error) {
         setError(`Error al eliminar el cliente: ${error.message}`);
       } finally {
@@ -366,7 +470,13 @@ const Clientes = () => {
                           >
                             Ver
                           </Button>
-                          <Button variant="outline-warning" size="sm" className="me-1">
+                          <Button 
+                            variant="outline-warning" 
+                            size="sm" 
+                            className="me-1"
+                            onClick={() => handleEditClient(client)}
+                            disabled={loading}
+                          >
                             <FaEdit />
                           </Button>
                           <Button 
@@ -465,7 +575,7 @@ const Clientes = () => {
           <Button variant="secondary" onClick={() => setShowClientModal(false)}>
             Cerrar
           </Button>
-          <Button variant="warning">
+          <Button variant="warning" onClick={() => handleEditClient(currentClient)}>
             <FaEdit className="me-2" /> Editar Información
           </Button>
         </Modal.Footer>
@@ -609,8 +719,155 @@ const Clientes = () => {
           </Modal.Footer>
         </Form>
       </Modal>
+      {/* Modal para editar cliente */}
+    <Modal
+      show={showEditClientModal}
+      onHide={() => setShowEditClientModal(false)}
+      size="lg"
+      centered
+      backdrop="static"
+    >
+      <Form noValidate validated={editValidated} onSubmit={handleSubmitEditClient}>
+        <Modal.Header closeButton className="border-bottom border-warning">
+          <Modal.Title>
+            <FaEdit className="me-2 text-warning" />
+            Editar Cliente
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="edit-client-form">
+            <h5 className="border-bottom pb-2 mb-3">Información de Identificación</h5>
+            <Row className="mb-3">
+              <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label>NIT (ID único - No editable)</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="nit"
+                  value={editClient.nit}
+                  readOnly
+                  className="bg-light"
+                  style={{ cursor: 'not-allowed' }}
+                />
+                <Form.Text className="text-muted">
+                  El NIT es el identificador único del cliente y no puede ser modificado
+                </Form.Text>
+              </Form.Group>
+              </Col>
+            </Row>
+            
+            <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Contacto</h5>
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Teléfono</Form.Label>
+                  <Form.Control
+                    type="tel"
+                    name="telefono"
+                    value={editClient.telefono}
+                    onChange={handleEditInputChange}
+                    required
+                    placeholder="Ingrese el teléfono"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    El teléfono es obligatorio
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Ciudad</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="ciudad"
+                    value={editClient.ciudad}
+                    onChange={handleEditInputChange}
+                    required
+                    placeholder="Ingrese la ciudad"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    La ciudad es obligatoria
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Row className="mb-3">
+              <Col md={12}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Dirección</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="direccion"
+                    value={editClient.direccion}
+                    onChange={handleEditInputChange}
+                    required
+                    placeholder="Ingrese la dirección completa"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    La dirección es obligatoria
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <h5 className="border-bottom pb-2 mb-3 mt-4">Información Empresarial</h5>
+            <Row className="mb-3">
+              <Col md={12}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Empresa</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="empresa"
+                    value={editClient.empresa}
+                    onChange={handleEditInputChange}
+                    placeholder="Ingrese el nombre de la empresa o del cliente"
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowEditClientModal(false)}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            variant="warning" 
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <div className="spinner-border spinner-border-sm me-2" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                Actualizando...
+              </>
+            ) : (
+              <>
+                <FaSave className="me-2" /> Actualizar Cliente
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Form>
+    </Modal>
     </LayoutBarButton>
   );
+};
+export const clientUtils = {
+  findClientByNit: (clients, nit) => clients.find(client => client.nit === nit),
+  getClientNitsList: (clients) => clients.map(client => ({
+    nit: client.nit,
+    empresa: client.empresa,
+    displayText: `${client.nit} - ${client.empresa || 'Sin empresa'}`
+  })),
+  checkNitExists: (clients, nit) => clients.some(client => client.nit === nit)
 };
 
 export default Clientes;

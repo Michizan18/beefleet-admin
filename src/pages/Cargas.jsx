@@ -1,170 +1,354 @@
-import { useState, useEffect } from 'react';
-import { Card, Table, Button, Dropdown, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, Table, Button, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
 import { 
-  FaBoxes, FaPhone, FaMapMarkerAlt, 
-  FaUserCircle,  FaSearch, FaFilter,
-  FaEdit, FaTrashAlt, FaPlus, FaSave, FaComments, FaTruck, FaBuilding,
-  FaWeightHanging, FaRoute, FaCalendar
+  FaTruck, FaBox, FaWeight, FaCalendarAlt,
+  FaUserCircle, FaSearch, FaUsers, 
+  FaEdit, FaTrashAlt, FaPlus, FaSave,
+  FaCar, FaImage, FaUser
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
-import './Cargas.css';
-import { useClients, clientUtils } from '../hook/useClients';
-import { useVehicles, vehicleUtils } from '../hook/useVehicles'; 
-import { useDrivers, driverUtils } from '../hook/useDrivers';
-import  axios from 'axios';
+
+// Constantes para mensajes de validación
+const VALIDATION_MESSAGES = {
+  REQUIRED: 'Este campo es obligatorio',
+  DATE_INVALID: 'La fecha de inicio debe ser anterior a la fecha de fin',
+  PESO_FORMAT: 'El peso debe ser un valor válido'
+};
 
 const Cargas = () => {
+  // Estados principales
   const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todos');
-  const [showCargaModal, setShowCargaModal] = useState(false);
-  const [currentCarga, setCurrentCarga] = useState(null);
-  const [showNewCargaModal, setShowNewCargaModal] = useState(false);
+  const [error, setError] = useState(null);
+  const [cargas, setCargas] = useState([]);
   
-  // Estado para nueva carga
+  // Estados para datos relacionados
+  const [clients, setClients] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  
+  // Estados para modales
+  const [showCargaModal, setShowCargaModal] = useState(false);
+  const [showNewCargaModal, setShowNewCargaModal] = useState(false);
+  const [showEditCargaModal, setShowEditCargaModal] = useState(false);
+  
+  // Estados para cargas
+  const [currentCarga, setCurrentCarga] = useState(null);
   const [newCarga, setNewCarga] = useState({
-    referencia: '',
     descripcion: '',
     peso: '',
-    cliente: '',
-    destino: '',
-    origen: '',
+    foto_carga: '',
+    fecha_inicio: '',
+    fecha_fin: '',
     vehiculo: '',
-    conductor: '',
-    fechaInicio: '',
-    fechaFin: '',
-    estado: 'Pendiente',
-    valor: '',
-    observaciones: '',
-    telefono: '',
-    direccionDestino: '',
-    direccionOrigen: ''
+    cliente: '',
+    conductor: ''
   });
   
+  const [editCarga, setEditCarga] = useState({
+    id_carga: '',
+    descripcion: '',
+    peso: '',
+    foto_carga: '',
+    fecha_inicio: '',
+    fecha_fin: '',
+    vehiculo: '',
+    cliente: '',
+    conductor: ''
+  });
+  
+  // Estados de validación
   const [validated, setValidated] = useState(false);
+  const [editValidated, setEditValidated] = useState(false);
 
-  const cargas = [
-    {
-      id: 1,
-      referencia: 'CARGA-001',
-      descripcion: 'Transporte de materiales de construcción',
-      peso: '2.5 ton',
-      cliente: 'Empresa A',
-      destino: 'Ciudad X',
-      origen: 'Bogotá',
-      vehiculo: 'ABC-123',
-      conductor: 'Luis Martínez',
-      fechaInicio: '2025-05-23',
-      fechaFin: '2025-05-24',
-      estado: 'En tránsito',
-      valor: '$500,000',
-      observaciones: 'Carga frágil - manejar con cuidado',
-      telefono: '3001234567',
-      direccionDestino: 'Calle 45 #12-34, Ciudad X',
-      direccionOrigen: 'Carrera 30 #45-67, Bogotá'
-    },
-    {
-      id: 2,
-      referencia: 'CARGA-002',
-      descripcion: 'Electrodomésticos varios',
-      peso: '1.8 ton',
-      cliente: 'Empresa B',
-      destino: 'Medellín',
-      origen: 'Bogotá',
-      vehiculo: 'XYZ-789',
-      conductor: 'Pablo Cárdenas',
-      fechaInicio: '2025-05-24',
-      fechaFin: '2025-05-25',
-      estado: 'Pendiente',
-      valor: '$350,000',
-      observaciones: 'Entrega en horario de oficina',
-      telefono: '3007654321',
-      direccionDestino: 'Avenida 80 #23-45, Medellín',
-      direccionOrigen: 'Zona Industrial, Bogotá'
-    },
-    {
-      id: 3,
-      referencia: 'CARGA-003',
-      descripcion: 'Productos alimenticios refrigerados',
-      peso: '3.2 ton',
-      cliente: 'Empresa C',
-      destino: 'Cali',
-      origen: 'Bogotá',
-      vehiculo: 'DEF-456',
-      conductor: 'Ana López',
-      fechaInicio: '2025-05-22',
-      fechaFin: '2025-05-23',
-      estado: 'Entregado',
-      valor: '$750,000',
-      observaciones: 'Cadena de frío requerida',
-      telefono: '3009876543',
-      direccionDestino: 'Centro Comercial, Cali',
-      direccionOrigen: 'Frigorífico Central, Bogotá'
-    },
-    {
-      id: 4,
-      referencia: 'CARGA-004',
-      descripción: 'Muebles de oficina',
-      peso: '1.2 ton',
-      cliente: 'Empresa D',
-      destino: 'Barranquilla',
-      origen: 'Bogotá',
-      vehiculo: 'Sin asignar',
-      conductor: 'Sin asignar',
-      fechaInicio: '2025-05-25',
-      fechaFin: '2025-05-26',
-      estado: 'Programado',
-      valor: '$400,000',
-      observaciones: 'Requiere servicio de montaje',
-      telefono: '3005432109',
-      direccionDestino: 'Edificio Torre Norte, Barranquilla',
-      direccionOrigen: 'Fábrica de Muebles, Bogotá'
+  // Función para obtener el token de autenticación
+  const getAuthToken = useCallback(() => {
+    const token = localStorage.getItem('token');
+    return token ? `Bearer ${token}` : null;
+  }, []);
+
+  // Función para procesar respuesta de MySQL
+  const processMySQLResponse = useCallback((rawData) => {
+    try {
+      console.log('🔍 Datos recibidos de la API:', rawData);
+      
+      if (!rawData) return [];
+      
+      let processedData = [];
+      
+      if (Array.isArray(rawData)) {
+        if (rawData.length > 0 && Array.isArray(rawData[0])) {
+          processedData = rawData[0];
+        } else {
+          processedData = rawData;
+        }
+      } else if (typeof rawData === 'object') {
+        processedData = [rawData];
+      }
+      
+      return processedData;
+      
+    } catch (error) {
+      console.error('❌ Error procesando respuesta MySQL:', error);
+      return [];
     }
-  ];
+  }, []);
 
+  // Función para obtener todas las cargas
+  const fetchCargas = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        setError('No hay token de autenticación');
+        setLoading(false);
+        return;
+      }
+      
+      const response = await fetch('http://localhost:3001/api/loads', {
+        method: 'GET',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('token');
+          setError('Sesión expirada. Por favor, inicie sesión nuevamente.');
+          return;
+        }
+        throw new Error(errorText || 'Error al obtener las cargas');
+      }
+
+      const data = await response.json();
+      const processedData = processMySQLResponse(data);
+      
+      setCargas(processedData);
+      
+    } catch (error) {
+      console.error('Error fetching cargas:', error);
+      setError(`Error al cargar las cargas: ${error.message}`);
+      setCargas([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [getAuthToken, processMySQLResponse]);
+
+  // Función para obtener clientes
+  const fetchClients = useCallback(async () => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch('http://localhost:3001/api/clients', {
+        method: 'GET',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const processedData = processMySQLResponse(data);
+        setClients(processedData);
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    }
+  }, [getAuthToken, processMySQLResponse]);
+
+  // Función para obtener vehículos (asumiendo endpoint similar)
+  const fetchVehicles = useCallback(async () => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch('http://localhost:3001/api/vehicles', {
+        method: 'GET',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const processedData = processMySQLResponse(data);
+        setVehicles(processedData);
+      }
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+    }
+  }, [getAuthToken, processMySQLResponse]);
+
+  // Función para obtener conductores (asumiendo endpoint similar)
+  const fetchDrivers = useCallback(async () => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch('http://localhost:3001/api/drivers', {
+        method: 'GET',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const processedData = processMySQLResponse(data);
+        setDrivers(processedData);
+      }
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    }
+  }, [getAuthToken, processMySQLResponse]);
+
+  // Función para crear una nueva carga
+  const createNewCarga = useCallback(async (cargaData) => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch('http://localhost:3001/api/loads', {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(cargaData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error al crear la carga');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error creating carga:', error);
+      throw error;
+    }
+  }, [getAuthToken]);
+
+  // Función para editar una carga
+  const updateCarga = useCallback(async (cargaId, cargaData) => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`http://localhost:3001/api/loads/${cargaId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(cargaData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error al actualizar la carga');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating carga:', error);
+      throw error;
+    }
+  }, [getAuthToken]);
+
+  // Función para eliminar una carga
+  const deleteCarga = useCallback(async (cargaId) => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`http://localhost:3001/api/loads/${cargaId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error al eliminar la carga');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting carga:', error);
+      throw error;
+    }
+  }, [getAuthToken]);
+
+  // Efectos para cargar datos
+  useEffect(() => {
+    fetchCargas();
+    fetchClients();
+    fetchVehicles();
+    fetchDrivers();
+  }, [fetchCargas, fetchClients, fetchVehicles, fetchDrivers]);
+
+  // Filtrar cargas
   const filteredCargas = cargas.filter((carga) => {
-    // Filtrar por término de búsqueda
-    const matchesSearch = 
-      carga.referencia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      carga.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      carga.destino.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (carga.conductor && carga.conductor.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (!carga?.id_carga) return false;
     
-    // Filtrar por estado
-    const matchesStatus = 
-      statusFilter === 'Todos' || carga.estado === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (carga.descripcion?.toLowerCase() || '').includes(searchLower) ||
+      (carga.peso?.toString() || '').toLowerCase().includes(searchLower) ||
+      (carga.id_carga?.toString() || '').includes(searchLower)
+    );
   });
-  
-  // Mostrar detalles de la carga
-  const handleShowDetails = (carga) => {
+
+  // Función para obtener nombre del cliente
+  const getClientName = useCallback((clientId) => {
+    const client = clients.find(c => c.id_cliente === clientId);
+    return client ? (client.empresa || 'Cliente') : 'N/A';
+  }, [clients]);
+
+  // Función para obtener información del vehículo
+  const getVehicleInfo = useCallback((vehicleId) => {
+    const vehicle = vehicles.find(v => v.id_vehiculo === vehicleId);
+    return vehicle ? (vehicle.placa || vehicle.modelo || 'Vehículo') : 'N/A';
+  }, [vehicles]);
+
+  // Función para obtener nombre del conductor
+  const getDriverName = useCallback((driverId) => {
+    const driver = drivers.find(d => d.id_conductor === driverId);
+    return driver ? (driver.nombre || 'Conductor') : 'N/A';
+  }, [drivers]);
+
+  // Handlers
+  const handleShowDetails = useCallback((carga) => {
+    console.log('👁️ Mostrando detalles de la carga:', carga);
+    
+    if (!carga || !carga.id_carga) {
+      console.error('❌ Carga inválida para mostrar detalles');
+      setError('Carga inválida seleccionada');
+      return;
+    }
+    
     setCurrentCarga(carga);
     setShowCargaModal(true);
-  };
-  
-  // Manejar cambios en el formulario
+    setError(null);
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewCarga({
-      ...newCarga,
-      [name]: value
-    });
+    setNewCarga(prev => ({ ...prev, [name]: value }));
   };
-  
-  // Generar referencia automática
-  const generateReference = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `CARGA-${year}${month}${day}-${random}`;
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditCarga(prev => ({ ...prev, [name]: value }));
   };
-  
-  // Manejar envío del formulario
-  const handleSubmitNewCarga = (e) => {
+
+  const validateDates = (fechaInicio, fechaFin) => {
+    if (!fechaInicio || !fechaFin) return false;
+    return new Date(fechaInicio) < new Date(fechaFin);
+  };
+
+  const handleSubmitNewCarga = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
     
@@ -174,66 +358,121 @@ const Cargas = () => {
       return;
     }
     
-    // Generar referencia si no se ha proporcionado
-    if (!newCarga.referencia) {
-      setNewCarga(prev => ({
-        ...prev,
-        referencia: generateReference()
-      }));
+    if (!validateDates(newCarga.fecha_inicio, newCarga.fecha_fin)) {
+      setError('La fecha de inicio debe ser anterior a la fecha de fin');
+      return;
     }
     
-    // Aquí iría la lógica para guardar la nueva carga
-    console.log('Nueva carga:', newCarga);
-    
-    // Cerrar modal y resetear form
-    setShowNewCargaModal(false);
-    setNewCarga({
-      referencia: '',
-      descripcion: '',
-      peso: '',
-      cliente: '',
-      destino: '',
-      origen: '',
-      vehiculo: '',
-      conductor: '',
-      fechaInicio: '',
-      fechaFin: '',
-      estado: 'Pendiente',
-      valor: '',
-      observaciones: '',
-      telefono: '',
-      direccionDestino: '',
-      direccionOrigen: ''
-    });
-    setValidated(false);
+    try {
+      setLoading(true);
+      await createNewCarga(newCarga);
+      await fetchCargas();
+      
+      setShowNewCargaModal(false);
+      setNewCarga({
+        descripcion: '',
+        peso: '',
+        foto_carga: '',
+        fecha_inicio: '',
+        fecha_fin: '',
+        vehiculo: '',
+        cliente: '',
+        conductor: ''
+      });
+      setValidated(false);
+      setError(null);
+    } catch (error) {
+      setError(`Error al crear la carga: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  // Componente para el badge de estado
-  const EstadoBadge = ({ estado }) => {
-    let variant;
-    switch (estado) {
-      case 'En tránsito':
-        variant = 'primary';
-        break;
-      case 'Entregado':
-        variant = 'success';
-        break;
-      case 'Pendiente':
-        variant = 'warning';
-        break;
-      case 'Programado':
-        variant = 'info';
-        break;
-      case 'Cancelado':
-        variant = 'danger';
-        break;
-      default:
-        variant = 'secondary';
+
+  const handleSubmitEditCarga = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setEditValidated(true);
+      return;
     }
     
-    return <span className={`badge bg-${variant} rounded-pill`}>{estado}</span>;
+    if (!validateDates(editCarga.fecha_inicio, editCarga.fecha_fin)) {
+      setError('La fecha de inicio debe ser anterior a la fecha de fin');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const { id_carga, ...cargaData } = editCarga;
+      await updateCarga(id_carga, cargaData);
+      await fetchCargas();
+      
+      setShowEditCargaModal(false);
+      setEditValidated(false);
+      setError(null);
+    } catch (error) {
+      setError(`Error al actualizar la carga: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
-  
+
+  const handleEditCarga = useCallback((carga) => {
+    console.log('✏️ Iniciando edición de la carga:', carga);
+    
+    if (!carga || !carga.id_carga) {
+      console.error('❌ Carga inválida para editar');
+      setError('Carga inválida para editar');
+      return;
+    }
+    
+    setShowCargaModal(false);
+    
+    setTimeout(() => {
+      const editData = {
+        id_carga: carga.id_carga,
+        descripcion: carga.descripcion || '',
+        peso: carga.peso || '',
+        foto_carga: carga.foto_carga || '',
+        fecha_inicio: carga.fecha_inicio ? carga.fecha_inicio.split('T')[0] : '',
+        fecha_fin: carga.fecha_fin ? carga.fecha_fin.split('T')[0] : '',
+        vehiculo: carga.vehiculo || '',
+        cliente: carga.cliente || '',
+        conductor: carga.conductor || ''
+      };
+      
+      console.log('✅ Datos preparados para edición:', editData);
+      setEditCarga(editData);
+      setShowEditCargaModal(true);
+      setEditValidated(false);
+      setError(null);
+    }, 100);
+  }, []);
+
+  const handleDeleteCarga = useCallback(async (cargaId) => {
+    if (!window.confirm('¿Está seguro de que desea eliminar esta carga?')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await deleteCarga(cargaId);
+      await fetchCargas();
+      setError(null);
+    } catch (error) {
+      setError(`Error al eliminar la carga: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [deleteCarga, fetchCargas]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('es-ES');
+  };
+
   return (
     <LayoutBarButton userData={userData}>
       <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
@@ -242,10 +481,17 @@ const Cargas = () => {
           variant="warning" 
           className="d-flex align-items-center"
           onClick={() => setShowNewCargaModal(true)}
+          disabled={loading}
         >
           <FaPlus className="me-2" /> Nueva Carga
         </Button>
       </div>
+
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
       
       {/* Filtros y búsqueda */}
       <Card className="mb-4">
@@ -257,28 +503,10 @@ const Cargas = () => {
                   <FaSearch />
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Buscar por referencia, cliente o destino"
+                  placeholder="Buscar por descripción, peso o ID de carga"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-              </InputGroup>
-            </Col>
-            <Col md={6} lg={4} className="mt-3 mt-md-0">
-              <InputGroup>
-                <InputGroup.Text id="filter-addon" className="bg-warning text-white">
-                  <FaFilter />
-                </InputGroup.Text>
-                <Form.Select 
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="Todos">Todos</option>
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="Programado">Programado</option>
-                  <option value="En tránsito">En tránsito</option>
-                  <option value="Entregado">Entregado</option>
-                  <option value="Cancelado">Cancelado</option>
-                </Form.Select>
               </InputGroup>
             </Col>
           </Row>
@@ -290,109 +518,114 @@ const Cargas = () => {
         <Card.Header className="bg-white">
           <div className="d-flex justify-content-between align-items-center">
             <div className="d-flex align-items-center">
-              <FaBoxes className="text-warning me-2" size={20} />
+              <FaTruck className="text-warning me-2" size={20} />
               <h5 className="mb-0">Listado de Cargas</h5>
             </div>
+            <small className="text-muted">
+              {filteredCargas.length} carga(s) encontrada(s)
+            </small>
           </div>
         </Card.Header>
         <Card.Body>
-          <div className="table-responsive">
-            <Table hover className="cargas-table">
-              <thead>
-                <tr>
-                  <th>Referencia</th>
-                  <th>Cliente</th>
-                  <th>Destino</th>
-                  <th>Vehículo</th>
-                  <th>Conductor</th>
-                  <th>Estado</th>
-                  <th>Valor</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCargas.map((carga, index) => (
-                  <tr key={index}>
-                    <td>
-                      <div>
-                        <strong>{carga.referencia}</strong>
-                        <br />
-                        <small className="text-muted">{carga.descripcion}</small>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <FaBuilding className="me-2 text-warning" />
-                        {carga.cliente}
-                      </div>
-                    </td>
-                    <td>
-                      <div>
-                        <FaMapMarkerAlt className="me-1 text-danger" />
-                        {carga.destino}
-                        <br />
-                        <small className="text-muted">
-                          <FaRoute className="me-1" />
-                          desde {carga.origen}
-                        </small>
-                      </div>
-                    </td>
-                    <td>
-                      {carga.vehiculo !== 'Sin asignar' ? (
-                        <div className="d-flex align-items-center">
-                          <FaTruck className="me-2 text-warning" />
-                          {carga.vehiculo}
-                        </div>
-                      ) : (
-                        <span className="text-muted">{carga.vehiculo}</span>
-                      )}
-                    </td>
-                    <td>
-                      {carga.conductor !== 'Sin asignar' ? (
-                        <div className="d-flex align-items-center">
-                          <FaUserCircle className="me-2 text-warning" />
-                          {carga.conductor}
-                        </div>
-                      ) : (
-                        <span className="text-muted">{carga.conductor}</span>
-                      )}
-                    </td>
-                    <td>
-                      <EstadoBadge estado={carga.estado} />
-                    </td>
-                    <td>
-                      <strong className="text-success">{carga.valor}</strong>
-                      <br />
-                      <small className="text-muted">
-                        <FaWeightHanging className="me-1" />
-                        {carga.peso}
-                      </small>
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        <Button 
-                          variant="outline-warning" 
-                          size="sm" 
-                          className="me-1"
-                          onClick={() => handleShowDetails(carga)}
-                        >
-                          Ver
-                        </Button>
-                        <Button variant="outline-warning" size="sm" className="me-1">
-                          <FaEdit />
-                        </Button>
-                        <Button variant="outline-danger" size="sm">
-                          <FaTrashAlt />
-                        </Button>
-                      </div>
-                    </td>
+          {loading ? (
+            <div className="text-center py-4">
+              <div className="spinner-border text-warning" role="status">
+                <span className="visually-hidden">Cargando...</span>
+              </div>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <Table hover className="cargas-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                    <th>Peso</th>
+                    <th>Fechas</th>
+                    <th>Cliente</th>
+                    <th>Vehículo</th>
+                    <th>Conductor</th>
+                    <th>Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredCargas.map((carga) => (
+                    <tr key={carga.id_carga}>
+                      <td>
+                        <Badge bg="secondary">#{carga.id_carga}</Badge>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <FaBox className="me-2 text-warning" />
+                          {carga.descripcion || 'N/A'}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <FaWeight className="me-2 text-muted" />
+                          {carga.peso || 'N/A'}
+                        </div>
+                      </td>
+                      <td>
+                        <div>
+                          <small className="text-muted">Inicio:</small>
+                          <br />
+                          <small>{formatDate(carga.fecha_inicio)}</small>
+                          <br />
+                          <small className="text-muted">Fin:</small>
+                          <br />
+                          <small>{formatDate(carga.fecha_fin)}</small>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <FaCar className="me-2 text-muted" />
+                          {getVehicleInfo(carga.vehiculo)}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <FaUser className="me-2 text-muted" />
+                          {getDriverName(carga.conductor)}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <Button 
+                            variant="outline-warning" 
+                            size="sm" 
+                            className="me-1"
+                            onClick={() => handleShowDetails(carga)}
+                          >
+                            Ver
+                          </Button>
+                          <Button 
+                            variant="outline-warning" 
+                            size="sm" 
+                            className="me-1"
+                            onClick={() => handleEditCarga(carga)}
+                            disabled={loading}
+                          >
+                            <FaEdit />
+                          </Button>
+                          <Button 
+                            variant="outline-danger" 
+                            size="sm"
+                            onClick={() => handleDeleteCarga(carga.id_carga)}
+                            disabled={loading}
+                          >
+                            <FaTrashAlt />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          )}
           
-          {filteredCargas.length === 0 && (
+          {!loading && filteredCargas.length === 0 && (
             <div className="text-center py-4">
               <p className="text-muted">No se encontraron cargas con los criterios de búsqueda.</p>
             </div>
@@ -415,120 +648,70 @@ const Cargas = () => {
             <div className="carga-detail">
               <Row>
                 <Col md={4} className="text-center mb-4 mb-md-0">
-                  <div className="carga-avatar mb-3">
-                    <FaBoxes size={100} className="text-warning" />
-                  </div>
-                  <h4>{currentCarga.referencia}</h4>
-                  <p className="mb-1">
-                    <EstadoBadge estado={currentCarga.estado} />
+                  <Badge bg="info" className="mb-2">ID #{currentCarga.id_carga}</Badge>
+                  <p className="text-muted">
+                    <FaBox className="me-2" />
+                    {currentCarga.descripcion}
                   </p>
-                  <p className="text-success">
-                    <strong>{currentCarga.valor}</strong>
-                  </p>
+                  {currentCarga.foto_carga && (
+                    <div className="mt-3">
+                      <FaImage className="text-warning me-2" />
+                      <small>Foto disponible</small>
+                    </div>
+                  )}
                 </Col>
                 <Col md={8}>
-                  <h5 className="mb-3">Información de la Carga</h5>
-                  <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Cliente:</strong></p>
-                      <p>
-                        <FaBuilding className="me-2 text-warning" />
-                        {currentCarga.cliente}
-                      </p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Descripción:</strong></p>
-                      <p>{currentCarga.descripcion}</p>
-                    </Col>
-                  </Row>
+                  <h5 className="mb-3 mt-4">Información de la Carga</h5>
                   <Row className="mb-3">
                     <Col sm={6}>
                       <p className="mb-1"><strong>Peso:</strong></p>
-                      <p>
-                        <FaWeightHanging className="me-2" />
+                      <p className="d-flex align-items-center">
+                        <FaWeight className="me-2 text-warning" />
                         {currentCarga.peso}
                       </p>
                     </Col>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Teléfono:</strong></p>
-                      <p>
-                        <FaPhone className="me-2" />
-                        {currentCarga.telefono}
+                      <p className="mb-1"><strong>Cliente:</strong></p>
+                      <p className="d-flex align-items-center">
+                        <FaUserCircle className="me-2 text-warning" />
+                        {getClientName(currentCarga.cliente)}
                       </p>
-                    </Col>
-                  </Row>
-                  
-                  <h5 className="mb-3 mt-4">Ruta y Fechas</h5>
-                  <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Origen:</strong></p>
-                      <p>
-                        <FaMapMarkerAlt className="me-2 text-success" />
-                        {currentCarga.origen}
-                      </p>
-                      <small className="text-muted">{currentCarga.direccionOrigen}</small>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Destino:</strong></p>
-                      <p>
-                        <FaMapMarkerAlt className="me-2 text-danger" />
-                        {currentCarga.destino}
-                      </p>
-                      <small className="text-muted">{currentCarga.direccionDestino}</small>
                     </Col>
                   </Row>
                   <Row className="mb-3">
                     <Col sm={6}>
                       <p className="mb-1"><strong>Fecha Inicio:</strong></p>
-                      <p>
-                        <FaCalendar className="me-2" />
-                        {currentCarga.fechaInicio}
+                      <p className="d-flex align-items-center">
+                        <FaCalendarAlt className="me-2 text-warning" />
+                        {formatDate(currentCarga.fecha_inicio)}
                       </p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Fecha Fin:</strong></p>
-                      <p>
-                        <FaCalendar className="me-2" />
-                        {currentCarga.fechaFin}
+                      <p className="d-flex align-items-center">
+                        <FaCalendarAlt className="me-2 text-warning" />
+                        {formatDate(currentCarga.fecha_fin)}
                       </p>
                     </Col>
                   </Row>
                   
-                  <h5 className="mb-3 mt-4">Asignación</h5>
+                  <h5 className="mb-3 mt-4">Asignaciones</h5>
                   <Row className="mb-3">
                     <Col sm={6}>
                       <p className="mb-1"><strong>Vehículo:</strong></p>
-                      {currentCarga.vehiculo !== 'Sin asignar' ? (
-                        <p className="d-flex align-items-center">
-                          <FaTruck className="me-2 text-warning" />
-                          {currentCarga.vehiculo}
-                        </p>
-                      ) : (
-                        <p className="text-muted">Sin asignar</p>
-                      )}
+                      <p className="d-flex align-items-center">
+                        <FaCar className="me-2 text-warning" />
+                        {getVehicleInfo(currentCarga.vehiculo)}
+                      </p>
                     </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Conductor:</strong></p>
-                      {currentCarga.conductor !== 'Sin asignar' ? (
-                        <p className="d-flex align-items-center">
-                          <FaUserCircle className="me-2 text-warning" />
-                          {currentCarga.conductor}
-                        </p>
-                      ) : (
-                        <p className="text-muted">Sin asignar</p>
-                      )}
+                      <p className="d-flex align-items-center">
+                        <FaUser className="me-2 text-warning" />
+                        {getDriverName(currentCarga.conductor)}
+                      </p>
                     </Col>
                   </Row>
-                  
-                  {currentCarga.observaciones && (
-                    <>
-                      <h5 className="mb-3 mt-4">Observaciones</h5>
-                      <p className="bg-light p-3 rounded">
-                        <FaComments className="me-2 text-warning" />
-                        {currentCarga.observaciones}
-                      </p>
-                    </>
-                  )}
                 </Col>
               </Row>
             </div>
@@ -538,8 +721,8 @@ const Cargas = () => {
           <Button variant="secondary" onClick={() => setShowCargaModal(false)}>
             Cerrar
           </Button>
-          <Button variant="warning">
-            <FaEdit className="me-2" /> Editar Información
+          <Button variant="warning" onClick={() => handleEditCarga(currentCarga)}>
+            <FaEdit className="me-2" /> Editar Carga
           </Button>
         </Modal.Footer>
       </Modal>
@@ -555,60 +738,24 @@ const Cargas = () => {
         <Form noValidate validated={validated} onSubmit={handleSubmitNewCarga}>
           <Modal.Header closeButton className="border-bottom border-warning">
             <Modal.Title>
-              <FaBoxes className="me-2 text-warning" />
+              <FaTruck className="me-2 text-warning" />
               Registrar Nueva Carga
             </Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <div className="new-carga-form">
-              {/* Información básica */}
-              <h5 className="border-bottom pb-2 mb-3">Información Básica</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Referencia</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="referencia"
-                      value={newCarga.referencia}
-                      onChange={handleInputChange}
-                      placeholder="Se generará automáticamente"
-                    />
-                    <Form.Text className="text-muted">
-                      Deje vacío para generar automáticamente
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Cliente</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="cliente"
-                      value={newCarga.cliente}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Nombre del cliente"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El cliente es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
+              <h5 className="border-bottom pb-2 mb-3">Información de la Carga</h5>
               <Row className="mb-3">
                 <Col md={12}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Descripción</Form.Label>
+                    <Form.Label>Descripción *</Form.Label>
                     <Form.Control
-                      as="textarea"
-                      rows={2}
+                      type="text"
                       name="descripcion"
                       value={newCarga.descripcion}
                       onChange={handleInputChange}
                       required
-                      placeholder="Descripción de la carga"
+                      placeholder="Ingrese la descripción de la carga"
                     />
                     <Form.Control.Feedback type="invalid">
                       La descripción es obligatoria
@@ -620,14 +767,14 @@ const Cargas = () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Peso</Form.Label>
+                    <Form.Label>Peso *</Form.Label>
                     <Form.Control
                       type="text"
                       name="peso"
                       value={newCarga.peso}
                       onChange={handleInputChange}
                       required
-                      placeholder="Ej: 2.5 ton, 500 kg"
+                      placeholder="Ej: 1500 kg"
                     />
                     <Form.Control.Feedback type="invalid">
                       El peso es obligatorio
@@ -636,128 +783,27 @@ const Cargas = () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Valor</Form.Label>
-                    <InputGroup>
-                      <InputGroup.Text>$</InputGroup.Text>
-                      <Form.Control
-                        type="text"
-                        name="valor"
-                        value={newCarga.valor}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="500,000"
-                      />
-                      <Form.Control.Feedback type="invalid">
-                        El valor es obligatorio
-                      </Form.Control.Feedback>
-                    </InputGroup>
+                    <Form.Label>Foto de la Carga</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="foto_carga"
+                      value={newCarga.foto_carga}
+                      onChange={handleInputChange}
+                      placeholder="URL de la foto (opcional)"
+                    />
                   </Form.Group>
                 </Col>
               </Row>
               
-              {/* Información de contacto */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Contacto</h5>
-              <Row className="mb-3">
-                <Col md={12}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Teléfono</Form.Label>
-                    <Form.Control
-                      type="tel"
-                      name="telefono"
-                      value={newCarga.telefono}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="3001234567"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El teléfono es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              {/* Ruta */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Ruta</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Origen</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="origen"
-                      value={newCarga.origen}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Ciudad de origen"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El origen es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Destino</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="destino"
-                      value={newCarga.destino}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Ciudad de destino"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El destino es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Dirección de Origen</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="direccionOrigen"
-                      value={newCarga.direccionOrigen}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Dirección completa de origen"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La dirección de origen es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Dirección de Destino</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="direccionDestino"
-                      value={newCarga.direccionDestino}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Dirección completa de destino"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La dirección de destino es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              {/* Fechas */}
               <h5 className="border-bottom pb-2 mb-3 mt-4">Fechas</h5>
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Fecha de Inicio</Form.Label>
+                    <Form.Label>Fecha de Inicio *</Form.Label>
                     <Form.Control
                       type="date"
-                      name="fechaInicio"
-                      value={newCarga.fechaInicio}
+                      name="fecha_inicio"
+                      value={newCarga.fecha_inicio}
                       onChange={handleInputChange}
                       required
                     />
@@ -768,11 +814,11 @@ const Cargas = () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Fecha de Fin</Form.Label>
+                    <Form.Label>Fecha de Fin *</Form.Label>
                     <Form.Control
                       type="date"
-                      name="fechaFin"
-                      value={newCarga.fechaFin}
+                      name="fecha_fin"
+                      value={newCarga.fecha_fin}
                       onChange={handleInputChange}
                       required
                     />
@@ -783,8 +829,31 @@ const Cargas = () => {
                 </Col>
               </Row>
               
-              {/* Asignación */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Asignación</h5>
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Asignaciones</h5>
+              <Row className="mb-3">
+                <Col md={12}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Cliente *</Form.Label>
+                    <Form.Select
+                      name="cliente"
+                      value={newCarga.cliente}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Seleccione un cliente</option>
+                      {clients.map(client => (
+                        <option key={client.id_cliente} value={client.id_cliente}>
+                          {client.empresa || client.nombre}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Debe seleccionar un cliente
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
@@ -794,14 +863,13 @@ const Cargas = () => {
                       value={newCarga.vehiculo}
                       onChange={handleInputChange}
                     >
-                      <option value="">Sin asignar</option>
-                      <option value="ABC-123">ABC-123 - Toyota Hilux</option>
-                      <option value="XYZ-789">XYZ-789 - Ford Transit</option>
-                      <option value="DEF-456">DEF-456 - Chevrolet NPR</option>
+                      <option value="">Seleccione un vehículo (opcional)</option>
+                      {vehicles.map(vehicle => (
+                        <option key={vehicle.id_vehiculo} value={vehicle.id_vehiculo}>
+                          {vehicle.placa} - {vehicle.modelo}
+                        </option>
+                      ))}
                     </Form.Select>
-                    <Form.Text className="text-muted">
-                      Puede dejar sin asignar y seleccionar un vehículo más tarde
-                    </Form.Text>
                   </Form.Group>
                 </Col>
                 <Col md={6}>
@@ -812,66 +880,240 @@ const Cargas = () => {
                       value={newCarga.conductor}
                       onChange={handleInputChange}
                     >
-                      <option value="">Sin asignar</option>
-                      <option value="Luis Martínez">Luis Martínez</option>
-                      <option value="Pablo Cárdenas">Pablo Cárdenas</option>
-                      <option value="Ana López">Ana López</option>
+                      <option value="">Seleccione un conductor (opcional)</option>
+                      {drivers.map(driver => (
+                        <option key={driver.id_conductor} value={driver.id_conductor}>
+                          {driver.nombre}
+                        </option>
+                      ))}
                     </Form.Select>
-                    <Form.Text className="text-muted">
-                      Puede dejar sin asignar y seleccionar un conductor más tarde
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Row className="mb-3">
-                <Col md={12}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Estado</Form.Label>
-                    <Form.Select
-                      name="estado"
-                      value={newCarga.estado}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="Pendiente">Pendiente</option>
-                      <option value="Programado">Programado</option>
-                      <option value="En tránsito">En tránsito</option>
-                      <option value="Entregado">Entregado</option>
-                      <option value="Cancelado">Cancelado</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              {/* Observaciones */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Observaciones</h5>
-              <Row className="mb-3">
-                <Col md={12}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Observaciones</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      name="observaciones"
-                      value={newCarga.observaciones}
-                      onChange={handleInputChange}
-                      placeholder="Observaciones adicionales sobre la carga (opcional)"
-                    />
-                    <Form.Text className="text-muted">
-                      Incluya información importante sobre manejo especial, horarios de entrega, etc.
-                    </Form.Text>
                   </Form.Group>
                 </Col>
               </Row>
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowNewCargaModal(false)}>
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowNewCargaModal(false)}
+              disabled={loading}
+            >
               Cancelar
             </Button>
-            <Button variant="warning" type="submit">
-              <FaSave className="me-2" /> Guardar Carga
+            <Button 
+              variant="warning" 
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <div className="spinner-border spinner-border-sm me-2" role="status">
+                    <span className="visually-hidden">Guardando...</span>
+                  </div>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <FaSave className="me-2" />
+                  Guardar Carga
+                </>
+              )}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
+
+      {/* Modal para editar carga */}
+      <Modal
+        show={showEditCargaModal}
+        onHide={() => setShowEditCargaModal(false)}
+        size="lg"
+        centered
+        backdrop="static"
+      >
+        <Form noValidate validated={editValidated} onSubmit={handleSubmitEditCarga}>
+          <Modal.Header closeButton className="border-bottom border-warning">
+            <Modal.Title>
+              <FaEdit className="me-2 text-warning" />
+              Editar Carga
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="edit-carga-form">
+              <h5 className="border-bottom pb-2 mb-3">Información de la Carga</h5>
+              <Row className="mb-3">
+                <Col md={12}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Descripción *</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="descripcion"
+                      value={editCarga.descripcion}
+                      onChange={handleEditInputChange}
+                      required
+                      placeholder="Ingrese la descripción de la carga"
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      La descripción es obligatoria
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Peso *</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="peso"
+                      value={editCarga.peso}
+                      onChange={handleEditInputChange}
+                      required
+                      placeholder="Ej: 1500 kg"
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      El peso es obligatorio
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Foto de la Carga</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="foto_carga"
+                      value={editCarga.foto_carga}
+                      onChange={handleEditInputChange}
+                      placeholder="URL de la foto (opcional)"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Fechas</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Fecha de Inicio *</Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="fecha_inicio"
+                      value={editCarga.fecha_inicio}
+                      onChange={handleEditInputChange}
+                      required
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      La fecha de inicio es obligatoria
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Fecha de Fin *</Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="fecha_fin"
+                      value={editCarga.fecha_fin}
+                      onChange={handleEditInputChange}
+                      required
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      La fecha de fin es obligatoria
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Asignaciones</h5>
+              <Row className="mb-3">
+                <Col md={12}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Cliente *</Form.Label>
+                    <Form.Select
+                      name="cliente"
+                      value={editCarga.cliente}
+                      onChange={handleEditInputChange}
+                      required
+                    >
+                      <option value="">Seleccione un cliente</option>
+                      {clients.map(client => (
+                        <option key={client.id_cliente} value={client.id_cliente}>
+                          {client.empresa || client.nombre}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Debe seleccionar un cliente
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Vehículo</Form.Label>
+                    <Form.Select
+                      name="vehiculo"
+                      value={editCarga.vehiculo}
+                      onChange={handleEditInputChange}
+                    >
+                      <option value="">Seleccione un vehículo (opcional)</option>
+                      {vehicles.map(vehicle => (
+                        <option key={vehicle.id_vehiculo} value={vehicle.id_vehiculo}>
+                          {vehicle.placa} - {vehicle.modelo}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Conductor</Form.Label>
+                    <Form.Select
+                      name="conductor"
+                      value={editCarga.conductor}
+                      onChange={handleEditInputChange}
+                    >
+                      <option value="">Seleccione un conductor (opcional)</option>
+                      {drivers.map(driver => (
+                        <option key={driver.id_conductor} value={driver.id_conductor}>
+                          {driver.nombre}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowEditCargaModal(false)}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="warning" 
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <div className="spinner-border spinner-border-sm me-2" role="status">
+                    <span className="visually-hidden">Actualizando...</span>
+                  </div>
+                  Actualizando...
+                </>
+              ) : (
+                <>
+                  <FaSave className="me-2" />
+                  Actualizar Carga
+                </>
+              )}
             </Button>
           </Modal.Footer>
         </Form>

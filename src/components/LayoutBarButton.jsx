@@ -123,7 +123,7 @@ const LayoutBarButton = ({ children} ) => {
           </Link>
           <Link 
             to="/profile" 
-            className={`header-button ${currentPath === '/AdminProfile' ? 'active' : ''}`}
+            className={`header-button ${currentPath === '/Profile' ? 'active' : ''}`}
           >
             <FaUserCircle className="icon" /> Mi Perfil
           </Link>

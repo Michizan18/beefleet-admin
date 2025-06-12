@@ -56,3 +56,6 @@ content-type: application/json
 //Probar sin comillas//
 GET http://localhost:3001/api/vehicles/
 Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwiaWF0IjoxNzQ5MTc5MDc2LCJleHAiOjE3NDkxODk4NzZ9.NUDB_Uw9kP6O2mdXavcsmKQkbriiVAZqe350Ne8dgmU
+ 
+###
+GET http://localhost:tu-puerto/api/sales

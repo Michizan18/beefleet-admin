@@ -20,6 +20,7 @@ const Ventas = () => {
   const [showNewSaleModal, setShowNewSaleModal] = useState(false);
   const [sales, setSales] = useState([]);
   const [cargas, setCargas] = useState([]);
+  const [error, setError] = useState('');
   
   // Estado para nueva venta
   const [newSale, setNewSale] = useState({
@@ -33,44 +34,80 @@ const Ventas = () => {
 
   // Función para obtener el token de autenticación
   const getAuthToken = () => {
-    return localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    console.log('Token obtenido:', token);
+    return token;
   };
 
-  // Función para hacer peticiones autenticadas
+  // Función para hacer peticiones autenticadas con mejor manejo de errores
   const makeAuthenticatedRequest = async (url, options = {}) => {
     const token = getAuthToken();
+    
+    if (!token) {
+      console.error('No hay token de autenticación');
+      window.location.href = '/login';
+      return null;
+    }
+
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': token,
+      'Authorization': `Bearer ${token}`, // Asegúrate de usar el formato correcto
       ...options.headers
     };
 
-    const response = await fetch(url, {
-      ...options,
-      headers
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers
+      });
 
-    if (response.status === 401) {
-      // Token expirado o inválido
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-      return;
+      // Verificar si la respuesta es exitosa
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.error('Token expirado o inválido');
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return null;
+        }
+        
+        if (response.status === 404) {
+          console.error(`Endpoint no encontrado: ${url}`);
+          throw new Error(`Endpoint no encontrado: ${url}`);
+        }
+        
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Verificar si la respuesta es JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('La respuesta no es JSON:', text.substring(0, 200));
+        throw new Error('El servidor no devolvió JSON válido');
+      }
+
+      return response;
+    } catch (error) {
+      console.error(`Error en petición a ${url}:`, error);
+      throw error;
     }
-
-    return response;
   };
 
   // Obtener ventas de la base de datos
   const fetchSales = async () => {
     setLoading(true);
+    setError('');
     try {
       const response = await makeAuthenticatedRequest('/api/sales');
       if (response && response.ok) {
         const data = await response.json();
-        setSales(data);
+        setSales(Array.isArray(data) ? data : []);
+        console.log('Ventas cargadas:', data);
       }
     } catch (error) {
       console.error('Error fetching sales:', error);
+      setError(`Error al cargar ventas: ${error.message}`);
+      setSales([]); // Asegurar que sales sea un array
     } finally {
       setLoading(false);
     }
@@ -78,19 +115,28 @@ const Ventas = () => {
 
   // Obtener cargas para el dropdown
   const fetchCargas = async () => {
+    setError('');
     try {
+      // Usar la ruta correcta según tu backend
       const response = await makeAuthenticatedRequest('/api/loads');
       if (response && response.ok) {
         const data = await response.json();
-        setCargas(data);
+        setCargas(Array.isArray(data) ? data : []);
+        console.log('Cargas cargadas:', data);
       }
     } catch (error) {
       console.error('Error fetching cargas:', error);
+      setError(`Error al cargar cargas: ${error.message}`);
+      setCargas([]); // Asegurar que cargas sea un array
+      
+      // Si las cargas fallan, al menos permitir crear ventas sin carga
+      console.warn('Continuando sin cargas disponibles');
     }
   };
 
   // useEffect para cargar datos al montar el componente
   useEffect(() => {
+    console.log('Componente montado, cargando datos...');
     fetchSales();
     fetchCargas();
   }, []);
@@ -155,11 +201,13 @@ const Ventas = () => {
           carga: ''
         });
         setValidated(false);
+        setError('');
       } else {
-        console.error('Error creating sale');
+        setError('Error al crear la venta');
       }
     } catch (error) {
       console.error('Error creating sale:', error);
+      setError(`Error al crear venta: ${error.message}`);
     }
   };
 
@@ -173,11 +221,13 @@ const Ventas = () => {
         
         if (response && response.ok) {
           await fetchSales();
+          setError('');
         } else {
-          console.error('Error deleting sale');
+          setError('Error al eliminar la venta');
         }
       } catch (error) {
         console.error('Error deleting sale:', error);
+        setError(`Error al eliminar venta: ${error.message}`);
       }
     }
   };
@@ -214,6 +264,13 @@ const Ventas = () => {
           <FaPlus className="me-2" /> Nueva Venta
         </Button>
       </div>
+      
+      {/* Mostrar errores si los hay */}
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
       
       {/* Filtros y búsqueda */}
       <Card className="mb-4">
@@ -319,7 +376,7 @@ const Ventas = () => {
             </div>
           )}
           
-          {!loading && filteredSales.length === 0 && (
+          {!loading && filteredSales.length === 0 && !error && (
             <div className="text-center py-4">
               <p className="text-muted">No se encontraron ventas con los criterios de búsqueda.</p>
             </div>
@@ -480,18 +537,27 @@ const Ventas = () => {
                       name="carga"
                       value={newSale.carga}
                       onChange={handleInputChange}
-                      required
+                      required={cargas.length > 0} // Solo requerido si hay cargas disponibles
                     >
-                      <option value="">Seleccionar carga...</option>
+                      <option value="">
+                        {cargas.length > 0 ? 'Seleccionar carga...' : 'No hay cargas disponibles'}
+                      </option>
                       {cargas.map((carga) => (
                         <option key={carga.id_carga} value={carga.id_carga}>
                           Carga #{carga.id_carga} - {carga.descripcion || 'Sin descripción'}
                         </option>
                       ))}
                     </Form.Select>
-                    <Form.Control.Feedback type="invalid">
-                      Seleccione una carga
-                    </Form.Control.Feedback>
+                    {cargas.length > 0 && (
+                      <Form.Control.Feedback type="invalid">
+                        Seleccione una carga
+                      </Form.Control.Feedback>
+                    )}
+                    {cargas.length === 0 && (
+                      <Form.Text className="text-warning">
+                        No se pudieron cargar las cargas disponibles
+                      </Form.Text>
+                    )}
                   </Form.Group>
                 </Col>
               </Row>

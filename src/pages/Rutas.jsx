@@ -9,13 +9,12 @@ const Rutas = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
+  const [modalMode, setModalMode] = useState('create');
   const [selectedRuta, setSelectedRuta] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cargasDisponibles, setCargasDisponibles] = useState([]);
 
-  // Estado para el formulario
   const initialFormState = {
     origen: '',
     destino: '',
@@ -30,15 +29,18 @@ const Rutas = () => {
     fetchCargas(); 
   }, []);
 
+  // FILTRO CORREGIDO
   useEffect(() => {
-    // Filtrar rutas basado en el término de búsqueda
     const filtered = rutasData.filter(ruta => {
       const searchTermLower = searchTerm.toLowerCase();
+      const origen = String(ruta.origen || '').toLowerCase();
+      const destino = String(ruta.destino || '').toLowerCase();
+      
       return (
-        ruta.origen.toLowerCase().includes(searchTermLower) ||
-        ruta.destino.toLowerCase().includes(searchTermLower) ||
-        ruta.distancia.toString().includes(searchTerm) ||
-        ruta.carga.toString().includes(searchTerm)
+        origen.includes(searchTermLower) ||
+        destino.includes(searchTermLower) ||
+        String(ruta.distancia || 0).includes(searchTerm) ||
+        String(ruta.carga || 0).includes(searchTerm)
       );
     });
     setFilteredRutas(filtered);
@@ -47,26 +49,37 @@ const Rutas = () => {
   const fetchCargas = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('🔄 Fetching cargas...');
+      
       const response = await fetch('http://localhost:3001/api/cargas', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
       if (response.ok) {
         const cargas = await response.json();
-        setCargasDisponibles(cargas);
+        console.log('✅ Cargas recibidas:', cargas);
+        setCargasDisponibles(Array.isArray(cargas) ? cargas : []);
+      } else {
+        console.error('❌ Error response cargas:', response.status);
+        setCargasDisponibles([]);
       }
     } catch (err) {
-      console.error("Error al cargar cargas:", err);
+      console.error("❌ Error al cargar cargas:", err);
+      setCargasDisponibles([]);
     }
-  };
+  }; 
 
   const fetchRutas = async () => {
+    console.log('🚀 INICIANDO fetchRutas...');
     setLoading(true);
     setError(null);
+    
     try {
       const token = localStorage.getItem('token');
-      
       if (!token) {
-        throw new Error('No se encontró token de autenticación');
+        setError('No hay sesión activa. Por favor, inicia sesión.');
+        setLoading(false);
+        return;
       }
 
       const response = await fetch('http://localhost:3001/api/routes', {
@@ -87,22 +100,45 @@ const Rutas = () => {
       }
 
       const data = await response.json();
+      console.log('📦 Datos recibidos del servidor:', data);
       
-      // Normalizar datos del backend
+      // NORMALIZACIÓN DE DATOS CORREGIDA
       const normalizedData = Array.isArray(data) 
-        ? data.map(ruta => ({
-            id_ruta: ruta.id_ruta,
-            origen: ruta.origen || 'Sin origen',
-            destino: ruta.destino || 'Sin destino',
-            distancia: parseFloat(ruta.distancia) || 0,
-            carga: ruta.carga || null // Cambiar a ID
-          }))
+        ? data.map((ruta, index) => {
+            console.log(`🔄 Procesando ruta ${index}:`, ruta);
+            console.log(`🔍 Keys de ruta:`, Object.keys(ruta));
+            
+            const result = {
+              id_ruta: ruta.id_ruta,
+              origen: String(ruta.origen || '').trim(), // Convertir a string y limpiar espacios
+              destino: String(ruta.destino || '').trim(),
+              distancia: Number(ruta.distancia) || 0,
+              carga: Number(ruta.carga) || 0
+            };
+            
+            console.log(`✅ Ruta ${index} normalizada:`, result);
+            return result;
+          })
         : [];
+      
+      console.log('✅ Datos normalizados finales:', normalizedData);
+      
+      // DEBUG ADICIONAL
+      normalizedData.forEach((ruta, index) => {
+        console.log(`🔍 RUTA ${index} FINAL:`, {
+          id: ruta.id_ruta,
+          origen: `"${ruta.origen}"`,
+          origenLength: ruta.origen?.length,
+          destino: `"${ruta.destino}"`,
+          destinoLength: ruta.destino?.length
+        });
+      });
       
       setRutasData(normalizedData);
       setFilteredRutas(normalizedData);
+      
     } catch (err) {
-      console.error("Error al cargar rutas:", err);
+      console.error("❌ Error al cargar rutas:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -110,30 +146,31 @@ const Rutas = () => {
   };
 
   const handleCreateRuta = () => {
+    setFormData(initialFormState);
     setModalMode('create');
     setSelectedRuta(null);
-    setFormData(initialFormState);
     setShowModal(true);
   };
 
   const handleEditRuta = (ruta) => {
-    setModalMode('edit');
-    setSelectedRuta(ruta);
     setFormData({
       origen: ruta.origen,
       destino: ruta.destino,
-      distancia: ruta.distancia.toString(),
-      carga: ruta.carga.toString()
+      distancia: ruta.distancia,
+      carga: ruta.carga
     });
+    setModalMode('edit');
+    setSelectedRuta(ruta);
     setShowModal(true);
   };
 
-  const handleDeleteRuta = async (id_ruta) => {
+  const handleDeleteRuta = async (id) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar esta ruta?')) return;
-
+    
+    setIsSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/routes/${id_ruta}`, {
+      const response = await fetch(`http://localhost:3001/api/routes/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -141,60 +178,29 @@ const Rutas = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al eliminar la ruta');
+        throw new Error('Error al eliminar la ruta');
       }
 
-      // Actualizar el estado local
-      setRutasData(prev => prev.filter(ruta => ruta.id_ruta !== id_ruta));
+      await fetchRutas();
     } catch (err) {
-      console.error("Error al eliminar ruta:", err);
       setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
-  };
-
-  const validateForm = () => {
-    const errors = [];
-    
-    if (!formData.origen.trim()) errors.push('El origen es requerido');
-    if (!formData.destino.trim()) errors.push('El destino es requerido');
-    if (formData.origen.length > 45) errors.push('El origen no puede exceder 45 caracteres');
-    if (formData.destino.length > 45) errors.push('El destino no puede exceder 45 caracteres');
-    
-    const distancia = parseFloat(formData.distancia);
-    if (isNaN(distancia) || distancia <= 0) errors.push('La distancia debe ser un número mayor a 0');
-    
-    // Cambiar validación de carga
-    if (!formData.carga || formData.carga === '') errors.push('Debe seleccionar una carga');
-
-    return errors;
   };
 
   const handleSubmitForm = async (e) => {
     e.preventDefault();
-    
-    const errors = validateForm();
-    if (errors.length > 0) {
-      setError(errors.join('\n'));
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
 
     try {
       const token = localStorage.getItem('token');
-      const rutaData = {
-        origen: formData.origen.trim(),
-        destino: formData.destino.trim(),
-        distancia: parseFloat(formData.distancia),
-        carga: parseInt(formData.carga) // Enviar como ID
-      };
-
-      const isEdit = modalMode === 'edit';
-      const url = `http://localhost:3001/api/routes${isEdit ? `/${selectedRuta.id_ruta}` : ''}`;
-      const method = isEdit ? 'PUT' : 'POST';
-      const body = isEdit ? { id_ruta: selectedRuta.id_ruta, ...rutaData } : rutaData;
+      const url = modalMode === 'create' 
+        ? 'http://localhost:3001/api/routes' 
+        : `http://localhost:3001/api/routes/${selectedRuta.id_ruta}`;
+      
+      const method = modalMode === 'create' ? 'POST' : 'PUT';
 
       const response = await fetch(url, {
         method,
@@ -202,26 +208,22 @@ const Rutas = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          origen: formData.origen,
+          destino: formData.destino,
+          distancia: parseFloat(formData.distancia),
+          carga: parseInt(formData.carga)
+        })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || `Error al ${isEdit ? 'actualizar' : 'crear'} la ruta`);
+        throw new Error(errorData.message || 'Error al guardar la ruta');
       }
 
-      const result = await response.json();
-      const newRuta = isEdit ? null : result.route;
-
-      setRutasData(prev => 
-        isEdit
-          ? prev.map(r => r.id_ruta === selectedRuta.id_ruta ? { ...r, ...rutaData } : r)
-          : [...prev, { id_ruta: newRuta.id_ruta, ...rutaData }]
-      );
-
+      await fetchRutas();
       setShowModal(false);
     } catch (err) {
-      console.error("Error al guardar ruta:", err);
       setError(err.message);
     } finally {
       setIsSubmitting(false);
@@ -237,17 +239,34 @@ const Rutas = () => {
   };
 
   const getCargaInfo = (cargaId) => {
+    if (!cargaId) return 'Sin carga';
+    
     const carga = cargasDisponibles.find(c => c.id_carga === cargaId);
-    return carga ? carga.descripcion || `Carga #${cargaId}` : `ID: ${cargaId}`;
+    if (carga) {
+      return carga.descripcion || `Carga #${cargaId}`;
+    }
+    
+    return `Carga ${cargaId}`;
   };
   
   const calculateStats = () => {
     const totalRutas = rutasData.length;
-    const totalDistancia = rutasData.reduce((sum, ruta) => sum + ruta.distancia, 0);
+    const totalDistancia = rutasData.reduce((sum, ruta) => sum + (ruta.distancia || 0), 0);
+    
+    const totalCarga = rutasData.reduce((sum, ruta) => {
+      if (!ruta.carga) return sum;
+      
+      const carga = cargasDisponibles.find(c => c.id_carga === ruta.carga);
+      if (carga && carga.peso) {
+        return sum + parseFloat(carga.peso);
+      }
+      
+      return sum + (ruta.carga || 0);
+    }, 0);
+    
     const distanciaPromedio = totalRutas > 0 ? totalDistancia / totalRutas : 0;
-    // Remover totalCarga ya que ahora son IDs, no pesos
 
-    return { totalRutas, totalDistancia, distanciaPromedio };
+    return { totalRutas, totalDistancia, totalCarga, distanciaPromedio };
   };
 
   const { totalRutas, totalDistancia, totalCarga, distanciaPromedio } = calculateStats();
@@ -275,7 +294,7 @@ const Rutas = () => {
 
       {error && (
         <Alert variant="danger" onClose={() => setError(null)} dismissible className="mb-4">
-          {error}
+          <pre>{error}</pre>
         </Alert>
       )}
 
@@ -321,7 +340,7 @@ const Rutas = () => {
                   <FaRoute />
                 </div>
                 <div>
-                  <h4 className="stats-number">{totalCarga.toLocaleString()} kg</h4>
+                  <h4 className="stats-number">{totalCarga.toLocaleString()}</h4>
                   <div className="stats-label">Carga Total</div>
                 </div>
               </div>
@@ -377,7 +396,7 @@ const Rutas = () => {
                     <th>Origen</th>
                     <th>Destino</th>
                     <th className="text-end">Distancia (km)</th>
-                    <th className="text-end">Carga (kg)</th>
+                    <th>Carga</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -392,23 +411,31 @@ const Rutas = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredRutas.map(ruta => (
-                      <tr key={`ruta-${ruta.id_ruta}`}>
-                        <td>#{ruta.id_ruta}</td>
+                    filteredRutas.map((ruta, index) => (
+                      <tr key={`ruta-${ruta.id_ruta}-${index}`}>
+                        <td>
+                        <span className="fw-bold">{ruta.id_ruta}</span>
+                        </td>
                         <td>
                           <div className="d-flex align-items-center">
                             <FaMapMarkerAlt className="text-success me-2" />
-                            {ruta.origen}
+                            {ruta.origen && ruta.origen.length > 0 
+                              ? ruta.origen.charAt(0).toUpperCase() + ruta.origen.slice(1).toLowerCase()
+                              : 'Sin origen'
+                            }
                           </div>
                         </td>
                         <td>
                           <div className="d-flex align-items-center">
                             <FaMapMarkerAlt className="text-danger me-2" />
-                            {ruta.destino}
+                            {ruta.destino && ruta.destino.length > 0
+                              ? ruta.destino.charAt(0).toUpperCase() + ruta.destino.slice(1).toLowerCase()
+                              : 'Sin destino'
+                            }
                           </div>
                         </td>
-                        <td className="text-end">{ruta.distancia.toFixed(1)}</td>
-                        <td className="text-end">{getCargaInfo(ruta.carga)}</td>
+                        <td className="text-end">{Number(ruta.distancia).toFixed(1)}</td>
+                        <td>{getCargaInfo(ruta.carga)}</td>
                         <td>
                           <div className="d-flex gap-2">
                             <Button
@@ -453,7 +480,7 @@ const Rutas = () => {
           <Modal.Body>
             {error && (
               <Alert variant="danger" className="mb-4">
-                {error}
+                <pre>{error}</pre>
               </Alert>
             )}
             <Row>
@@ -520,20 +547,35 @@ const Rutas = () => {
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>Carga *</Form.Label>
-                  <Form.Select
-                    name="carga"
-                    value={formData.carga}
-                    onChange={handleInputChange}
-                    required
-                    disabled={isSubmitting}
-                  >
-                    <option value="">Seleccionar carga...</option>
-                    {cargasDisponibles.map(carga => (
-                      <option key={carga.id_carga} value={carga.id_carga}>
-                        {carga.descripcion || `Carga #${carga.id_carga}`}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  {cargasDisponibles.length > 0 ? (
+                    <Form.Select
+                      name="carga"
+                      value={formData.carga}
+                      onChange={handleInputChange}
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Seleccionar carga...</option>
+                      {cargasDisponibles.map(carga => (
+                        <option key={carga.id_carga} value={carga.id_carga}>
+                          {carga.descripcion || `Carga #${carga.id_carga}`}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  ) : (
+                    <Form.Control
+                      type="number"
+                      name="carga"
+                      value={formData.carga}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="ID de carga"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                  <Form.Text className="text-muted">
+                    {cargasDisponibles.length === 0 && 'No se pudieron cargar las cargas disponibles. Ingresa el ID manualmente.'}
+                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>

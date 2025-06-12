@@ -72,70 +72,13 @@ const Conductores = () => {
   const [validated, setValidated] = useState(false);
   const [editValidated, setEditValidated] = useState(false);
 
-<<<<<<< HEAD
-  const [newDriver, setNewDriver] = useState(initialDriverState);
-  const [editDriver, setEditDriver] = useState(initialDriverState);
+  //Estados de imagenes
+  // Agregar después de los estados existentes
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState('');
 
-  const conductoresPorPagina = 8;
-
-  useEffect(() => {
-    const fetchConductores = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          console.error('No hay token disponible');
-          return;
-        }
-
-        const response = await fetch('http://localhost:3001/api/drivers', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}, ${errorText}`);
-        }
-
-        const driverData = await response.json();
-        setConductores(driverData);
-        setFilteredConductores(driverData);
-      } catch (error) {
-        console.error("Error al cargar datos de conductores:", error);
-        alert(`Error al cargar conductores: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchConductores();
-  }, []);
-
-  useEffect(() => {
-    let filtered = conductores;
-    
-    if (searchTerm) {
-      filtered = filtered.filter(conductor => 
-        (conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conductor.documento?.toString().includes(searchTerm))
-      );
-    }
-    
-    if (filterStatus !== 'todos') {
-      filtered = filtered.filter(conductor => conductor.estado === filterStatus);
-    }
-    
-    setFilteredConductores(filtered);
-    setCurrentPage(1);
-  }, [searchTerm, filterStatus, conductores]);
-  
-  const formatDate = (dateString) => {
-    if (!dateString) return 'No especificada';
-=======
   // Función para obtener el token de autenticación
   const getAuthToken = useCallback(() => {
     const token = localStorage.getItem('token');
@@ -254,9 +197,22 @@ const Conductores = () => {
     return password;
   };
 
+  // Agregar esta función después de generatePassword
+  const handleImageChange = (e, isEdit = false) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (isEdit) {
+        setEditImageFile(file);
+        setEditImagePreview(URL.createObjectURL(file));
+      } else {
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+      }
+    }
+  };
+
   // Función para enviar contraseña por email
   const sendPasswordByEmail = useCallback(async (email, password) => {
->>>>>>> a435542878c08862957ac5f1021b901b26191042
     try {
       const response = await fetch('http://localhost:3001/api/send-password', {
         method: 'POST',
@@ -269,63 +225,8 @@ const Conductores = () => {
         })
       });
 
-<<<<<<< HEAD
-  const handleEditDriver = (driver) => {
-    setEditDriver({
-      id_conductor: driver.id_conductor,
-      tipo_documento: driver.tipo_documento || 'CC',
-      documento: driver.documento || '',
-      nombre_conductor: driver.nombre_conductor || '',
-      apellido_conductor: driver.apellido_conductor || '',
-      correo_conductor: driver.correo_conductor || '',
-      foto: driver.foto || '',
-      telefono: driver.telefono || '',
-      ciudad: driver.ciudad || '',
-      direccion: driver.direccion || '',
-      tipo_licencia: driver.tipo_licencia || '',
-      fecha_vencimiento: driver.fecha_vencimiento ? driver.fecha_vencimiento.split('T')[0] : '',
-      experiencia: driver.experiencia || '',
-    });
-    setShowUpdateDriverModal(true);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    let processedValue = value;
-    
-    if (name === 'documento' || name === 'experiencia' || name === 'telefono') {
-      processedValue = value.replace(/\D/g, '');
-    }
-    
-    setNewDriver({
-      ...newDriver,
-      [name]: processedValue
-    });
-  };
-
-  const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
-    const confirmDelete = window.confirm(
-      `¿Estás seguro de que quieres eliminar al conductor?\n\n` +
-      `Nombre: ${nombre_conductor} ${apellido_conductor}\n` +
-      `Documento: ${documento}`
-    );
-    
-    if (confirmDelete) {
-      try {
-        await api(`/drivers/${id_conductor}`, {
-          method: 'DELETE'
-        });
-        
-        setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
-        alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
-      } catch (error) {
-        console.error('Error:', error);
-        alert(`Hubo un error al eliminar el conductor: ${error.message}`);
-=======
       if (!response.ok) {
         throw new Error('Error al enviar el email');
->>>>>>> a435542878c08862957ac5f1021b901b26191042
       }
 
       return true;
@@ -473,14 +374,11 @@ const Conductores = () => {
     setNewDriver(prev => ({ ...prev, [name]: value }));
   };
 
-<<<<<<< HEAD
-=======
   const handleEditInputChange = (e) => {
     const { name, value } = e.target;
     setEditDriver(prev => ({ ...prev, [name]: value }));
   };
   
->>>>>>> a435542878c08862957ac5f1021b901b26191042
   const handleSubmitNewDriver = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -491,45 +389,6 @@ const Conductores = () => {
       return;
     }
     
-<<<<<<< HEAD
-    return <Badge bg={variants[estado] || 'secondary'}>{estado}</Badge>;
-  };
-  
-  const renderPagination = () => {
-    if (totalPages <= 1) return null;
-    
-    const pageNumbers = [];
-    for (let i = 1; i <= totalPages; i++) {
-      pageNumbers.push(i);
-    }
-    
-    return (
-      <div className="pagination-container d-flex justify-content-between align-items-center mt-3">
-        <div className="showing-entries">
-          Mostrando {indexOfFirstConductor + 1} a {Math.min(indexOfLastConductor, filteredConductores.length)} de {filteredConductores.length} registros
-        </div>
-        <ul className="pagination mb-0">
-          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => handlePageChange(currentPage - 1)}>
-              Anterior
-            </button>
-          </li>
-          {pageNumbers.map(number => (
-            <li key={number} className={`page-item ${number === currentPage ? 'active' : ''}`}>
-              <button className="page-link" onClick={() => handlePageChange(number)}>
-                {number}
-              </button>
-            </li>
-          ))}
-          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => handlePageChange(currentPage + 1)}>
-              Siguiente
-            </button>
-          </li>
-        </ul>
-      </div>
-    );
-=======
     if (checkDocumentExists(newDriver.documento)) {
       setError(`Ya existe un conductor con el documento: ${newDriver.documento}`);
       return;
@@ -575,7 +434,6 @@ const Conductores = () => {
     } finally {
       setLoading(false);
     }
->>>>>>> a435542878c08862957ac5f1021b901b26191042
   };
 
   const handleSubmitEditDriver = async (e) => {
@@ -670,20 +528,6 @@ const Conductores = () => {
   };
 
   return (
-<<<<<<< HEAD
-    <LayoutBarButton>
-      <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
-        <h1>Gestión de Conductores</h1>
-        <div>
-          <Button 
-            variant="warning" 
-            className="d-flex align-items-center me-2"
-            onClick={() => setShowNewDriverModal(true)}
-          >
-            <FaPlus className="me-2" /> Nuevo Conductor
-          </Button>
-        </div>
-=======
     <LayoutBarButton userData={userData}>
       <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
         <h1>Gestión de Conductores</h1>
@@ -695,7 +539,6 @@ const Conductores = () => {
         >
           <FaPlus className="me-2" /> Nuevo Conductor
         </Button>
->>>>>>> a435542878c08862957ac5f1021b901b26191042
       </div>
 
       {error && (

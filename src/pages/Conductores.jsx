@@ -72,6 +72,13 @@ const Conductores = () => {
   const [validated, setValidated] = useState(false);
   const [editValidated, setEditValidated] = useState(false);
 
+  //Estados de imagenes
+  // Agregar después de los estados existentes
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState('');
+
   // Función para obtener el token de autenticación
   const getAuthToken = useCallback(() => {
     const token = localStorage.getItem('token');
@@ -188,6 +195,20 @@ const Conductores = () => {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return password;
+  };
+
+  // Agregar esta función después de generatePassword
+  const handleImageChange = (e, isEdit = false) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (isEdit) {
+        setEditImageFile(file);
+        setEditImagePreview(URL.createObjectURL(file));
+      } else {
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+      }
+    }
   };
 
   // Función para enviar contraseña por email

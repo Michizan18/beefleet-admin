@@ -1,491 +1,682 @@
-import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Badge, Table, Button, Modal, Form, Spinner } from 'react-bootstrap';
-import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaClock, FaUsers, FaIdCard, FaEdit, FaSave } from 'react-icons/fa';
-import './AdminProfile.css';
-import LayoutBarButton from './LayoutBarButton';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, Table, Button, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
+import { 
+  FaIdCard,  
+  FaUserCircle, 
+  FaSearch, FaUsers, 
+  FaEdit, FaTrashAlt, FaPlus, FaSave,
+  FaPhone, FaMapMarkerAlt, FaEnvelope,
+  FaUser, FaLock, FaKey, FaClock, FaUserCog, FaTimes
+} from 'react-icons/fa';
+import LayoutBarButton from '../components/LayoutBarButton';
 
 const AdminProfile = () => {
-  const [admin, setAdmin] = useState(null);
+  // Estados principales
+  const [adminData, setAdminData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [notifications, setNotifications] = useState(3);
   const [userData, setUserData] = useState(null);
   
-  // Estados para el modal de edición
+  // Estados para modales
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({});
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  
+  // Estados para formularios
+  const [editForm, setEditForm] = useState({
+    nombre_usuario: '',
+    apellido_usuario: '',
+    correo_usuario: ''
+  });
+  
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: ''
+  });
+  
+  // Estados de validación y guardado
+  const [editErrors, setEditErrors] = useState({});
+  const [passwordErrors, setPasswordErrors] = useState({});
   const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const fetchAdminProfile = async () => {
+  const processMySQLResponse = useCallback((rawData) => {
+      try {
+        if (!rawData) return [];
+        
+        if (Array.isArray(rawData)) {
+          // Si es un array de arrays (resultado directo de MySQL)
+          if (rawData.length > 0 && Array.isArray(rawData[0])) {
+            return rawData[0].filter(item => item?.id_usuario);
+          }
+          // Si es un array simple de objetos cliente
+          return rawData.filter(item => item?.id_usuario);
+        }
+        
+        // Si es un solo objeto cliente
+        if (rawData?.id_usuario) {
+          return [rawData];
+        }
+        
+        return [];
+      } catch (error) {
+        console.error('Error processing MySQL response:', error);
+        return [];
+      }
+    }, []);
+
+  // Función para obtener el token de autenticación
+  const getAuthToken = useCallback(() => {
+    const token = localStorage.getItem('token');
+    return token ? `Bearer ${token}` : null;
+  }, []);
+
+  // Función para obtener los datos del perfil del administrador
+  const fetchAdminProfile = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      setLoading(true);
-      const id_usuario = await localStorage.getItem('id_usuario');
-      console.log(id_usuario)
-      const response = await fetch(`http://localhost:3001/api/admin/${id_usuario}`, {
+      const token = getAuthToken();
+      const id_usuario = localStorage.getItem('id_usuario');
+      
+      console.log('Token:', token); // Debug
+      console.log('ID Usuario:', id_usuario); // Debug
+      
+      if (!token || !id_usuario) {
+        setError('No hay información de autenticación');
+        setLoading(false);
+        return;
+      }
+      
+      const response = await fetch(`http://localhost:3001/api/users`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('Token')}`,
-          'Content-Type': 'application/json',
+          'Authorization': token,
+          'Content-Type': 'application/json'
         }
       });
-      const data = await response.json();
-      console.log(data)
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulación de retraso de red
-    
       
-      setAdmin(data);
-      setEditForm(data); // También inicializamos el formulario con los datos actuales
-      setError(null);
-    } catch (err) {
-      console.error("Error al cargar datos del perfil:", err);
-      setError("No se pudo cargar la información del perfil. Por favor, intente nuevamente.");
+      console.log('Response status:', response.status); // Debug
+      console.log('Response ok:', response.ok); // Debug
+      
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('id_usuario');
+          setError('Sesión expirada. Por favor, inicie sesión nuevamente.');
+          return;
+        }
+        
+        // Obtener texto del error para más información
+        const errorText = await response.text();
+        console.error('Error response:', errorText); // Debug
+        throw new Error(`Error ${response.status}: ${errorText || 'Error al obtener los datos del perfil'}`);
+      }
+
+      const data = await response.json();
+      console.log('Data received:', data); // Debug
+      setAdminData(data);
+      
+      // Inicializar el formulario de edición con los datos actuales
+      setEditForm({
+        nombre_usuario: data.nombre_usuario || '',
+        apellido_usuario: data.apellido_usuario || '',
+        correo_usuario: data.correo_usuario || '' 
+      });
+      
+    } catch (error) {
+      console.error('Error fetching admin profile:', error);
+      setError(`Error al cargar el perfil: ${error.message}`);
     } finally {
       setLoading(false);
     }
+  }, [getAuthToken]);
+
+  // Función para actualizar el perfil
+  const updateProfile = useCallback(async (profileData) => {
+    try {
+      const token = getAuthToken();
+      const id_usuario = localStorage.getItem('id_usuario');
+      
+      console.log('Updating profile with data:', profileData); // Debug
+      
+      const response = await fetch(`http://localhost:3001/api/users/${id_usuario}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(profileData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Update error:', errorText); // Debug
+        throw new Error(errorText || 'Error al actualizar el perfil');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  }, [getAuthToken]);
+
+  // Función para cambiar contraseña
+  const changePassword = useCallback(async (passwordData) => {
+    try {
+      const token = getAuthToken();
+      const id_usuario = localStorage.getItem('id_usuario');
+      
+      const response = await fetch(`http://localhost:3001/api/users/${id_usuario}/password`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(passwordData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Error al cambiar la contraseña');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error changing password:', error);
+      throw error;
+    }
+  }, [getAuthToken]);
+
+  // Validaciones
+  const validateEditForm = () => {
+    const errors = {};
+    
+    if (!editForm.nombre_usuario.trim()) {
+      errors.nombre_usuario = 'El nombre es obligatorio';
+    }
+    
+    if (!editForm.apellido_usuario.trim()) {
+      errors.apellido_usuario = 'El apellido es obligatorio';
+    }
+    
+    if (!editForm.correo_usuario.trim()) {
+      errors.correo_usuario = 'El correo es obligatorio';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.correo_usuario)) {
+      errors.correo_usuario = 'Formato de correo inválido';
+    }
+    
+    setEditErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  const formatDate = (dateString) => {
-    const options = { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    };
-    return new Date(dateString).toLocaleDateString('es-ES', options);
+  const validatePasswordForm = () => {
+    const errors = {};
+    
+    if (!passwordForm.current_password) {
+      errors.current_password = 'La contraseña actual es obligatoria';
+    }
+    
+    if (!passwordForm.new_password) {
+      errors.new_password = 'La nueva contraseña es obligatoria';
+    } else if (passwordForm.new_password.length < 6) {
+      errors.new_password = 'La contraseña debe tener al menos 6 caracteres';
+    }
+    
+    if (!passwordForm.confirm_password) {
+      errors.confirm_password = 'Debe confirmar la nueva contraseña';
+    } else if (passwordForm.new_password !== passwordForm.confirm_password) {
+      errors.confirm_password = 'Las contraseñas no coinciden';
+    }
+    
+    setPasswordErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  // Función para manejar la apertura del modal de edición
-  const handleEditClick = () => {
-    setEditForm(admin); // Aseguramos que el formulario tenga los datos actuales
-    setSaveSuccess(false); // Reseteamos el estado de éxito
-    setShowEditModal(true);
-  };
+  // Efecto para cargar el perfil al montar el componente
+  useEffect(() => {
+    fetchAdminProfile();
+  }, [fetchAdminProfile]);
 
-  // Función para manejar cambios en el formulario
-  const handleFormChange = (e) => {
+  // Handlers para formularios
+  const handleEditInputChange = (e) => {
     const { name, value } = e.target;
-    setEditForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setEditForm(prev => ({ ...prev, [name]: value }));
+    
+    // Limpiar error del campo cuando el usuario empieza a escribir
+    if (editErrors[name]) {
+      setEditErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
-  // Función para guardar los cambios del perfil
-  const handleSaveProfile = async (e) => {
+  const handlePasswordInputChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordForm(prev => ({ ...prev, [name]: value }));
+    
+    // Limpiar error del campo cuando el usuario empieza a escribir
+    if (passwordErrors[name]) {
+      setPasswordErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  // Submit para editar perfil
+  const handleSubmitEditProfile = async (e) => {
     e.preventDefault();
-    setSaving(true);
+    
+    if (!validateEditForm()) {
+      return;
+    }
     
     try {
-      // En un caso real, aquí enviarías los datos al servidor
-      // const response = await fetch('http://tu-servidor.com/api/admin/update-profile.php', {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      //   },
-      //   body: JSON.stringify(editForm)
-      // });
+      setSaving(true);
+      await updateProfile(editForm);
+      await fetchAdminProfile(); // Recargar datos
       
-      // Simulación de demora en la petición
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setShowEditModal(false);
+      setEditErrors({});
+      setError(null);
       
-      // Actualizamos el estado local con los nuevos datos
-      setAdmin(editForm);
-      setSaveSuccess(true);
-      
-      // Cerramos el modal después de 1.5 segundos para mostrar el mensaje de éxito
-      setTimeout(() => {
-        setShowEditModal(false);
-      }, 1500);
-      
-    } catch (err) {
-      console.error("Error al actualizar el perfil:", err);
-      // Aquí podrías manejar el error, por ejemplo mostrando un mensaje
+      // Mostrar mensaje de éxito
+      alert('Perfil actualizado correctamente');
+    } catch (error) {
+      setError(`Error al actualizar el perfil: ${error.message}`);
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner-grow text-warning" role="status">
-          <span className="visually-hidden">Cargando...</span>
-        </div>
-        <p>Cargando información del perfil...</p>
-      </div>
-    );
-  }
+  // Submit para cambiar contraseña
+  const handleSubmitPasswordChange = async (e) => {
+    e.preventDefault();
+    
+    if (!validatePasswordForm()) {
+      return;
+    }
+    
+    try {
+      setSaving(true);
+      await changePassword({
+        current_password: passwordForm.current_password,
+        new_password: passwordForm.new_password
+      });
+      
+      setShowPasswordModal(false);
+      setPasswordForm({
+        current_password: '',
+        new_password: '',
+        confirm_password: ''
+      });
+      setPasswordErrors({});
+      setError(null);
+      
+      alert('Contraseña actualizada correctamente');
+    } catch (error) {
+      setError(`Error al cambiar la contraseña: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const perfilContent = (
-    <>
-      <Container className="d-flex justify-content-between align-items-center mt-4 mb-4">
-        <h1 className="text-center mb-5">Perfil de Administrador</h1>
-        
-        {admin && (
-          <>
+  // Handlers para abrir modales
+  const handleEditClick = () => {
+    setError(null);
+    setEditErrors({});
+    setShowEditModal(true);
+  };
+
+  const handlePasswordClick = () => {
+    setError(null);
+    setPasswordErrors({});
+    setPasswordForm({
+      current_password: '',
+      new_password: '',
+      confirm_password: ''
+    });
+    setShowPasswordModal(true);
+  };
+
+  // Handlers para cerrar modales
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditErrors({});
+    setError(null);
+    // Restaurar valores originales
+    if (adminData) {
+      setEditForm({
+        nombre_usuario: adminData.nombre_usuario || '',
+        apellido_usuario: adminData.apellido_usuario || '',
+        correo_usuario: adminData.correo_usuario || adminData.correo_usuario || ''
+      });
+    }
+  };
+
+  const handleClosePasswordModal = () => {
+    setShowPasswordModal(false);
+    setPasswordErrors({});
+    setPasswordForm({
+      current_password: '',
+      new_password: '',
+      confirm_password: ''
+    });
+    setError(null);
+  };
+
+  // Función para formatear fecha
+  const formatDate = (dateString) => {
+    if (!dateString) return 'No disponible';
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Fecha inválida';
+    }
+  };
+
+  return (
+    <LayoutBarButton userData={userData}>
+      <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
+        <h1>Mi Perfil de Administrador</h1>
+      </div>
+
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
+      
+      {/* Tarjeta de perfil */}
+      <Card className="mb-4">
+        <Card.Header className="bg-white">
+          <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center">
+              <FaUser className="text-warning me-2" size={20} />
+              <h5 className="mb-0">Información del Perfil</h5>
+            </div>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          {loading ? (
+            <div className="text-center py-4">
+              <div className="spinner-border text-warning" role="status">
+                <span className="visually-hidden">Cargando...</span>
+              </div>
+            </div>
+          ) : adminData ? (
             <Row>
-              <Col lg={4} md={5}>
-                <Card className="profile-card">
-                  <div className="profile-header text-center">
-                    <h3 className='mt-5 text-white'>{admin.nombre_usuario}</h3>
+              <Col md={4} className="text-center mb-4 mb-md-0">
+                <div className="mb-3">
+                  <div 
+                    className="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto"
+                    style={{ width: '150px', height: '150px' }}
+                  >
+                    <FaUserCircle className="text-warning" size={80} />
                   </div>
-                  <Card.Body className="text-center">
-                    <div className="mb-3">
-                      <Badge bg={admin.estado === 'Activo' ? 'success' : 'danger'} className="px-3 py-2">
-                        {admin.estado}
-                      </Badge>
-                    </div>
-                    <h5>
-                      <Badge bg="primary" className="w-100 py-2">{admin.rol}</Badge>
+                </div>
+                <h4 className="mb-1">
+                  {adminData.nombre_usuario} {adminData.apellido_usuario}
+                </h4>
+                <p className="text-muted">
+                  <Badge bg="info">Administrador</Badge>
+                </p>
+              </Col>
+              <Col md={8}>
+                <Row>
+                  <Col md={6}>
+                    <h5 className="border-bottom pb-2 mb-3">
+                      <FaUser className="me-2 text-warning" />
+                      Información Personal
                     </h5>
                     
-                    <div className="profile-info mt-4">
-                      <div className="info-item">
-                        <FaUsers className="info-icon" />
-                        <span>
-                          <strong>{admin.empleadosACargo}</strong> empleados a cargo
-                        </span>
-                      </div>
-                      <div className="info-item">
-                        <FaClock className="info-icon" />
-                        <span>
-                          Último acceso:<br />
-                          <strong>{formatDate(admin.ultimoAcceso)}</strong>
-                        </span>
-                      </div>
+                    <div className="mb-3">
+                      <p className="mb-1"><strong>ID de Usuario:</strong></p>
+                      <p>{adminData.id_usuario}</p>
                     </div>
                     
-                    <Button 
-                      variant="outline-primary" 
-                      className="mt-4 w-100"
-                      onClick={handleEditClick}
-                    >
-                      <FaEdit className="me-2" /> Editar Perfil
-                    </Button>
-                  </Card.Body>
-                </Card>
-              </Col>
-              
-              <Col lg={8} md={7}>
-                <Card className="mb-4">
-                  <Card.Header>
-                    <h4 className="mb-0">Información Personal</h4>
-                  </Card.Header>
-                  <Card.Body>
-                    <Table responsive borderless className="admin-table">
-                      <tbody>
-                        <tr>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="icon-container">
-                                <FaUser />
-                              </div>
-                              <div>
-                                <strong>Nombre Completo</strong>
-                              </div>
-                            </div>
-                          </td>
-                          <td>{admin.nombre}</td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="icon-container">
-                                <FaIdCard />
-                              </div>
-                              <div>
-                                <strong>Documento</strong>
-                              </div>
-                            </div>
-                          </td>
-                          <td>{admin.documento}</td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="icon-container">
-                                <FaEnvelope />
-                              </div>
-                              <div>
-                                <strong>Correo Electrónico</strong>
-                              </div>
-                            </div>
-                          </td>
-                          <td>{admin.correo}</td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="icon-container">
-                                <FaPhone />
-                              </div>
-                              <div>
-                                <strong>Teléfono</strong>
-                              </div>
-                            </div>
-                          </td>
-                          <td>{admin.telefono}</td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="icon-container">
-                                <FaMapMarkerAlt />
-                              </div>
-                              <div>
-                                <strong>Dirección</strong>
-                              </div>
-                            </div>
-                          </td>
-                          <td>{admin.direccion}</td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="icon-container">
-                                <FaUsers />
-                              </div>
-                              <div>
-                                <strong>Empleados a Cargo</strong>
-                              </div>
-                            </div>
-                          </td>
-                          <td>{admin.empleadosACargo}</td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <div className="icon-container">
-                                <FaClock />
-                              </div>
-                              <div>
-                                <strong>Fecha de Contratación</strong>
-                              </div>
-                            </div>
-                          </td>
-                          <td>{new Date(admin.fechaContratacion).toLocaleDateString('es-ES')}</td>
-                        </tr>
-                      </tbody>
-                    </Table>
-                  </Card.Body>
-                </Card>
+                    <div className="mb-3">
+                      <p className="mb-1"><strong>Nombre:</strong></p>
+                      <p>{adminData.nombre_usuario}</p>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <p className="mb-1"><strong>Apellido:</strong></p>
+                      <p>{adminData.apellido_usuario}</p>
+                    </div>
+                  </Col>
+                  
+                  <Col md={6}>
+                    <h5 className="border-bottom pb-2 mb-3">
+                      <FaUserCog className="me-2 text-warning" />
+                      Información de Cuenta
+                    </h5>
+                    
+                    <div className="mb-3">
+                      <p className="mb-1"><strong>Correo Electrónico:</strong></p>
+                      <p className="d-flex align-items-center">
+                        <FaEnvelope className="me-2 text-warning" />
+                        {adminData.correo_usuario || ''}
+                      </p>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <p className="mb-1"><strong>Fecha de Registro:</strong></p>
+                      <p className="d-flex align-items-center">
+                        <FaClock className="me-2 text-warning" />
+                        {formatDate(adminData.fecha_creacion)}
+                      </p>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <p className="mb-1"><strong>Última Actualización:</strong></p>
+                      <p className="d-flex align-items-center">
+                        <FaClock className="me-2 text-warning" />
+                        {formatDate(adminData.fecha_actualizacion)}
+                      </p>
+                    </div>
+                  </Col>
+                </Row>
                 
-                <Card>
-                  <Card.Header>
-                    <h4 className="mb-0">Permisos del Sistema</h4>
-                  </Card.Header>
-                  <Card.Body>
-                    <div className="permissions-container">
-                      {admin.permisos.map((permiso, index) => (
-                        <Badge 
-                          bg="info" 
-                          className="permission-badge" 
-                          key={index}
-                        >
-                          {permiso}
-                        </Badge>
-                      ))}
-                    </div>
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
-            
-            <Row className="mt-4">
-              <Col>
-                <Card>
-                  <Card.Header>
-                    <h4 className="mb-0">Actividad Reciente</h4>
-                  </Card.Header>
-                  <Card.Body>
-                    <div className="activity-timeline">
-                      <div className="activity-item">
-                        <div className="activity-dot bg-success"></div>
-                        <div className="activity-content">
-                          <div className="activity-date">{formatDate(new Date())}</div>
-                          <div className="activity-text">Inició sesión desde la IP 192.168.1.25</div>
-                        </div>
-                      </div>
-                      <div className="activity-item">
-                        <div className="activity-dot bg-primary"></div>
-                        <div className="activity-content">
-                          <div className="activity-date">{formatDate(new Date(Date.now() - 86400000))}</div>
-                          <div className="activity-text">Actualizó la información de 3 empleados</div>
-                        </div>
-                      </div>
-                      <div className="activity-item">
-                        <div className="activity-dot bg-warning"></div>
-                        <div className="activity-content">
-                          <div className="activity-date">{formatDate(new Date(Date.now() - 172800000))}</div>
-                          <div className="activity-text">Generó reportes mensuales de productividad</div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
-            
-            {/* Modal para editar el perfil */}
-            <Modal 
-              show={showEditModal} 
-              onHide={() => setShowEditModal(false)} 
-              size="lg"
-              backdrop="static"
-              centered
-            >
-              <Modal.Header closeButton>
-                <Modal.Title>Editar Perfil</Modal.Title>
-              </Modal.Header>
-              <Form onSubmit={handleSaveProfile}>
-                <Modal.Body>
-                  {saveSuccess && (
-                    <div className="alert alert-success" role="alert">
-                      ¡Perfil actualizado correctamente!
-                    </div>
-                  )}
-                  
-                  <Row className="mb-3">
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label>Nombre Completo</Form.Label>
-                        <Form.Control 
-                          type="text" 
-                          name="nombre" 
-                          value={editForm.nombre || ''} 
-                          onChange={handleFormChange}
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label>Documento</Form.Label>
-                        <Form.Control 
-                          type="text" 
-                          name="documento" 
-                          value={editForm.documento || ''} 
-                          onChange={handleFormChange}
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  
-                  <Row className="mb-3">
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label>Correo Electrónico</Form.Label>
-                        <Form.Control 
-                          type="email" 
-                          name="correo" 
-                          value={editForm.correo || ''} 
-                          onChange={handleFormChange}
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label>Teléfono</Form.Label>
-                        <Form.Control 
-                          type="tel" 
-                          name="telefono" 
-                          value={editForm.telefono || ''} 
-                          onChange={handleFormChange}
-                          required
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  
-                  <Form.Group className="mb-3">
-                    <Form.Label>Dirección</Form.Label>
-                    <Form.Control 
-                      type="text" 
-                      name="direccion" 
-                      value={editForm.direccion || ''} 
-                      onChange={handleFormChange}
-                      required
-                    />
-                  </Form.Group>
-                  
-                  <Row className="mb-3">
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label>Rol</Form.Label>
-                        <Form.Select 
-                          name="rol" 
-                          value={editForm.rol || ''} 
-                          onChange={handleFormChange}
-                          required
-                        >
-                          <option value="Administrador General">Administrador General</option>
-                          <option value="Administrador de Recursos Humanos">Administrador de Recursos Humanos</option>
-                          <option value="Administrador Financiero">Administrador Financiero</option>
-                          <option value="Administrador de TI">Administrador de TI</option>
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label>Estado</Form.Label>
-                        <Form.Select 
-                          name="estado" 
-                          value={editForm.estado || ''} 
-                          onChange={handleFormChange}
-                          required
-                        >
-                          <option value="Activo">Activo</option>
-                          <option value="Inactivo">Inactivo</option>
-                          <option value="Suspendido">Suspendido</option>
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                </Modal.Body>
-                <Modal.Footer>
-                  <Button variant="secondary" onClick={() => setShowEditModal(false)}>
-                    Cancelar
+                <div className="mt-4 pt-3 border-top">
+                  <Button 
+                    variant="warning" 
+                    className="me-2"
+                    onClick={handleEditClick}
+                  >
+                    <FaEdit className="me-2" /> Editar Perfil
                   </Button>
                   <Button 
-                    variant="primary" 
-                    type="submit" 
-                    disabled={saving}
+                    variant="outline-warning"
+                    onClick={handlePasswordClick}
                   >
-                    {saving ? (
-                      <>
-                        <Spinner
-                          as="span"
-                          animation="border"
-                          size="sm"
-                          role="status"
-                          aria-hidden="true"
-                          className="me-2"
-                        />
-                        Guardando...
-                      </>
-                    ) : (
-                      <>
-                        <FaSave className="me-2" /> Guardar Cambios
-                      </>
-                    )}
+                    <FaKey className="me-2" /> Cambiar Contraseña
                   </Button>
-                </Modal.Footer>
-              </Form>
-            </Modal>
-          </>
-        )}
-      </Container>
-    </>
-  );
-
-    return (
-    <LayoutBarButton userData={userData}>
-      {perfilContent}
+                </div>
+              </Col>
+            </Row>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-muted">No se encontraron datos del perfil.</p>
+            </div>
+          )}
+        </Card.Body>
+      </Card>
+      
+      {/* Modal para editar perfil */}
+      <Modal 
+        show={showEditModal} 
+        onHide={handleCloseEditModal}
+        centered
+      >
+        <Modal.Header closeButton className="border-bottom border-warning">
+          <Modal.Title>
+            <FaEdit className="me-2 text-warning" />
+            Editar Perfil
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmitEditProfile}>
+            <Form.Group className="mb-3">
+              <Form.Label>Nombre</Form.Label>
+              <Form.Control
+                type="text"
+                name="nombre_usuario"
+                value={editForm.nombre_usuario}
+                onChange={handleEditInputChange}
+                isInvalid={!!editErrors.nombre_usuario}
+                required
+              />
+              <Form.Control.Feedback type="invalid">
+                {editErrors.nombre_usuario}
+              </Form.Control.Feedback>
+            </Form.Group>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Apellido</Form.Label>
+              <Form.Control
+                type="text"
+                name="apellido_usuario"
+                value={editForm.apellido_usuario}
+                onChange={handleEditInputChange}
+                isInvalid={!!editErrors.apellido_usuario}
+                required
+              />
+              <Form.Control.Feedback type="invalid">
+                {editErrors.apellido_usuario}
+              </Form.Control.Feedback>
+            </Form.Group>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Correo Electrónico</Form.Label>
+              <Form.Control
+                type="email"
+                name="correo_usuario"
+                value={editForm.correo_usuario}
+                onChange={handleEditInputChange}
+                isInvalid={!!editErrors.correo_usuario}
+                required
+              />
+              <Form.Control.Feedback type="invalid">
+                {editErrors.correo_usuario}
+              </Form.Control.Feedback>
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseEditModal}>
+            Cancelar
+          </Button>
+          <Button 
+            variant="warning" 
+            onClick={handleSubmitEditProfile}
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <div className="spinner-border spinner-border-sm me-2" role="status">
+                  <span className="visually-hidden">Guardando...</span>
+                </div>
+                Guardando...
+              </>
+            ) : (
+              <>
+                <FaSave className="me-2" />
+                Guardar Cambios
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      
+      {/* Modal para cambiar contraseña */}
+      <Modal 
+        show={showPasswordModal} 
+        onHide={handleClosePasswordModal}
+        centered
+      >
+        <Modal.Header closeButton className="border-bottom border-warning">
+          <Modal.Title>
+            <FaLock className="me-2 text-warning" />
+            Cambiar Contraseña
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmitPasswordChange}>
+            <Form.Group className="mb-3">
+              <Form.Label>Contraseña Actual</Form.Label>
+              <Form.Control
+                type="password"
+                name="current_password"
+                value={passwordForm.current_password}
+                onChange={handlePasswordInputChange}
+                isInvalid={!!passwordErrors.current_password}
+                required
+              />
+              <Form.Control.Feedback type="invalid">
+                {passwordErrors.current_password}
+              </Form.Control.Feedback>
+            </Form.Group>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Nueva Contraseña</Form.Label>
+              <Form.Control
+                type="password"
+                name="new_password"
+                value={passwordForm.new_password}
+                onChange={handlePasswordInputChange}
+                isInvalid={!!passwordErrors.new_password}
+                required
+              />
+              <Form.Control.Feedback type="invalid">
+                {passwordErrors.new_password}
+              </Form.Control.Feedback>
+            </Form.Group>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Confirmar Nueva Contraseña</Form.Label>
+              <Form.Control
+                type="password"
+                name="confirm_password"
+                value={passwordForm.confirm_password}
+                onChange={handlePasswordInputChange}
+                isInvalid={!!passwordErrors.confirm_password}
+                required
+              />
+              <Form.Control.Feedback type="invalid">
+                {passwordErrors.confirm_password}
+              </Form.Control.Feedback>
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClosePasswordModal}>
+            Cancelar
+          </Button>
+          <Button 
+            variant="warning" 
+            onClick={handleSubmitPasswordChange}
+            disabled={saving}
+          >
+            {saving ? (
+              <>
+                <div className="spinner-border spinner-border-sm me-2" role="status">
+                  <span className="visually-hidden">Actualizando...</span>
+                </div>
+                Actualizando...
+              </>
+            ) : (
+              <>
+                <FaSave className="me-2" />
+                Cambiar Contraseña
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </LayoutBarButton>
   );
 };

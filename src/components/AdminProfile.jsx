@@ -65,10 +65,23 @@ const AdminProfile = () => {
     }, []);
 
   // Función para obtener el token de autenticación
-  const getAuthToken = useCallback(() => {
-    const token = localStorage.getItem('token');
-    return token ? `Bearer ${token}` : null;
-  }, []);
+const getAuthToken = useCallback(() => {
+  const token = localStorage.getItem('token');
+  const id_usuario = localStorage.getItem('id_usuario');
+  
+  console.log('Token from storage:', token); // Debug
+  console.log('ID from storage:', id_usuario); // Debug
+  
+  if (!token || !id_usuario) {
+    console.error('Missing authentication data in localStorage');
+    return null;
+  }
+  
+  return {
+    token: `Bearer ${token}`,
+    id_usuario: id_usuario
+  };
+}, []);
 
   // Función para obtener los datos del perfil del administrador
   const fetchAdminProfile = useCallback(async () => {

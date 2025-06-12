@@ -36,9 +36,12 @@ const Cargas = () => {
   // Estados para cargas
   const [currentCarga, setCurrentCarga] = useState(null);
   const [newCarga, setNewCarga] = useState({
-    referencia: '',
     descripcion: '',
     peso: '',
+    foto_carga: '',
+    fecha_inicio: '',
+    fecha_fin: '',
+    vehiculo: '',
     cliente: '',
     conductor: ''
   });
@@ -51,15 +54,8 @@ const Cargas = () => {
     fecha_inicio: '',
     fecha_fin: '',
     vehiculo: '',
-    conductor: '',
-    fechaInicio: '',
-    fechaFin: '',
-    estado: 'Pendiente',
-    valor: '',
-    observaciones: '',
-    telefono: '',
-    direccionDestino: '',
-    direccionOrigen: ''
+    cliente: '',
+    conductor: ''
   });
   
   // Estados de validación
@@ -485,6 +481,7 @@ const Cargas = () => {
           variant="warning" 
           className="d-flex align-items-center"
           onClick={() => setShowNewCargaModal(true)}
+          disabled={loading}
         >
           <FaPlus className="me-2" /> Nueva Carga
         </Button>
@@ -715,16 +712,6 @@ const Cargas = () => {
                       </p>
                     </Col>
                   </Row>
-                  
-                  {currentCarga.observaciones && (
-                    <>
-                      <h5 className="mb-3 mt-4">Observaciones</h5>
-                      <p className="bg-light p-3 rounded">
-                        <FaComments className="me-2 text-warning" />
-                        {currentCarga.observaciones}
-                      </p>
-                    </>
-                  )}
                 </Col>
               </Row>
             </div>
@@ -938,22 +925,26 @@ const Cargas = () => {
 
       {/* Modal para editar carga */}
       <Modal
-        show={showNewCargaModal}
-        onHide={() => setShowNewCargaModal(false)}
+        show={showEditCargaModal}
+        onHide={() => setShowEditCargaModal(false)}
         size="lg"
         centered
         backdrop="static"
       >
-        <Form noValidate validated={validated} onSubmit={handleSubmitNewCarga}>
+        <Form noValidate validated={editValidated} onSubmit={handleSubmitEditCarga}>
           <Modal.Header closeButton className="border-bottom border-warning">
             <Modal.Title>
-              <FaBoxes className="me-2 text-warning" />
-              Registrar Nueva Carga
+              <FaEdit className="me-2 text-warning" />
+              Editar Carga
             </Modal.Title>
           </Modal.Header>
           <Modal.Body>
             <div className="edit-carga-form">
               <h5 className="border-bottom pb-2 mb-3">Información de la Carga</h5>
+            <div className="new-carga-form">
+              </div>
+              {/* Información básica */}
+              <h5 className="border-bottom pb-2 mb-3">Información Básica</h5>
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
@@ -991,12 +982,12 @@ const Cargas = () => {
               <Row className="mb-3">
                 <Col md={12}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Descripción</Form.Label>
+                    <Form.Label>Descripción *</Form.Label>
                     <Form.Control
                       type="text"
                       name="descripcion"
-                      value={newCarga.descripcion}
-                      onChange={handleInputChange}
+                      value={editCarga.descripcion}
+                      onChange={handleEditInputChange}
                       required
                       placeholder="Ingrese la descripción de la carga"
                     />
@@ -1010,12 +1001,12 @@ const Cargas = () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Peso</Form.Label>
+                    <Form.Label>Peso *</Form.Label>
                     <Form.Control
                       type="text"
                       name="peso"
-                      value={newCarga.peso}
-                      onChange={handleInputChange}
+                      value={editCarga.peso}
+                      onChange={handleEditInputChange}
                       required
                       placeholder="Ej: 1500 kg"
                     />
@@ -1038,110 +1029,16 @@ const Cargas = () => {
                 </Col>
               </Row>
               
-              {/* Información de contacto */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Contacto</h5>
-              <Row className="mb-3">
-                <Col md={12}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Teléfono</Form.Label>
-                    <Form.Control
-                      type="tel"
-                      name="telefono"
-                      value={newCarga.telefono}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="3001234567"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El teléfono es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              {/* Ruta */}
-              <h5 className="border-bottom pb-2 mb-3 mt-4">Ruta</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Origen</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="origen"
-                      value={newCarga.origen}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Ciudad de origen"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El origen es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Destino</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="destino"
-                      value={newCarga.destino}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Ciudad de destino"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El destino es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Dirección de Origen</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="direccionOrigen"
-                      value={newCarga.direccionOrigen}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Dirección completa de origen"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La dirección de origen es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Dirección de Destino</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="direccionDestino"
-                      value={newCarga.direccionDestino}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Dirección completa de destino"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La dirección de destino es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              {/* Fechas */}
               <h5 className="border-bottom pb-2 mb-3 mt-4">Fechas</h5>
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Fecha de Inicio</Form.Label>
+                    <Form.Label>Fecha de Inicio *</Form.Label>
                     <Form.Control
                       type="date"
-                      name="fechaInicio"
-                      value={newCarga.fechaInicio}
-                      onChange={handleInputChange}
+                      name="fecha_inicio"
+                      value={editCarga.fecha_inicio}
+                      onChange={handleEditInputChange}
                       required
                     />
                     <Form.Control.Feedback type="invalid">
@@ -1151,12 +1048,12 @@ const Cargas = () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Fecha de Fin</Form.Label>
+                    <Form.Label>Fecha de Fin *</Form.Label>
                     <Form.Control
                       type="date"
-                      name="fechaFin"
-                      value={newCarga.fechaFin}
-                      onChange={handleInputChange}
+                      name="fecha_fin"
+                      value={editCarga.fecha_fin}
+                      onChange={handleEditInputChange}
                       required
                     />
                     <Form.Control.Feedback type="invalid">

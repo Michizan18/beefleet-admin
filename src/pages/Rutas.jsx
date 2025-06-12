@@ -13,6 +13,7 @@ const Rutas = () => {
   const [selectedRuta, setSelectedRuta] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cargasDisponibles, setCargasDisponibles] = useState([]);
 
   const initialFormState = {
     origen: '',
@@ -25,6 +26,7 @@ const Rutas = () => {
 
   useEffect(() => {
     fetchRutas();
+    fetchCargas(); 
   }, []);
 
   // FILTRO CORREGIDO
@@ -44,6 +46,32 @@ const Rutas = () => {
     setFilteredRutas(filtered);
   }, [searchTerm, rutasData]);
 
+<<<<<<< HEAD
+=======
+  const fetchCargas = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('🔄 Fetching cargas...');
+      
+      const response = await fetch('http://localhost:3001/api/cargas', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const cargas = await response.json();
+        console.log('✅ Cargas recibidas:', cargas);
+        setCargasDisponibles(Array.isArray(cargas) ? cargas : []);
+      } else {
+        console.error('❌ Error response cargas:', response.status);
+        setCargasDisponibles([]);
+      }
+    } catch (err) {
+      console.error("❌ Error al cargar cargas:", err);
+      setCargasDisponibles([]);
+    }
+  }; 
+
+>>>>>>> a435542878c08862957ac5f1021b901b26191042
   const fetchRutas = async () => {
     console.log('🚀 INICIANDO fetchRutas...');
     setLoading(true);
@@ -79,6 +107,7 @@ const Rutas = () => {
       
       // NORMALIZACIÓN DE DATOS CORREGIDA
       const normalizedData = Array.isArray(data) 
+<<<<<<< HEAD
         ? data.flat().map(ruta => ({
             id_ruta: ruta.id_ruta,
             origen: ruta.origen || 'Sin origen',
@@ -86,6 +115,23 @@ const Rutas = () => {
             distancia: parseFloat(ruta.distancia) || 0,
             carga: parseInt(ruta.carga) || 0
           }))
+=======
+        ? data.map((ruta, index) => {
+            console.log(`🔄 Procesando ruta ${index}:`, ruta);
+            console.log(`🔍 Keys de ruta:`, Object.keys(ruta));
+            
+            const result = {
+              id_ruta: ruta.id_ruta,
+              origen: String(ruta.origen || '').trim(), // Convertir a string y limpiar espacios
+              destino: String(ruta.destino || '').trim(),
+              distancia: Number(ruta.distancia) || 0,
+              carga: Number(ruta.carga) || 0
+            };
+            
+            console.log(`✅ Ruta ${index} normalizada:`, result);
+            return result;
+          })
+>>>>>>> a435542878c08862957ac5f1021b901b26191042
         : [];
       
       console.log('✅ Datos normalizados finales:', normalizedData);
@@ -156,6 +202,7 @@ const Rutas = () => {
     }
   };
 
+<<<<<<< HEAD
   const validateForm = () => {
     const errors = [];
     
@@ -173,6 +220,8 @@ const Rutas = () => {
     return errors;
   };
 
+=======
+>>>>>>> a435542878c08862957ac5f1021b901b26191042
   const handleSubmitForm = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -180,6 +229,7 @@ const Rutas = () => {
 
     try {
       const token = localStorage.getItem('token');
+<<<<<<< HEAD
       const rutaData = {
         origen: formData.origen.trim(),
         destino: formData.destino.trim(),
@@ -191,6 +241,13 @@ const Rutas = () => {
       const url = `http://localhost:3001/api/routes${isEdit ? `/${selectedRuta.id_ruta}` : ''}`;
       const method = isEdit ? 'PUT' : 'POST';
       const body = isEdit ? { id_ruta: selectedRuta.id_ruta, ...rutaData } : rutaData;
+=======
+      const url = modalMode === 'create' 
+        ? 'http://localhost:3001/api/routes' 
+        : `http://localhost:3001/api/routes/${selectedRuta.id_ruta}`;
+      
+      const method = modalMode === 'create' ? 'POST' : 'PUT';
+>>>>>>> a435542878c08862957ac5f1021b901b26191042
 
       const response = await fetch(url, {
         method,
@@ -211,6 +268,7 @@ const Rutas = () => {
         throw new Error(errorData.message || 'Error al guardar la ruta');
       }
 
+<<<<<<< HEAD
       const result = await response.json();
       const newRuta = isEdit ? null : result.route;
       
@@ -221,6 +279,9 @@ const Rutas = () => {
           : [...prev, newRuta]
       );
 
+=======
+      await fetchRutas();
+>>>>>>> a435542878c08862957ac5f1021b901b26191042
       setShowModal(false);
     } catch (err) {
       setError(err.message);
@@ -237,10 +298,39 @@ const Rutas = () => {
     }));
   };
 
+<<<<<<< HEAD
   const calculateStats = () => {
     const totalRutas = rutasData.length;
     const totalDistancia = rutasData.reduce((sum, ruta) => sum + ruta.distancia, 0);
     const totalCarga = rutasData.reduce((sum, ruta) => sum + ruta.carga, 0);
+=======
+  const getCargaInfo = (cargaId) => {
+    if (!cargaId) return 'Sin carga';
+    
+    const carga = cargasDisponibles.find(c => c.id_carga === cargaId);
+    if (carga) {
+      return carga.descripcion || `Carga #${cargaId}`;
+    }
+    
+    return `Carga ${cargaId}`;
+  };
+  
+  const calculateStats = () => {
+    const totalRutas = rutasData.length;
+    const totalDistancia = rutasData.reduce((sum, ruta) => sum + (ruta.distancia || 0), 0);
+    
+    const totalCarga = rutasData.reduce((sum, ruta) => {
+      if (!ruta.carga) return sum;
+      
+      const carga = cargasDisponibles.find(c => c.id_carga === ruta.carga);
+      if (carga && carga.peso) {
+        return sum + parseFloat(carga.peso);
+      }
+      
+      return sum + (ruta.carga || 0);
+    }, 0);
+    
+>>>>>>> a435542878c08862957ac5f1021b901b26191042
     const distanciaPromedio = totalRutas > 0 ? totalDistancia / totalRutas : 0;
 
     return { totalRutas, totalDistancia, totalCarga, distanciaPromedio };
@@ -411,8 +501,13 @@ const Rutas = () => {
                             }
                           </div>
                         </td>
+<<<<<<< HEAD
                         <td className="text-end">{ruta.distancia.toFixed(1)}</td>
                         <td className="text-end">{ruta.carga.toLocaleString()}</td>
+=======
+                        <td className="text-end">{Number(ruta.distancia).toFixed(1)}</td>
+                        <td>{getCargaInfo(ruta.carga)}</td>
+>>>>>>> a435542878c08862957ac5f1021b901b26191042
                         <td>
                           <div className="d-flex gap-2">
                             <Button
@@ -523,6 +618,7 @@ const Rutas = () => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
+<<<<<<< HEAD
                   <Form.Label>Carga (kg) *</Form.Label>
                   <Form.Control
                     type="number"
@@ -534,6 +630,38 @@ const Rutas = () => {
                     placeholder="0"
                     disabled={isSubmitting}
                   />
+=======
+                  <Form.Label>Carga *</Form.Label>
+                  {cargasDisponibles.length > 0 ? (
+                    <Form.Select
+                      name="carga"
+                      value={formData.carga}
+                      onChange={handleInputChange}
+                      required
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Seleccionar carga...</option>
+                      {cargasDisponibles.map(carga => (
+                        <option key={carga.id_carga} value={carga.id_carga}>
+                          {carga.descripcion || `Carga #${carga.id_carga}`}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  ) : (
+                    <Form.Control
+                      type="number"
+                      name="carga"
+                      value={formData.carga}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="ID de carga"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                  <Form.Text className="text-muted">
+                    {cargasDisponibles.length === 0 && 'No se pudieron cargar las cargas disponibles. Ingresa el ID manualmente.'}
+                  </Form.Text>
+>>>>>>> a435542878c08862957ac5f1021b901b26191042
                 </Form.Group>
               </Col>
             </Row>

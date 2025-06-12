@@ -9,6 +9,7 @@ import Cargas from './pages/Cargas';
 import Clientes from './pages/Clientes';
 import Ventas from './pages/Ventas';
 import RecuperarContraseña from './components/RecuperarContraseña';
+import MiPerfil from './components/MiPerfil';
 
 function App() {
   return (
@@ -24,6 +25,8 @@ function App() {
         <Route path="/clientes" element={<Clientes/>} />
         <Route path="/ventas" element={<Ventas/>} />
         <Route path="/recuperar-password" element={<RecuperarContraseña/>} />
+        <Route path="/profile" element={<MiPerfil/>} />
+        <Route path="/miperfil" element={<MiPerfil/>} />
       </Routes>
     </Router>
   )

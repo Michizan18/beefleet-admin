@@ -7,6 +7,7 @@ import {
   FaEdit, FaTrashAlt, FaPlus, FaSave 
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
+import apiRequest from '../services/api';
 import './Conductores.css';
 
 const Conductores = () => {
@@ -45,6 +46,7 @@ const Conductores = () => {
   const [editDriver, setEditDriver] = useState(initialDriverState);
 
   const conductoresPorPagina = 8;
+<<<<<<< HEAD
 
   useEffect(() => {
     const fetchConductores = async () => {
@@ -77,12 +79,47 @@ const Conductores = () => {
         alert(`Error al cargar conductores: ${error.message}`);
       } finally {
         setLoading(false);
+=======
+  const fetchConductores = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('No hay token disponible');
+        return;
+>>>>>>> e15c377429bff602f53ff0a81a73b03b4fc8709c
       }
     };
 
     fetchConductores();
   }, []);
 
+<<<<<<< HEAD
+=======
+      const response = await fetch('http://localhost:3001/api/drivers', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const driverData = await response.json();
+      setConductores(driverData);
+      setFilteredConductores(driverData);
+    } catch (error) {
+      console.error("Error al cargar datos de conductores:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+>>>>>>> e15c377429bff602f53ff0a81a73b03b4fc8709c
   useEffect(() => {
     let filtered = conductores;
     
@@ -96,8 +133,14 @@ const Conductores = () => {
     if (filterStatus !== 'todos') {
       filtered = filtered.filter(conductor => conductor.estado === filterStatus);
     }
+    
     setFilteredConductores(filtered);
+<<<<<<< HEAD
     setCurrentPage(1);
+=======
+    setCurrentPage(1); // Resetear a primera página al filtrar
+    fetchConductores();
+>>>>>>> e15c377429bff602f53ff0a81a73b03b4fc8709c
   }, [searchTerm, filterStatus, conductores]);
   
   const formatDate = (dateString) => {
@@ -127,6 +170,7 @@ const Conductores = () => {
     setShowModal(true);
   };
 
+<<<<<<< HEAD
   const handleEditDriver = (driver) => {
     setEditDriver({
       id_conductor: driver.id_conductor,
@@ -152,6 +196,20 @@ const Conductores = () => {
     let processedValue = value;
     
     if (name === 'documento' || name === 'experiencia' || name === 'telefono') {
+=======
+  // Manejar cambios en el formulario
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Manejar campos numéricos específicamente
+    let processedValue = value;
+    
+    if (name === 'documento') {
+      // Solo permitir números para documento
+      processedValue = value.replace(/\D/g, '');
+    } else if (name === 'experiencia') {
+      // Solo permitir números para experiencia
+>>>>>>> e15c377429bff602f53ff0a81a73b03b4fc8709c
       processedValue = value.replace(/\D/g, '');
     }
     
@@ -160,6 +218,14 @@ const Conductores = () => {
       [name]: processedValue
     });
   };
+<<<<<<< HEAD
+=======
+
+  const getAuthToken = () => {
+    const token = localStorage.getItem('token');
+    return token ? `Bearer ${token}` : null; // Agregar Bearer prefix
+  };
+>>>>>>> e15c377429bff602f53ff0a81a73b03b4fc8709c
 
   const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
     const confirmDelete = window.confirm(
@@ -167,13 +233,36 @@ const Conductores = () => {
       `Nombre: ${nombre_conductor} ${apellido_conductor}\n` +
       `Documento: ${documento}`
     );
+    
     if (confirmDelete) {
       try {
+<<<<<<< HEAD
         await api(`/drivers/${id_conductor}`, {
           method: 'DELETE'
         });
         
         setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
+=======
+        const token = getAuthToken(); 
+        if (!token) {
+          throw new Error('No hay token de autenticación');
+        }
+        const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Error al eliminar el cliente');
+        }
+        // Actualiza la lista de conductores después de eliminar
+        setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
+        // Mostrar mensaje de éxito
+>>>>>>> e15c377429bff602f53ff0a81a73b03b4fc8709c
         alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
       } catch (error) {
         console.error('Error:', error);
@@ -182,6 +271,7 @@ const Conductores = () => {
     }
   };
 
+<<<<<<< HEAD
   const handleSubmitNewDriver = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -293,6 +383,140 @@ const Conductores = () => {
     return <Badge bg={variants[estado] || 'secondary'}>{estado}</Badge>;
   };
   
+=======
+  // const updateConductor = async(id_conductor, updatedData) => {
+  //   try {
+  //     setIsUpdating(true);
+  //     const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type' : 'application/json'
+  //       },
+  //       body: JSON.stringify(updatedData)
+  //     });
+  //     if (!response.ok){
+  //       throw new Error('Error al actualizar el conductor')
+  //     }
+  //     const data = await response.json();
+  //     setConductores(data);
+  //   } catch (error) {
+  //     console.error('Error:', error);
+  //     alert('Hubo un error al crear el conductor');
+  //   } finally{
+  //     setIsUpdating(false)
+  //   }
+  // }
+
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   const formData = new FormData(e.target);
+  //   const updateConductor = {
+  //     tipo_documento: formData.get('tipo_documento'),
+  //     documento: formData.get('documento'),
+  //     nombre_conductor: formData.get('nombre_conductor'),
+  //     apellido_conductor: formData.get('apellido_conductor'),
+  //     correo_conductor: formData.get('correo_conductor'),
+  //     foto: formData.get('foto'),
+  //     telefono: formData.get('telefono'),
+  //     ciudad: formData.get('ciudad'),
+  //     direccion: formData.get('direccion')
+  //   }
+  //   updateConductor(conductor.id_conductor, updateConductor);
+  // }
+
+// Función corregida para manejar el envío del formulario
+const handleSubmitNewDriver = async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setValidated(true);
+    return;
+  }
+
+  try {
+    setIsUpdating(true);
+    
+    // Validar campos requeridos antes de enviar
+    if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
+      alert('Por favor complete todos los campos requeridos');
+      return;
+    }
+
+    // CORREGIR EL PAYLOAD - Asegurar tipos de datos correctos
+    const payload = {
+      tipo_documento: newDriver.tipo_documento || 'CC',
+      documento: newDriver.documento.toString(), // Asegurar que sea string
+      nombre_conductor: newDriver.nombre_conductor.trim(),
+      apellido_conductor: newDriver.apellido_conductor?.trim() || '',
+      correo_conductor: newDriver.correo_conductor.trim(),
+      foto: newDriver.foto || null, // Enviar null en lugar de string vacío
+      telefono: newDriver.telefono || null,
+      ciudad: newDriver.ciudad || null,
+      direccion: newDriver.direccion || null,
+      tipo_licencia: newDriver.tipo_licencia || null,
+      fecha_vencimiento: newDriver.fecha_vencimiento || null,
+      experiencia: newDriver.experiencia ? parseInt(newDriver.experiencia, 10) : null,
+      estado: newDriver.estado || 'Activo'
+    };
+
+    const token = localStorage.getItem('token');
+    
+    const response = await fetch('http://localhost:3001/api/drivers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify(payload)
+    });
+
+    // Manejar respuesta del servidor
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Error del servidor:', errorData);
+      throw new Error(`Error ${response.status}: ${errorData}`);
+    }
+
+    const data = await response.json();
+    console.log('Conductor creado exitosamente:', data);
+    
+    alert('Conductor creado exitosamente');
+    setShowNewDriverModal(false);
+    
+    // Actualizar la lista de conductores
+    setConductores(prev => [...prev, data.driver || data]);
+    
+    // Limpiar el formulario
+    setNewDriver({
+      tipo_documento: '',
+      documento: '',
+      nombre_conductor: '',
+      apellido_conductor: '',
+      correo_conductor: '',
+      foto: '',
+      telefono: '',
+      ciudad: '',
+      direccion: '',
+      tipo_licencia: '',
+      fecha_vencimiento: '',
+      experiencia: '',
+      estado: 'Activo',
+    });
+    
+    setValidated(false);
+    
+  } catch (error) {
+    console.error('Error completo:', error);
+    alert(`Hubo un error al crear el conductor: ${error.message}`);
+  } finally {
+    setIsUpdating(false);
+  }
+};
+  
+  // Componente de Paginación
+>>>>>>> e15c377429bff602f53ff0a81a73b03b4fc8709c
   const renderPagination = () => {
     if (totalPages <= 1) return null;
     
@@ -328,6 +552,7 @@ const Conductores = () => {
       </div>
     );
   };
+<<<<<<< HEAD
 
   if (loading) {
     return (
@@ -355,6 +580,46 @@ const Conductores = () => {
             <FaPlus className="me-2" /> Nuevo Conductor
           </Button>
         </div>
+=======
+  
+  // Componente para el badge de estado
+  const EstadoBadge = ({ estado }) => {
+    let variant;
+    switch (estado) {
+      case 'Activo':
+        variant = 'success';
+        break;
+      case 'En ruta':
+        variant = 'primary';
+        break;
+      case 'Descanso':
+      case 'Entrenamiento':
+        variant = 'warning';
+        break;
+      case 'Inactivo':
+        variant = 'danger';
+        break;
+      default:
+        variant = 'secondary';
+    }
+    
+    return <span className={`badge bg-${variant} rounded-pill`}>{estado}</span>;
+  };
+  
+  
+  const conductoresContent = (
+    <>
+      
+      <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
+        <h1>Gestión de Conductores</h1>
+        <Button 
+          variant="warning" 
+          className="d-flex align-items-center"
+          onClick={() => setShowNewDriverModal(true)}
+        >
+          <FaPlus className="me-2" /> Nuevo Conductor
+        </Button>
+>>>>>>> e15c377429bff602f53ff0a81a73b03b4fc8709c
       </div>
       
       <Card className="mb-4">
@@ -705,9 +970,7 @@ const Conductores = () => {
                         value={newDriver.telefono}
                         onChange={handleInputChange}
                         required
-                        maxLength={15}
-                        pattern="[0-9]*"
-                        title="Solo números"
+                        maxLength={45}
                       />
                       <Form.Control.Feedback type="invalid">
                         Teléfono requerido

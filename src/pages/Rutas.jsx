@@ -13,7 +13,6 @@ const Rutas = () => {
   const [selectedRuta, setSelectedRuta] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [cargasDisponibles, setCargasDisponibles] = useState([]);
 
   const initialFormState = {
     origen: '',
@@ -26,7 +25,6 @@ const Rutas = () => {
 
   useEffect(() => {
     fetchRutas();
-    fetchCargas(); 
   }, []);
 
   // FILTRO CORREGIDO
@@ -45,29 +43,6 @@ const Rutas = () => {
     });
     setFilteredRutas(filtered);
   }, [searchTerm, rutasData]);
-
-  const fetchCargas = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      console.log('🔄 Fetching cargas...');
-      
-      const response = await fetch('http://localhost:3001/api/cargas', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const cargas = await response.json();
-        console.log('✅ Cargas recibidas:', cargas);
-        setCargasDisponibles(Array.isArray(cargas) ? cargas : []);
-      } else {
-        console.error('❌ Error response cargas:', response.status);
-        setCargasDisponibles([]);
-      }
-    } catch (err) {
-      console.error("❌ Error al cargar cargas:", err);
-      setCargasDisponibles([]);
-    }
-  }; 
 
   const fetchRutas = async () => {
     console.log('🚀 INICIANDO fetchRutas...');
@@ -104,21 +79,13 @@ const Rutas = () => {
       
       // NORMALIZACIÓN DE DATOS CORREGIDA
       const normalizedData = Array.isArray(data) 
-        ? data.map((ruta, index) => {
-            console.log(`🔄 Procesando ruta ${index}:`, ruta);
-            console.log(`🔍 Keys de ruta:`, Object.keys(ruta));
-            
-            const result = {
-              id_ruta: ruta.id_ruta,
-              origen: String(ruta.origen || '').trim(), // Convertir a string y limpiar espacios
-              destino: String(ruta.destino || '').trim(),
-              distancia: Number(ruta.distancia) || 0,
-              carga: Number(ruta.carga) || 0
-            };
-            
-            console.log(`✅ Ruta ${index} normalizada:`, result);
-            return result;
-          })
+        ? data.flat().map(ruta => ({
+            id_ruta: ruta.id_ruta,
+            origen: ruta.origen || 'Sin origen',
+            destino: ruta.destino || 'Sin destino',
+            distancia: parseFloat(ruta.distancia) || 0,
+            carga: parseInt(ruta.carga) || 0
+          }))
         : [];
       
       console.log('✅ Datos normalizados finales:', normalizedData);
@@ -189,6 +156,23 @@ const Rutas = () => {
     }
   };
 
+  const validateForm = () => {
+    const errors = [];
+    
+    if (!formData.origen.trim()) errors.push('El origen es requerido');
+    if (!formData.destino.trim()) errors.push('El destino es requerido');
+    if (formData.origen.length > 45) errors.push('El origen no puede exceder 45 caracteres');
+    if (formData.destino.length > 45) errors.push('El destino no puede exceder 45 caracteres');
+    
+    const distancia = parseFloat(formData.distancia);
+    if (isNaN(distancia) || distancia <= 0) errors.push('La distancia debe ser un número mayor a 0');
+    
+    const carga = parseInt(formData.carga);
+    if (isNaN(carga) || carga <= 0) errors.push('La carga debe ser un número mayor a 0');
+
+    return errors;
+  };
+
   const handleSubmitForm = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -196,11 +180,17 @@ const Rutas = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const url = modalMode === 'create' 
-        ? 'http://localhost:3001/api/routes' 
-        : `http://localhost:3001/api/routes/${selectedRuta.id_ruta}`;
-      
-      const method = modalMode === 'create' ? 'POST' : 'PUT';
+      const rutaData = {
+        origen: formData.origen.trim(),
+        destino: formData.destino.trim(),
+        distancia: parseFloat(formData.distancia),
+        carga: parseInt(formData.carga)
+      };
+
+      const isEdit = modalMode === 'edit';
+      const url = `http://localhost:3001/api/routes${isEdit ? `/${selectedRuta.id_ruta}` : ''}`;
+      const method = isEdit ? 'PUT' : 'POST';
+      const body = isEdit ? { id_ruta: selectedRuta.id_ruta, ...rutaData } : rutaData;
 
       const response = await fetch(url, {
         method,
@@ -221,7 +211,16 @@ const Rutas = () => {
         throw new Error(errorData.message || 'Error al guardar la ruta');
       }
 
-      await fetchRutas();
+      const result = await response.json();
+      const newRuta = isEdit ? null : result.route;
+      
+      // Actualizar estado local
+      setRutasData(prev => 
+        isEdit
+          ? prev.map(r => r.id_ruta === selectedRuta.id_ruta ? { ...r, ...rutaData } : r)
+          : [...prev, newRuta]
+      );
+
       setShowModal(false);
     } catch (err) {
       setError(err.message);
@@ -238,32 +237,10 @@ const Rutas = () => {
     }));
   };
 
-  const getCargaInfo = (cargaId) => {
-    if (!cargaId) return 'Sin carga';
-    
-    const carga = cargasDisponibles.find(c => c.id_carga === cargaId);
-    if (carga) {
-      return carga.descripcion || `Carga #${cargaId}`;
-    }
-    
-    return `Carga ${cargaId}`;
-  };
-  
   const calculateStats = () => {
     const totalRutas = rutasData.length;
-    const totalDistancia = rutasData.reduce((sum, ruta) => sum + (ruta.distancia || 0), 0);
-    
-    const totalCarga = rutasData.reduce((sum, ruta) => {
-      if (!ruta.carga) return sum;
-      
-      const carga = cargasDisponibles.find(c => c.id_carga === ruta.carga);
-      if (carga && carga.peso) {
-        return sum + parseFloat(carga.peso);
-      }
-      
-      return sum + (ruta.carga || 0);
-    }, 0);
-    
+    const totalDistancia = rutasData.reduce((sum, ruta) => sum + ruta.distancia, 0);
+    const totalCarga = rutasData.reduce((sum, ruta) => sum + ruta.carga, 0);
     const distanciaPromedio = totalRutas > 0 ? totalDistancia / totalRutas : 0;
 
     return { totalRutas, totalDistancia, totalCarga, distanciaPromedio };
@@ -434,8 +411,8 @@ const Rutas = () => {
                             }
                           </div>
                         </td>
-                        <td className="text-end">{Number(ruta.distancia).toFixed(1)}</td>
-                        <td>{getCargaInfo(ruta.carga)}</td>
+                        <td className="text-end">{ruta.distancia.toFixed(1)}</td>
+                        <td className="text-end">{ruta.carga.toLocaleString()}</td>
                         <td>
                           <div className="d-flex gap-2">
                             <Button
@@ -546,36 +523,17 @@ const Rutas = () => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Carga *</Form.Label>
-                  {cargasDisponibles.length > 0 ? (
-                    <Form.Select
-                      name="carga"
-                      value={formData.carga}
-                      onChange={handleInputChange}
-                      required
-                      disabled={isSubmitting}
-                    >
-                      <option value="">Seleccionar carga...</option>
-                      {cargasDisponibles.map(carga => (
-                        <option key={carga.id_carga} value={carga.id_carga}>
-                          {carga.descripcion || `Carga #${carga.id_carga}`}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  ) : (
-                    <Form.Control
-                      type="number"
-                      name="carga"
-                      value={formData.carga}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="ID de carga"
-                      disabled={isSubmitting}
-                    />
-                  )}
-                  <Form.Text className="text-muted">
-                    {cargasDisponibles.length === 0 && 'No se pudieron cargar las cargas disponibles. Ingresa el ID manualmente.'}
-                  </Form.Text>
+                  <Form.Label>Carga (kg) *</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min="1"
+                    name="carga"
+                    value={formData.carga}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="0"
+                    disabled={isSubmitting}
+                  />
                 </Form.Group>
               </Col>
             </Row>

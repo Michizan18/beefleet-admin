@@ -73,33 +73,29 @@ const Conductores = () => {
       setLoading(false);
     }
   };
- 
-  // useEffect para cargar datos iniciales (SOLO una vez al montar)
-useEffect(() => {
-  fetchConductores();
-}, []); 
-
-// useEffect para filtrar (SIN llamar fetchConductores)
-useEffect(() => {
-  let filtered = conductores;
+  useEffect(() => {
+    // Filtrar conductores según búsqueda y estado
+    let filtered = conductores;
+    
+    // Aplicar filtro por término de búsqueda
+    if (searchTerm) {
+      filtered = filtered.filter(conductor => 
+        conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conductor.documento?.includes(searchTerm)
+      );
+    }
+    
+    // Aplicar filtro por estado
+    if (filterStatus !== 'todos') {
+      filtered = filtered.filter(conductor => conductor.estado === filterStatus);
+    }
+    
+    setFilteredConductores(filtered);
+    setCurrentPage(1); // Resetear a primera página al filtrar
+    fetchConductores();
+  }, [searchTerm, filterStatus, conductores]);
   
-  // Aplicar filtro por término de búsqueda
-  if (searchTerm) {
-    filtered = filtered.filter(conductor => 
-      conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      conductor.documento?.includes(searchTerm)
-    );
-  }
-  
-  // Aplicar filtro por estado
-  if (filterStatus !== 'todos') {
-    filtered = filtered.filter(conductor => conductor.estado === filterStatus);
-  }
-  
-  setFilteredConductores(filtered);
-  setCurrentPage(1); // Resetear a primera página al filtrar
-}, [searchTerm, filterStatus, conductores]); 
-  
+  // Formatear fecha a formato español
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('es-ES', { 
       year: 'numeric', 

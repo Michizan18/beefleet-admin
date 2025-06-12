@@ -581,6 +581,7 @@ const handleUpdateVehicle = async (e) => {
       <Row className="mb-3">
         <Col md={6}>
           <Form.Group className="mb-3">
+            <Form.Label>Placa</Form.Label>
           <Form.Label>Placa</Form.Label>
           <Form.Control
           type="text"

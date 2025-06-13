@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Row, Col, Card, Button, Table, Badge, Form } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { FaUsers, FaChartLine, FaCalendarAlt, FaBuilding, FaSearch, FaPlus, FaEdit } from 'react-icons/fa';
@@ -10,19 +10,33 @@ const Dashboard = () => {
   const [conductores, setConductores] = useState([]);
   const [reportes, setReportes] = useState([]);
 
+  const getAuthToken = useCallback(() => {
+      const token = localStorage.getItem('token');
+      console.log(token ? `Bearer ${token}` : "XXXX")
+      return token ? `Bearer ${token}` : null;
+    }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const token = getAuthToken();
+        if (!token) {
+          setError('No hay token de autenticación');
+          setLoading(false);
+          return;
+        }
         const [reportesResponse, conductoresResponse] = await Promise.all([
           fetch('http://localhost:3001/api/reports', {
             method: 'GET',
             headers: {
+              'Authorization': token,
               'Content-Type': 'application/json',
             },
           }),
           fetch('http://localhost:3001/api/drivers', {
             method: 'GET',
             headers: {
+              'Authorization': token,
               'Content-Type': 'application/json',
             },
           }),
@@ -139,7 +153,7 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {conductores.map(conductor => (
+                    {conductores[0].map(conductor => (
                       <tr key={conductor.id_conductor || Math.random()}>
                         <td>{conductor.nombre_conductor || 'Sin nombre'}</td>
                         <td>{formatDate(conductor.fechaVencimiento)}</td>

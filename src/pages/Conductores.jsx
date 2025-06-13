@@ -82,6 +82,7 @@ const Conductores = () => {
   // Función para obtener el token de autenticación
   const getAuthToken = useCallback(() => {
     const token = localStorage.getItem('token');
+    console.log(token ? `Bearer ${token}` : "XXXX")
     return token ? `Bearer ${token}` : null;
   }, []);
 

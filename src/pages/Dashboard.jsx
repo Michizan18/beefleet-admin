@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Row, Col, Card, Button, Table, Badge, Form } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { FaUsers, FaChartLine, FaCalendarAlt, FaBuilding, FaSearch, FaPlus, FaEdit } from 'react-icons/fa';
@@ -16,6 +16,12 @@ const Dashboard = () => {
   }, []);
   const fetchData = async () => {
       try {
+        const token = getAuthToken();
+        if (!token) {
+          setError('No hay token de autenticación');
+          setLoading(false);
+          return;
+        }
         const [reportesResponse, conductoresResponse] = await Promise.all([
           fetch('http://localhost:3001/api/reports', {
             method: 'GET',
@@ -139,7 +145,7 @@ const Dashboard = () => {
                   <thead>
                     <tr>
                       <th>Nombre</th>
-                      <th>Fecha Ingreso</th>
+                      <th>Fecha Vencimiento Licencia</th>
                       <th>Estado</th>
                     </tr>
                   </thead>
@@ -147,7 +153,7 @@ const Dashboard = () => {
                     {conductores.map(conductor => (
                       <tr key={conductor.id_conductor || Math.random()}>
                         <td>{conductor.nombre_conductor || 'Sin nombre'}</td>
-                        <td>{formatDate(conductor.fechaVencimiento)}</td>
+                        <td>{formatDate(conductor.fecha_vencimiento)}</td>
                         <td>
                           <span className={`badge bg-${conductor.estado === 'activo' ? 'success' : 'warning'} rounded-pill`}>
                             {conductor.estado || 'Sin estado'}

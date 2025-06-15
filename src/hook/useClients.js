@@ -61,18 +61,3 @@ export const useClients = () => {
 
   return { clients, loading, error };
 };
-
-export const clientUtils = {
-  findClientByNit: (clients, nit) => {
-    if (!Array.isArray(clients)) return null;
-    return clients.find(c => c.nit == nit || c.id_cliente == nit);
-  },
-  
-  getClientsList: (clients) => {
-    if (!Array.isArray(clients)) return []; // Manejo seguro
-    return clients.map(c => ({
-      nit: c.nit || c.id_cliente,
-      displayText: `${c.nit || c.id_cliente || 'Sin NIT'} - ${c.empresa || c.nombre_empresa || 'Sin empresa'}`
-    }));
-  }
-};

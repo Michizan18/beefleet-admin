@@ -39,7 +39,6 @@ const Clientes = () => {
     telefono: '',
     empresa: '',
     email: '',
-    nombre: ''
   });
   
   const [editClient, setEditClient] = useState({
@@ -50,7 +49,6 @@ const Clientes = () => {
     telefono: '',
     empresa: '',
     email: '',
-    nombre: ''
   });
   
   // Estados de validación
@@ -279,7 +277,6 @@ const Clientes = () => {
         telefono: '',
         empresa: '',
         email: '',
-        nombre: ''
       });
       setValidated(false);
       setError(null);
@@ -324,7 +321,6 @@ const Clientes = () => {
         id_cliente: client.id_cliente,
         nit: client.nit || '',
         ciudad: client.ciudad || '',
-        nombre: client.nombre || '',
         telefono: client.telefono || '',
         direccion: client.direccion || '',
         email: client.email || '',
@@ -379,7 +375,7 @@ const Clientes = () => {
                   <FaSearch />
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Buscar por documento, nombre, empresa o ciudad"
+                  placeholder="Buscar por documento, nombre, empresa o municipio"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -415,8 +411,7 @@ const Clientes = () => {
                 <thead>
                   <tr>
                     <th>Documento</th>
-                    <th>Nombre Completo</th>
-                    <th>Ciudad</th>
+                    <th>Municipio</th>
                     <th>Teléfono</th>
                     <th>Empresa</th>
                     <th>Acciones</th>
@@ -434,14 +429,8 @@ const Clientes = () => {
                       </td>
                       <td>
                         <div className="d-flex align-items-center">
-                          <FaUserCircle className="me-2 text-warning" />
-                          {client.empresa || 'Sin empresa'}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center">
                           <FaMapMarkerAlt className="me-2 text-muted" />
-                          {client.ciudad || 'Sin ciudad'}
+                          {client.ciudad || 'Sin municipio'}
                         </div>
                       </td>
                       <td>
@@ -538,7 +527,7 @@ const Clientes = () => {
                       </p>
                     </Col>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Ciudad:</strong></p>
+                      <p className="mb-1"><strong>Municipio:</strong></p>
                       <p className="d-flex align-items-center">
                         <FaMapMarkerAlt className="me-2 text-warning" />
                         {currentClient.ciudad}
@@ -638,17 +627,17 @@ const Clientes = () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Ciudad</Form.Label>
+                    <Form.Label>Municipio</Form.Label>
                     <Form.Control
                       type="text"
                       name="ciudad"
                       value={newClient.ciudad}
                       onChange={handleInputChange}
                       required
-                      placeholder="Ingrese la ciudad"
+                      placeholder="Ingrese el municipio"
                     />
                     <Form.Control.Feedback type="invalid">
-                      La ciudad es obligatoria
+                      El municipio es obligatorio
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
@@ -776,17 +765,17 @@ const Clientes = () => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Ciudad</Form.Label>
+                  <Form.Label>Municipio</Form.Label>
                   <Form.Control
                     type="text"
                     name="ciudad"
                     value={editClient.ciudad}
                     onChange={handleEditInputChange}
                     required
-                    placeholder="Ingrese la ciudad"
+                    placeholder="Ingrese el municipio"
                   />
                   <Form.Control.Feedback type="invalid">
-                    La ciudad es obligatoria
+                    El municipio es obligatorio
                   </Form.Control.Feedback>
                 </Form.Group>
               </Col>

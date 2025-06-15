@@ -16,7 +16,7 @@ const LoginForm = () => {
     setError('');
     setSuccess(false);
     try{
-      const response = await fetch('http://localhost:3001/api/admin/',{
+      const response = await fetch('http://localhost:3001/api/admin',{
         method: 'POST',
         headers:{
           'Content-Type': 'application/json',

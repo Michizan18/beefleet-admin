@@ -883,7 +883,7 @@ const Cargas = () => {
                       <option value="">Seleccione un conductor (opcional)</option>
                       {drivers.map(driver => (
                         <option key={driver.id_conductor} value={driver.id_conductor}>
-                          {driver.nombre}
+                          {driver.nombre_conductor} {driver.apellido_conductor}
                         </option>
                       ))}
                     </Form.Select>

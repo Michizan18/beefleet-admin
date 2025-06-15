@@ -1,12 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, Table, Button, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
 import { 
-  FaIdCard,  
-  FaUserCircle, 
-  FaSearch, FaUsers, 
-  FaEdit, FaTrashAlt, FaPlus, FaSave,
-  FaPhone, FaMapMarkerAlt, FaEnvelope,
-  FaCarSide, FaCamera, FaUser
+  FaIdCard, FaUserCircle, FaSearch, FaEdit, FaTrashAlt, FaPlus, 
+  FaSave, FaCalendarPlus, FaPhone, FaMapMarkerAlt, FaEnvelope,
+  FaCarSide, FaCamera, FaUser, FaHome, FaCalendarAlt, FaClock, FaTimes
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 
@@ -18,13 +15,26 @@ const DOCUMENT_TYPES = [
   { value: 'PA', label: 'Pasaporte' }
 ];
 
-// Constantes para mensajes de validación
-const VALIDATION_MESSAGES = {
-  REQUIRED: 'Este campo es obligatorio',
-  EMAIL_FORMAT: 'El email debe tener un formato válido',
-  PHONE_FORMAT: 'El teléfono debe tener un formato válido',
-  DOCUMENT_UNIQUE: 'Ya existe un conductor con este documento'
-};
+// Constantes para tipos de licencia
+const LICENSE_TYPES = [
+  { value: 'A1', label: 'A1 - Motocicletas' },
+  { value: 'A2', label: 'A2 - Motocicletas, motocarros, cuatrimotos' },
+  { value: 'B1', label: 'B1 - Automóviles, camionetas' },
+  { value: 'B2', label: 'B2 - Camiones rígidos, buses' },
+  { value: 'B3', label: 'B3 - Vehículos articulados' },
+  { value: 'C1', label: 'C1 - Automóviles, camionetas servicio público' },
+  { value: 'C2', label: 'C2 - Camiones rígidos, buses servicio público' },
+  { value: 'C3', label: 'C3 - Vehículos articulados servicio público' }
+];
+
+// Constantes para estados del conductor
+const DRIVER_STATUS = [
+  { value: 'Activo', label: 'Activo' },
+  { value: 'Inactivo', label: 'Inactivo' },
+  { value: 'En ruta', label: 'En ruta' },
+  { value: 'Descanso', label: 'Descanso' },
+  { value: 'Entrenamiento', label: 'Entrenamiento' }
+];
 
 const Conductores = () => {
   // Estados principales
@@ -33,7 +43,7 @@ const Conductores = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
   const [drivers, setDrivers] = useState([]);
-  const [isUpdating, setIsUpdating] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
   
   // Estados para modales
   const [showDriverModal, setShowDriverModal] = useState(false);
@@ -44,7 +54,9 @@ const Conductores = () => {
   // Estados para conductores
   const [currentDriver, setCurrentDriver] = useState(null);
   const [driverToDelete, setDriverToDelete] = useState(null);
-  const [newDriver, setNewDriver] = useState({
+  
+  // Estado inicial para nuevo conductor
+  const initialDriverState = {
     tipo_documento: 'CC',
     documento: '',
     nombre_conductor: '',
@@ -58,35 +70,14 @@ const Conductores = () => {
     fecha_vencimiento: '',
     experiencia: '',
     estado: 'Activo',
-  });
+  };
   
-  const [editDriver, setEditDriver] = useState({
-    id_conductor: '',
-    tipo_documento: '',
-    documento: '',
-    nombre_conductor: '',
-    apellido_conductor: '',
-    correo_conductor: '',
-    foto: '',
-    telefono: '',
-    ciudad: '',
-    direccion: '',
-    tipo_licencia: '',
-    fecha_vencimiento: '',
-    experiencia: '',
-    estado: '',
-  });
+  const [newDriver, setNewDriver] = useState(initialDriverState);
+  const [editDriver, setEditDriver] = useState(initialDriverState);
   
   // Estados de validación
   const [validated, setValidated] = useState(false);
   const [editValidated, setEditValidated] = useState(false);
-
-  //Estados de imagenes
-  // Agregar después de los estados existentes
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
-  const [editImageFile, setEditImageFile] = useState(null);
-  const [editImagePreview, setEditImagePreview] = useState('');
 
   // Función para obtener el token de autenticación
   const getAuthToken = useCallback(() => {
@@ -94,57 +85,25 @@ const Conductores = () => {
     return token ? `Bearer ${token}` : null;
   }, []);
 
-  // Función para procesar la respuesta de MySQL
-  const processMySQLResponse = useCallback((rawData) => {
-    try {
-      console.log('🔍 Datos recibidos de la API:', rawData);
-      
-      if (!rawData) return [];
-      
-      let processedData = [];
-      
-      if (Array.isArray(rawData)) {
-        if (rawData.length > 0 && Array.isArray(rawData[0])) {
-          processedData = rawData[0];
-        } else {
-          processedData = rawData;
-        }
-      } else if (typeof rawData === 'object') {
-        processedData = [rawData];
-      }
-      
-      // Validar y normalizar cada conductor
-      const validDrivers = processedData.filter(item => {
-        const hasValidId = item && (item.id_conductor || item.id);
-        const hasDocument = item && item.documento;
-        
-        if (!hasValidId || !hasDocument) {
-          console.warn('⚠️ Conductor inválido filtrado:', item);
-          return false;
-        }
-        
-        // Normalizar campos
-        item.id_conductor = item.id_conductor || item.id;
-        item.tipo_documento = item.tipo_documento || 'CC';
-        item.documento = item.documento || '';
-        item.nombre_conductor = item.nombre_conductor || '';
-        item.apellido_conductor = item.apellido_conductor || '';
-        item.correo_conductor = item.correo_conductor || '';
-        item.foto = item.foto || '';
-        item.telefono = item.telefono || '';
-        item.ciudad = item.ciudad || '';
-        item.direccion = item.direccion || '';
-        
-        return true;
-      });
-      
-      console.log('✅ Conductores procesados:', validDrivers.length);
-      return validDrivers;
-      
-    } catch (error) {
-      console.error('❌ Error procesando respuesta MySQL:', error);
-      return [];
-    }
+  // Función para normalizar datos de conductores
+  const normalizeDriverData = useCallback((driver) => {
+    return {
+      id_conductor: driver.id_conductor || driver.id || '',
+      tipo_documento: driver.tipo_documento || 'CC',
+      documento: driver.documento || '',
+      nombre_conductor: driver.nombre_conductor || '',
+      apellido_conductor: driver.apellido_conductor || '',
+      correo_conductor: driver.correo_conductor || '',
+      foto: driver.foto || '',
+      telefono: driver.telefono || '',
+      ciudad: driver.ciudad || '',
+      direccion: driver.direccion || '',
+      tipo_licencia: driver.tipo_licencia || '',
+      fecha_vencimiento: driver.fecha_vencimiento || '',
+      experiencia: driver.experiencia || '',
+      estado: driver.estado || 'Activo',
+      fecha_registro: driver.fecha_registro || ''
+    };
   }, []);
 
   // Función para obtener todos los conductores
@@ -179,7 +138,7 @@ const Conductores = () => {
       }
 
       const data = await response.json();
-      const processedData = processMySQLResponse(data);
+      const processedData = Array.isArray(data) ? data.map(normalizeDriverData) : [normalizeDriverData(data)];
       
       if (!processedData.length) {
         setError('No se encontraron conductores');
@@ -194,35 +153,20 @@ const Conductores = () => {
     } finally {
       setLoading(false);
     }
-  }, [getAuthToken, processMySQLResponse]);
+  }, [getAuthToken, normalizeDriverData]);
 
   useEffect(() => {
     fetchDrivers();
   }, [fetchDrivers]);
-
-
-  // Agregar esta función después de generatePassword
-  const handleImageChange = (e, isEdit = false) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (isEdit) {
-        setEditImageFile(file);
-        setEditImagePreview(URL.createObjectURL(file));
-      } else {
-        setImageFile(file);
-        setImagePreview(URL.createObjectURL(file));
-      }
-    }
-  };
 
   // Función para crear un nuevo conductor
   const handleSubmitNewDriver = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
     const token = getAuthToken();
+    
     if (!token) {
       setError('No hay token de autenticación');
-      setLoading(false);
       return;
     }
   
@@ -235,30 +179,27 @@ const Conductores = () => {
     try {
       setIsUpdating(true);
 
-      // Validar campos requeridos antes de enviar
+      // Validar campos requeridos
       if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
         alert('Por favor complete todos los campos requeridos');
         return;
       }
 
-      // CORREGIR EL PAYLOAD - Asegurar tipos de datos correctos
+      // Preparar payload
       const payload = {
-        tipo_documento: newDriver.tipo_documento || 'CC',
-        documento: newDriver.documento.toString(), // Asegurar que sea string
+        ...newDriver,
+        documento: newDriver.documento.toString(),
         nombre_conductor: newDriver.nombre_conductor.trim(),
-        apellido_conductor: newDriver.apellido_conductor?.trim() || '',
+        apellido_conductor: newDriver.apellido_conductor.trim(),
         correo_conductor: newDriver.correo_conductor.trim(),
-        foto: newDriver.foto || null, // Enviar null en lugar de string vacío
+        experiencia: newDriver.experiencia ? parseInt(newDriver.experiencia, 10) : null,
+        foto: newDriver.foto || null,
         telefono: newDriver.telefono || null,
         ciudad: newDriver.ciudad || null,
         direccion: newDriver.direccion || null,
         tipo_licencia: newDriver.tipo_licencia || null,
-        fecha_vencimiento: newDriver.fecha_vencimiento || null,
-        experiencia: newDriver.experiencia ? parseInt(newDriver.experiencia, 10) : null,
-        estado: newDriver.estado || 'Activo'
+        fecha_vencimiento: newDriver.fecha_vencimiento || null
       };
-
-      
 
       const response = await fetch('http://localhost:3001/api/drivers', {
         method: 'POST',
@@ -269,49 +210,25 @@ const Conductores = () => {
         body: JSON.stringify(payload)
       });
 
-      // Manejar respuesta del servidor
       if (!response.ok) {
         const errorData = await response.text();
-        console.error('Error del servidor:', errorData);
         throw new Error(`Error ${response.status}: ${errorData}`);
       }
 
       const data = await response.json();
-      console.log('Conductor creado exitosamente:', data);
-
       alert('Conductor creado exitosamente');
       setShowNewDriverModal(false);
-
-      // Actualizar la lista de conductores
-      setDrivers(prev => [...prev, data.driver || data]);
-
-      // Limpiar el formulario
-      setNewDriver({
-        tipo_documento: '',
-        documento: '',
-        nombre_conductor: '',
-        apellido_conductor: '',
-        correo_conductor: '',
-        foto: '',
-        telefono: '',
-        ciudad: '',
-        direccion: '',
-        tipo_licencia: '',
-        fecha_vencimiento: '',
-        experiencia: '',
-        estado: 'Activo',
-      });
-
+      setDrivers(prev => [...prev, normalizeDriverData(data.driver || data)]);
+      setNewDriver(initialDriverState);
       setValidated(false);
 
     } catch (error) {
-      console.error('Error completo:', error);
+      console.error('Error:', error);
       alert(`Hubo un error al crear el conductor: ${error.message}`);
     } finally {
       setIsUpdating(false);
     }
-};
-
+  };
 
   // Función para editar un conductor
   const updateDriver = useCallback(async (id_conductor, driverData) => {
@@ -360,67 +277,9 @@ const Conductores = () => {
       console.error('Error deleting driver:', error);
       throw error;
     }
-  });
+  }, [getAuthToken]);
 
-  // Helper functions
-  const checkDocumentExists = useCallback((documento) => {
-    return drivers.some(driver => driver.documento === documento);
-  }, [drivers]);
-
-  // Efecto para cargar conductores al montar el componente
-  useEffect(() => {
-    fetchDrivers();
-  }, [fetchDrivers]);
-
-  // Filtrar conductores
-  const filteredDrivers = drivers.filter((driver) => {
-    if (!driver?.id_conductor) return false;
-    
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      (driver.documento?.toString() || '').toLowerCase().includes(searchLower) ||
-      (driver.nombre_conductor?.toLowerCase() || '').includes(searchLower) ||
-      (driver.apellido_conductor?.toLowerCase() || '').includes(searchLower) ||
-      (driver.ciudad?.toLowerCase() || '').includes(searchLower) ||
-      (driver.correo_conductor?.toLowerCase() || '').includes(searchLower)
-    );
-  });
-  
-  // Handlers
-  const handleShowDetails = useCallback((driver) => {
-    console.log('👁️ Mostrando detalles del conductor:', driver);
-    
-    if (!driver || (!driver.id_conductor && !driver.id)) {
-      console.error('❌ Conductor inválido para mostrar detalles');
-      setError('Conductor inválido seleccionado');
-      return;
-    }
-    
-    const driverToShow = drivers.find(d => 
-      (d.id_conductor === driver.id_conductor || d.id === driver.id_conductor) ||
-      (d.id_conductor === driver.id || d.id === driver.id) ||
-      d.documento === driver.documento
-    ) || driver;
-    
-    const validatedDriver = {
-      id_conductor: driverToShow.id_conductor || driverToShow.id,
-      tipo_documento: driverToShow.tipo_documento || 'CC',
-      documento: driverToShow.documento || 'N/A',
-      nombre_conductor: driverToShow.nombre_conductor || 'Sin nombre',
-      apellido_conductor: driverToShow.apellido_conductor || 'Sin apellido',
-      correo_conductor: driverToShow.correo_conductor || 'Sin email',
-      foto: driverToShow.foto || '',
-      telefono: driverToShow.telefono || 'Sin teléfono',
-      ciudad: driverToShow.ciudad || 'Sin ciudad',
-      direccion: driverToShow.direccion || 'Sin dirección'
-    };
-    
-    console.log('✅ Conductor validado para mostrar:', validatedDriver);
-    setCurrentDriver(validatedDriver);
-    setShowDriverModal(true);
-    setError(null);
-  }, [drivers]);
-  
+  // Handlers para cambios en los inputs
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewDriver(prev => ({ ...prev, [name]: value }));
@@ -430,8 +289,43 @@ const Conductores = () => {
     const { name, value } = e.target;
     setEditDriver(prev => ({ ...prev, [name]: value }));
   };
-  
 
+  // Handler para mostrar detalles del conductor
+  const handleShowDetails = useCallback((driver) => {
+    if (!driver) {
+      setError('Conductor inválido seleccionado');
+      return;
+    }
+    
+    setCurrentDriver(normalizeDriverData(driver));
+    setShowDriverModal(true);
+    setError(null);
+  }, [normalizeDriverData]);
+
+  // Handler para editar conductor
+  const handleEditDriver = useCallback((driver) => {
+    if (!driver) {
+      setError('Conductor inválido para editar');
+      return;
+    }
+    
+    setShowDriverModal(false);
+    setEditDriver(normalizeDriverData(driver));
+    setShowEditDriverModal(true);
+    setEditValidated(false);
+    setError(null);
+  }, [normalizeDriverData]);
+
+  // Handler para eliminar conductor
+  const handleDeleteDriver = useCallback((driverId) => {
+    const driver = drivers.find(d => d.id_conductor === driverId);
+    if (driver) {
+      setDriverToDelete(driver);
+      setShowDeleteModal(true);
+    }
+  }, [drivers]);
+
+  // Handler para enviar edición de conductor
   const handleSubmitEditDriver = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -458,54 +352,7 @@ const Conductores = () => {
     }
   };
 
-  const handleEditDriver = useCallback(async (driver) => {
-    console.log('✏️ Iniciando edición del conductor:', driver);
-    
-    if (!driver || (!driver.id_conductor && !driver.id)) {
-      console.error('❌ Conductor inválido para editar');
-      setError('Conductor inválido para editar');
-      return;
-    }
-    
-    setShowDriverModal(false);
-    
-    const driverId = driver.id_conductor || driver.id;
-    const currentDriverInState = drivers.find(d => 
-      d.id_conductor === driverId || d.id === driverId || d.documento === driver.documento
-    );
-    
-    const driverToEdit = currentDriverInState || driver;
-    
-    setTimeout(() => {
-      const editData = {
-        id_conductor: driverToEdit.id_conductor || driverToEdit.id,
-        tipo_documento: driverToEdit.tipo_documento || 'CC',
-        documento: driverToEdit.documento || '',
-        nombre_conductor: driverToEdit.nombre_conductor || '',
-        apellido_conductor: driverToEdit.apellido_conductor || '',
-        correo_conductor: driverToEdit.correo_conductor || '',
-        foto: driverToEdit.foto || '',
-        telefono: driverToEdit.telefono || '',
-        ciudad: driverToEdit.ciudad || '',
-        direccion: driverToEdit.direccion || ''
-      };
-      
-      console.log('✅ Datos preparados para edición:', editData);
-      setEditDriver(editData);
-      setShowEditDriverModal(true);
-      setEditValidated(false);
-      setError(null);
-    }, 100);
-  }, [drivers]);
-
-  const handleDeleteDriver = useCallback((driverId) => {
-    const driver = drivers.find(d => d.id_conductor === driverId);
-    if (driver) {
-      setDriverToDelete(driver);
-      setShowDeleteModal(true);
-    }
-  }, [drivers]);
-
+  // Confirmar eliminación de conductor
   const confirmDeleteDriver = async () => {
     if (!driverToDelete) return;
     
@@ -522,6 +369,20 @@ const Conductores = () => {
       setLoading(false);
     }
   };
+
+  // Filtrar conductores
+  const filteredDrivers = drivers.filter((driver) => {
+    if (!driver?.id_conductor) return false;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (driver.documento?.toString() || '').toLowerCase().includes(searchLower) ||
+      (driver.nombre_conductor?.toLowerCase() || '').includes(searchLower) ||
+      (driver.apellido_conductor?.toLowerCase() || '').includes(searchLower) ||
+      (driver.ciudad?.toLowerCase() || '').includes(searchLower) ||
+      (driver.correo_conductor?.toLowerCase() || '').includes(searchLower)
+    );
+  });
 
   return (
     <LayoutBarButton userData={userData}>
@@ -553,7 +414,7 @@ const Conductores = () => {
                   <FaSearch />
                 </InputGroup.Text>
                 <Form.Control
-                  placeholder="Buscar por documento, nombre, apellido, ciudad o email"
+                  placeholder="Buscar por documento, nombre, apellido, municipio o email"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -592,7 +453,8 @@ const Conductores = () => {
                     <th>Nombre Completo</th>
                     <th>Email</th>
                     <th>Teléfono</th>
-                    <th>Ciudad</th>
+                    <th>Municipio</th>
+                    <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -601,7 +463,7 @@ const Conductores = () => {
                     <tr key={driver.id_conductor}>
                       <td>
                         <div>
-                          <small className="text-muted">{driver.tipo_documento}</small>
+                          <small className="text-muted mb-2">{driver.tipo_documento}</small>
                           <br />
                           <strong>{driver.documento || 'N/A'}</strong>
                         </div>
@@ -627,8 +489,21 @@ const Conductores = () => {
                       <td>
                         <div className="d-flex align-items-center">
                           <FaMapMarkerAlt className="me-2 text-muted" />
-                          {driver.ciudad || 'Sin ciudad'}
+                          {driver.ciudad || 'Sin municipio'}
                         </div>
+                      </td>
+                      <td>
+                        <Badge 
+                          bg={
+                            driver.estado === 'Activo' ? 'success' :
+                            driver.estado === 'En ruta' ? 'primary' :
+                            driver.estado === 'Descanso' ? 'warning' :
+                            driver.estado === 'Entrenamiento' ? 'info' :
+                            'secondary'
+                          }
+                        >
+                          {driver.estado || 'Sin estado'}
+                        </Badge>
                       </td>
                       <td>
                         <div className="action-buttons">
@@ -682,81 +557,163 @@ const Conductores = () => {
         centered
       >
         <Modal.Header closeButton className="border-bottom border-warning">
-          <Modal.Title>Detalles del Conductor</Modal.Title>
+          <Modal.Title>
+            <FaUser className="me-2 text-warning" />
+            Detalles del Conductor
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {currentDriver && (
             <div className="driver-detail">
-              <Row>
-                <Col md={4} className="text-center mb-4 mb-md-0">
+              <h5 className="border-bottom pb-2 mb-3">Información de Identificación</h5>
+              <Row className="mb-4">
+                <Col md={4} className="text-center">
                   <div className="mb-3">
                     {currentDriver.foto ? (
                       <img 
                         src={currentDriver.foto} 
                         alt="Foto del conductor" 
                         className="rounded-circle"
-                        style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                        style={{ width: '120px', height: '120px', objectFit: 'cover' }}
                       />
                     ) : (
                       <div 
-                        className="rounded-circle bg-light d-flex align-items-center justify-content-center"
-                        style={{ width: '100px', height: '100px' }}
+                        className="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto"
+                        style={{ width: '120px', height: '120px' }}
                       >
-                        <FaCamera className="text-muted" size={30} />
+                        <FaCamera className="text-muted" size={40} />
                       </div>
                     )}
                   </div>
-                  <p className="mb-1">
-                    <Badge bg="info">{currentDriver.tipo_documento}</Badge>
-                  </p>
-                  <p className="text-muted">
-                    <FaIdCard className="me-2" />
-                    {currentDriver.documento}
-                  </p>
                 </Col>
                 <Col md={8}>
-                  <h5 className="mb-3">Información Personal</h5>
-                  <Row className="mb-3">
+                  <Row>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Nombre:</strong></p>
-                      <p>{currentDriver.nombre_conductor}</p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Apellido:</strong></p>
-                      <p>{currentDriver.apellido_conductor}</p>
-                    </Col>
-                  </Row>
-                  
-                  <h5 className="mb-3 mt-4">Información de Contacto</h5>
-                  <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Email:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <FaEnvelope className="me-2 text-warning" />
-                        {currentDriver.correo_conductor}
+                      <p className="mb-1"><strong>Tipo de Documento:</strong></p>
+                      <p>
+                        <Badge bg="info" className="fs-6">{currentDriver.tipo_documento}</Badge>
                       </p>
                     </Col>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Teléfono:</strong></p>
+                      <p className="mb-1"><strong>Número de Documento:</strong></p>
                       <p className="d-flex align-items-center">
-                        <FaPhone className="me-2 text-warning" />
-                        {currentDriver.telefono}
+                        <FaIdCard className="me-2 text-warning" />
+                        {currentDriver.documento}
                       </p>
                     </Col>
                   </Row>
-                  <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Ciudad:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <FaMapMarkerAlt className="me-2 text-warning" />
-                        {currentDriver.ciudad}
-                      </p>
-                    </Col>
-                    <Col sm={12}>
-                      <p className="mb-1"><strong>Dirección:</strong></p>
-                      <p>{currentDriver.direccion}</p>
-                    </Col>
-                  </Row>
+                </Col>
+              </Row>
+
+              <h5 className="border-bottom pb-2 mb-3">Información Personal</h5>
+              <Row className="mb-4">
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Nombre:</strong></p>
+                  <p>{currentDriver.nombre_conductor}</p>
+                </Col>
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Apellido:</strong></p>
+                  <p>{currentDriver.apellido_conductor}</p>
+                </Col>
+              </Row>
+              
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Contacto</h5>
+              <Row className="mb-4">
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Email:</strong></p>
+                  <p className="d-flex align-items-center">
+                    <FaEnvelope className="me-2 text-warning" />
+                    <span className="text-break">{currentDriver.correo_conductor}</span>
+                  </p>
+                </Col>
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Teléfono:</strong></p>
+                  <p className="d-flex align-items-center">
+                    <FaPhone className="me-2 text-warning" />
+                    {currentDriver.telefono}
+                  </p>
+                </Col>
+              </Row>
+              <Row className="mb-4">
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Municipio:</strong></p>
+                  <p className="d-flex align-items-center">
+                    <FaMapMarkerAlt className="me-2 text-warning" />
+                    {currentDriver.ciudad}
+                  </p>
+                </Col>
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Dirección:</strong></p>
+                  <p className="d-flex align-items-center">
+                    <FaHome className="me-2 text-warning" />
+                    {currentDriver.direccion}
+                  </p>
+                </Col>
+              </Row>
+
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Licencia</h5>
+              <Row className="mb-4">
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Tipo de Licencia:</strong></p>
+                  <p>
+                    <Badge bg="success" className="fs-6">
+                      {currentDriver.tipo_licencia}
+                    </Badge>
+                    <br />
+                    <small className="text-muted">
+                      {LICENSE_TYPES.find(l => l.value === currentDriver.tipo_licencia)?.label || ''}
+                    </small>
+                  </p>
+                </Col>
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Fecha de Vencimiento:</strong></p>
+                  <p className="d-flex align-items-center">
+                    <FaCalendarAlt className="me-2 text-warning" />
+                    {currentDriver.fecha_vencimiento ? 
+                      new Date(currentDriver.fecha_vencimiento).toLocaleDateString('es-CO') : 
+                      'No especificada'
+                    }
+                  </p>
+                </Col>
+              </Row>
+              <Row className="mb-4">
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Años de Experiencia:</strong></p>
+                  <p className="d-flex align-items-center">
+                    <FaClock className="me-2 text-warning" />
+                    {currentDriver.experiencia ? `${currentDriver.experiencia} años` : 'No especificado'}
+                  </p>
+                </Col>
+              </Row>
+
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Cuenta</h5>
+              <Row className="mb-3">
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Estado:</strong></p>
+                  <p>
+                    <Badge 
+                      bg={
+                        currentDriver.estado === 'Activo' ? 'success' :
+                        currentDriver.estado === 'En ruta' ? 'primary' :
+                        currentDriver.estado === 'Descanso' ? 'warning' :
+                        currentDriver.estado === 'Entrenamiento' ? 'info' :
+                        'secondary'
+                      }
+                      className="fs-6"
+                    >
+                      {currentDriver.estado || 'No especificado'}
+                    </Badge>
+                  </p>
+                </Col>
+                <Col sm={6}>
+                  <p className="mb-1"><strong>Fecha de Registro:</strong></p>
+                  <p className="d-flex align-items-center">
+                    <FaCalendarPlus className="me-2 text-warning" />
+                    {currentDriver.fecha_registro ? 
+                      new Date(currentDriver.fecha_registro).toLocaleDateString('es-CO') : 
+                      'No disponible'
+                    }
+                  </p>
                 </Col>
               </Row>
             </div>
@@ -764,10 +721,12 @@ const Conductores = () => {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowDriverModal(false)}>
+            <FaTimes className="me-2" />
             Cerrar
           </Button>
           <Button variant="warning" onClick={() => handleEditDriver(currentDriver)}>
-            <FaEdit className="me-2" /> Editar Información
+            <FaEdit className="me-2" /> 
+            Editar Información
           </Button>
         </Modal.Footer>
       </Modal>
@@ -775,7 +734,11 @@ const Conductores = () => {
       {/* Modal para crear nuevo conductor */}
       <Modal
         show={showNewDriverModal}
-        onHide={() => setShowNewDriverModal(false)}
+        onHide={() => {
+          setShowNewDriverModal(false);
+          setValidated(false);
+          setNewDriver(initialDriverState);
+        }}
         size="lg"
         centered
         backdrop="static"
@@ -859,7 +822,8 @@ const Conductores = () => {
                       placeholder="Ingrese el apellido"
                     />
                     <Form.Control.Feedback type="invalid">
-                      El apellido es obligatorio</Form.Control.Feedback>
+                      El apellido es obligatorio
+                    </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
               </Row>
@@ -903,17 +867,17 @@ const Conductores = () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Ciudad</Form.Label>
+                    <Form.Label>Municipio</Form.Label>
                     <Form.Control
                       type="text"
                       name="ciudad"
                       value={newDriver.ciudad}
                       onChange={handleInputChange}
                       required
-                      placeholder="Ciudad de residencia"
+                      placeholder="Municipio de residencia"
                     />
                     <Form.Control.Feedback type="invalid">
-                      La ciudad es obligatoria
+                      El municipio es obligatorio
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
@@ -934,7 +898,7 @@ const Conductores = () => {
                   </Form.Group>
                 </Col>
               </Row>
-              {/* Información de licencia */}
+              
               <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Licencia</h5>
               <Row className="mb-3">
                 <Col md={6}>
@@ -947,14 +911,11 @@ const Conductores = () => {
                       required
                     >
                       <option value="">Seleccionar...</option>
-                      <option value="A1">A1 - Motocicletas</option>
-                      <option value="A2">A2 - Motocicletas, motocarros, cuatrimotos</option>
-                      <option value="B1">B1 - Automóviles, camionetas</option>
-                      <option value="B2">B2 - Camiones rígidos, buses</option>
-                      <option value="B3">B3 - Vehículos articulados</option>
-                      <option value="C1">C1 - Automóviles, camionetas servicio público</option>
-                      <option value="C2">C2 - Camiones rígidos, buses servicio público</option>
-                      <option value="C3">C3 - Vehículos articulados servicio público</option>
+                      {LICENSE_TYPES.map(license => (
+                        <option key={license.value} value={license.value}>
+                          {license.label}
+                        </option>
+                      ))}
                     </Form.Select>
                     <Form.Control.Feedback type="invalid">
                       Seleccione un tipo de licencia
@@ -983,7 +944,7 @@ const Conductores = () => {
                   <Form.Group className="mb-3">
                     <Form.Label>Años de Experiencia</Form.Label>
                     <Form.Control
-                      type="text"  // Cambiar de "number" a "text" para mejor control
+                      type="text"
                       name="experiencia"
                       value={newDriver.experiencia}
                       onChange={handleInputChange}
@@ -995,7 +956,6 @@ const Conductores = () => {
                 </Col>
               </Row>
               
-              {/* Información de cuenta */}
               <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Cuenta</h5>
               <Row className="mb-3">
                 <Col md={6}>
@@ -1006,11 +966,11 @@ const Conductores = () => {
                       value={newDriver.estado}
                       onChange={handleInputChange}
                     >
-                      <option value="Activo">Activo</option>
-                      <option value="Inactivo">Inactivo</option>
-                      <option value="En ruta">En ruta</option>
-                      <option value="Descanso">Descanso</option>
-                      <option value="Entrenamiento">Entrenamiento</option>
+                      {DRIVER_STATUS.map(status => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
@@ -1036,6 +996,7 @@ const Conductores = () => {
               onClick={() => {
                 setShowNewDriverModal(false);
                 setValidated(false);
+                setNewDriver(initialDriverState);
               }}
               disabled={loading}
             >
@@ -1044,13 +1005,11 @@ const Conductores = () => {
             <Button 
               variant="warning" 
               type="submit"
-              disabled={loading}
+              disabled={loading || isUpdating}
             >
-              {loading ? (
+              {isUpdating ? (
                 <>
-                  <div className="spinner-border spinner-border-sm me-2" role="status">
-                    <span className="visually-hidden">Guardando...</span>
-                  </div>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                   Guardando...
                 </>
               ) : (
@@ -1067,7 +1026,10 @@ const Conductores = () => {
       {/* Modal para editar conductor */}
       <Modal
         show={showEditDriverModal}
-        onHide={() => setShowEditDriverModal(false)}
+        onHide={() => {
+          setShowEditDriverModal(false);
+          setEditValidated(false);
+        }}
         size="lg"
         centered
         backdrop="static"
@@ -1098,22 +1060,25 @@ const Conductores = () => {
                         </option>
                       ))}
                     </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      El tipo de documento es obligatorio
+                    </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Número de Documento</Form.Label>
+                    <Form.Label>Número de Documento (No editable)</Form.Label>
                     <Form.Control
                       type="text"
                       name="documento"
                       value={editDriver.documento}
-                      onChange={handleEditInputChange}
-                      required
-                      placeholder="Ingrese el número de documento"
+                      readOnly
+                      className="bg-light"
+                      style={{ cursor: 'not-allowed' }}
                     />
-                    <Form.Control.Feedback type="invalid">
-                      El número de documento es obligatorio
-                    </Form.Control.Feedback>
+                    <Form.Text className="text-muted">
+                      El número de documento es el identificador único del conductor y no puede ser modificado
+                    </Form.Text>
                   </Form.Group>
                 </Col>
               </Row>
@@ -1193,17 +1158,17 @@ const Conductores = () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Ciudad</Form.Label>
+                    <Form.Label>Municipio</Form.Label>
                     <Form.Control
                       type="text"
                       name="ciudad"
                       value={editDriver.ciudad}
                       onChange={handleEditInputChange}
                       required
-                      placeholder="Ciudad de residencia"
+                      placeholder="Municipio de residencia"
                     />
                     <Form.Control.Feedback type="invalid">
-                      La ciudad es obligatoria
+                      El municipio es obligatorio
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
@@ -1221,6 +1186,83 @@ const Conductores = () => {
                     <Form.Control.Feedback type="invalid">
                       La dirección es obligatoria
                     </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Licencia</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Tipo de Licencia</Form.Label>
+                    <Form.Select
+                      name="tipo_licencia"
+                      value={editDriver.tipo_licencia}
+                      onChange={handleEditInputChange}
+                      required
+                    >
+                      <option value="">Seleccionar...</option>
+                      {LICENSE_TYPES.map(license => (
+                        <option key={license.value} value={license.value}>
+                          {license.label}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Seleccione un tipo de licencia
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Fecha de Vencimiento</Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="fecha_vencimiento"
+                      value={editDriver.fecha_vencimiento}
+                      onChange={handleEditInputChange}
+                      required
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      La fecha de vencimiento es obligatoria
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Años de Experiencia</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="experiencia"
+                      value={editDriver.experiencia}
+                      onChange={handleEditInputChange}
+                      pattern="[0-9]*"
+                      title="Solo números"
+                      placeholder="Años de experiencia"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Cuenta</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Estado</Form.Label>
+                    <Form.Select
+                      name="estado"
+                      value={editDriver.estado}
+                      onChange={handleEditInputChange}
+                    >
+                      {DRIVER_STATUS.map(status => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </Form.Select>
                   </Form.Group>
                 </Col>
               </Row>
@@ -1258,9 +1300,7 @@ const Conductores = () => {
             >
               {loading ? (
                 <>
-                  <div className="spinner-border spinner-border-sm me-2" role="status">
-                    <span className="visually-hidden">Actualizando...</span>
-                  </div>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                   Actualizando...
                 </>
               ) : (
@@ -1325,9 +1365,7 @@ const Conductores = () => {
           >
             {loading ? (
               <>
-                <div className="spinner-border spinner-border-sm me-2" role="status">
-                  <span className="visually-hidden">Eliminando...</span>
-                </div>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 Eliminando...
               </>
             ) : (

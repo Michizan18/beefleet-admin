@@ -148,7 +148,7 @@ const Dashboard = () => {
                   <thead>
                     <tr>
                       <th>Nombre</th>
-                      <th>Fecha Ingreso</th>
+                      <th>Fecha Vencimiento</th>
                       <th>Estado</th>
                     </tr>
                   </thead>
@@ -156,7 +156,7 @@ const Dashboard = () => {
                     {conductores[0].map(conductor => (
                       <tr key={conductor.id_conductor || Math.random()}>
                         <td>{conductor.nombre_conductor || 'Sin nombre'}</td>
-                        <td>{formatDate(conductor.fechaVencimiento)}</td>
+                        <td>{formatDate(conductor.fecha_vencimiento)}</td>
                         <td>
                           <span className={`badge bg-${conductor.estado === 'activo' ? 'success' : 'warning'} rounded-pill`}>
                             {conductor.estado || 'Sin estado'}

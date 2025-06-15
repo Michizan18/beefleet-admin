@@ -33,6 +33,7 @@ const Conductores = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
   const [drivers, setDrivers] = useState([]);
+  const [isUpdating, setIsUpdating] = useState('');
   
   // Estados para modales
   const [showDriverModal, setShowDriverModal] = useState(false);
@@ -52,12 +53,16 @@ const Conductores = () => {
     foto: '',
     telefono: '',
     ciudad: '',
-    direccion: ''
+    direccion: '',
+    tipo_licencia: '',
+    fecha_vencimiento: '',
+    experiencia: '',
+    estado: 'Activo',
   });
   
   const [editDriver, setEditDriver] = useState({
     id_conductor: '',
-    tipo_documento: 'CC',
+    tipo_documento: '',
     documento: '',
     nombre_conductor: '',
     apellido_conductor: '',
@@ -65,7 +70,11 @@ const Conductores = () => {
     foto: '',
     telefono: '',
     ciudad: '',
-    direccion: ''
+    direccion: '',
+    tipo_licencia: '',
+    fecha_vencimiento: '',
+    experiencia: '',
+    estado: '',
   });
   
   // Estados de validación
@@ -188,15 +197,10 @@ const Conductores = () => {
     }
   }, [getAuthToken, processMySQLResponse]);
 
-  // Función para generar contraseña automática
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let password = '';
-    for (let i = 0; i < 8; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-  };
+  useEffect(() => {
+    fetchDrivers();
+  }, [fetchDrivers]);
+
 
   // Agregar esta función después de generatePassword
   const handleImageChange = (e, isEdit = false) => {
@@ -212,61 +216,109 @@ const Conductores = () => {
     }
   };
 
-  // Función para enviar contraseña por email
-  const sendPasswordByEmail = useCallback(async (email, password) => {
-    try {
-      const response = await fetch('http://localhost:3001/api/send-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          correo_conductor: email,
-          contraseña: password
-        })
-      });
+  // Función para crear un nuevo conductor
+  const handleSubmitNewDriver = async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const token = getAuthToken();
+    if (!token) {
+      setError('No hay token de autenticación');
+      setLoading(false);
+      return;
+    }
+  
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
+      return;
+    }
 
-      if (!response.ok) {
-        throw new Error('Error al enviar el email');
+    try {
+      setIsUpdating(true);
+
+      // Validar campos requeridos antes de enviar
+      if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
+        alert('Por favor complete todos los campos requeridos');
+        return;
       }
 
-      return true;
-    } catch (error) {
-      console.error('Error sending email:', error);
-      throw error;
-    }
-  }, []);
+      // CORREGIR EL PAYLOAD - Asegurar tipos de datos correctos
+      const payload = {
+        tipo_documento: newDriver.tipo_documento || 'CC',
+        documento: newDriver.documento.toString(), // Asegurar que sea string
+        nombre_conductor: newDriver.nombre_conductor.trim(),
+        apellido_conductor: newDriver.apellido_conductor?.trim() || '',
+        correo_conductor: newDriver.correo_conductor.trim(),
+        foto: newDriver.foto || null, // Enviar null en lugar de string vacío
+        telefono: newDriver.telefono || null,
+        ciudad: newDriver.ciudad || null,
+        direccion: newDriver.direccion || null,
+        tipo_licencia: newDriver.tipo_licencia || null,
+        fecha_vencimiento: newDriver.fecha_vencimiento || null,
+        experiencia: newDriver.experiencia ? parseInt(newDriver.experiencia, 10) : null,
+        estado: newDriver.estado || 'Activo'
+      };
 
-  // Función para crear un nuevo conductor
-  const createNewDriver = useCallback(async (driverData) => {
-    try {
-      const token = getAuthToken();
+      
+
       const response = await fetch('http://localhost:3001/api/drivers', {
         method: 'POST',
         headers: {
           'Authorization': token,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(driverData)
+        body: JSON.stringify(payload)
       });
 
+      // Manejar respuesta del servidor
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Error al crear el conductor');
+        const errorData = await response.text();
+        console.error('Error del servidor:', errorData);
+        throw new Error(`Error ${response.status}: ${errorData}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('Conductor creado exitosamente:', data);
+
+      alert('Conductor creado exitosamente');
+      setShowNewDriverModal(false);
+
+      // Actualizar la lista de conductores
+      setDrivers(prev => [...prev, data.driver || data]);
+
+      // Limpiar el formulario
+      setNewDriver({
+        tipo_documento: '',
+        documento: '',
+        nombre_conductor: '',
+        apellido_conductor: '',
+        correo_conductor: '',
+        foto: '',
+        telefono: '',
+        ciudad: '',
+        direccion: '',
+        tipo_licencia: '',
+        fecha_vencimiento: '',
+        experiencia: '',
+        estado: 'Activo',
+      });
+
+      setValidated(false);
+
     } catch (error) {
-      console.error('Error creating driver:', error);
-      throw error;
+      console.error('Error completo:', error);
+      alert(`Hubo un error al crear el conductor: ${error.message}`);
+    } finally {
+      setIsUpdating(false);
     }
-  }, [getAuthToken]);
+};
+
 
   // Función para editar un conductor
-  const updateDriver = useCallback(async (driverId, driverData) => {
+  const updateDriver = useCallback(async (id_conductor, driverData) => {
     try {
       const token = getAuthToken();
-      const response = await fetch(`http://localhost:3001/api/drivers/${driverId}`, {
+      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
         method: 'PUT',
         headers: {
           'Authorization': token,
@@ -282,7 +334,7 @@ const Conductores = () => {
 
       return await response.json();
     } catch (error) {
-      console.error('Error updating driver:', error);
+      console.error('Error updating driver:', error.message);
       throw error;
     }
   }, [getAuthToken]);
@@ -309,7 +361,7 @@ const Conductores = () => {
       console.error('Error deleting driver:', error);
       throw error;
     }
-  }, [getAuthToken]);
+  });
 
   // Helper functions
   const checkDocumentExists = useCallback((documento) => {
@@ -380,62 +432,6 @@ const Conductores = () => {
     setEditDriver(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleSubmitNewDriver = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setValidated(true);
-      return;
-    }
-    
-    if (checkDocumentExists(newDriver.documento)) {
-      setError(`Ya existe un conductor con el documento: ${newDriver.documento}`);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      // Generar contraseña automática
-      const generatedPassword = generatePassword();
-      
-      // Crear el conductor
-      await createNewDriver(newDriver);
-      
-      // Enviar contraseña por email si hay correo
-      if (newDriver.correo_conductor) {
-        try {
-          await sendPasswordByEmail(newDriver.correo_conductor, generatedPassword);
-          console.log('✅ Contraseña enviada por email');
-        } catch (emailError) {
-          console.warn('⚠️ Error enviando email, pero conductor creado:', emailError);
-        }
-      }
-      
-      await fetchDrivers();
-      
-      setShowNewDriverModal(false);
-      setNewDriver({
-        tipo_documento: 'CC',
-        documento: '',
-        nombre_conductor: '',
-        apellido_conductor: '',
-        correo_conductor: '',
-        foto: '',
-        telefono: '',
-        ciudad: '',
-        direccion: ''
-      });
-      setValidated(false);
-      setError(null);
-    } catch (error) {
-      setError(`Error al crear el conductor: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmitEditDriver = async (e) => {
     e.preventDefault();
@@ -939,7 +935,87 @@ const Conductores = () => {
                   </Form.Group>
                 </Col>
               </Row>
+              {/* Información de licencia */}
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Licencia</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Tipo de Licencia</Form.Label>
+                    <Form.Select
+                      name="tipo_licencia"
+                      value={newDriver.tipo_licencia}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="A1">A1 - Motocicletas</option>
+                      <option value="A2">A2 - Motocicletas, motocarros, cuatrimotos</option>
+                      <option value="B1">B1 - Automóviles, camionetas</option>
+                      <option value="B2">B2 - Camiones rígidos, buses</option>
+                      <option value="B3">B3 - Vehículos articulados</option>
+                      <option value="C1">C1 - Automóviles, camionetas servicio público</option>
+                      <option value="C2">C2 - Camiones rígidos, buses servicio público</option>
+                      <option value="C3">C3 - Vehículos articulados servicio público</option>
+                    </Form.Select>
+                    <Form.Control.Feedback type="invalid">
+                      Seleccione un tipo de licencia
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Fecha de Vencimiento</Form.Label>
+                    <Form.Control
+                      type="date"
+                      name="fecha_vencimiento"
+                      value={newDriver.fecha_vencimiento}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <Form.Control.Feedback type="invalid">
+                      La fecha de vencimiento es obligatoria
+                    </Form.Control.Feedback>
+                  </Form.Group>
+                </Col>
+              </Row>
               
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Años de Experiencia</Form.Label>
+                    <Form.Control
+                      type="text"  // Cambiar de "number" a "text" para mejor control
+                      name="experiencia"
+                      value={newDriver.experiencia}
+                      onChange={handleInputChange}
+                      pattern="[0-9]*"
+                      title="Solo números"
+                      placeholder="Años de experiencia"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+              
+              {/* Información de cuenta */}
+              <h5 className="border-bottom pb-2 mb-3 mt-4">Información de Cuenta</h5>
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Estado</Form.Label>
+                    <Form.Select
+                      name="estado"
+                      value={newDriver.estado}
+                      onChange={handleInputChange}
+                    >
+                      <option value="Activo">Activo</option>
+                      <option value="Inactivo">Inactivo</option>
+                      <option value="En ruta">En ruta</option>
+                      <option value="Descanso">Descanso</option>
+                      <option value="Entrenamiento">Entrenamiento</option>
+                    </Form.Select>
+                  </Form.Group>
+                </Col>
+              </Row>
               <Form.Group className="mb-3">
                 <Form.Label>URL de Foto (Opcional)</Form.Label>
                 <Form.Control

@@ -59,7 +59,7 @@ const Vehiculos = () => {
   const getConductorName = (conductorId) => {
     if (!conductorId) return 'Sin asignar';
     const conductor = conductores.find(c => c.id === conductorId || c.id_conductor === conductorId);
-    return conductor ? conductor.nombre : `Conductor ID: ${conductorId}`;
+    return conductor ? conductor.nombre_conductor : `Conductor ID: ${conductorId}`;
   };
 
   // Función para eliminar vehículo
@@ -112,7 +112,7 @@ const Vehiculos = () => {
             method: 'GET',
             headers,
           }),
-          fetch('http://localhost:3001/api/conductores', { // Ajusta esta URL según tu API
+          fetch('http://localhost:3001/api/drivers', { // Ajusta esta URL según tu API
             method: 'GET',
             headers,
           }).catch(error => {
@@ -245,55 +245,55 @@ const handleUpdateVehicle = async (e) => {
   
   // Manejar envío del formulario
   const handleSubmitNewVehicle = async (e) => {
-  e.preventDefault();
-  const form = e.currentTarget;
-  
-  if (form.checkValidity() === false) {
-    e.stopPropagation();
-    setValidated(true);
-    return;
-  }
-  
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:3001/api/vehicles', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(newVehicle),
-    });
-
-    const responseData = await response.json();
+    e.preventDefault();
+    const form = e.currentTarget;
     
-    if (!response.ok) {
-      throw new Error(responseData.message || 'Error al crear vehículo');
+    if (form.checkValidity() === false) {
+      e.stopPropagation();
+      setValidated(true);
+      return;
     }
 
-    setVehiculos([...vehiculos, responseData.vehicle]);
-    setShowNewVehicleModal(false);
-    setNewVehicle({
-      placa: '',
-      modelo: '',
-      conductor: '',
-      estado_vehiculo: 1,
-      seguro: '',
-      kilometraje: '',
-      marca: '',
-      color: '',
-      capacidad: '',
-      tipo: '',
-      peso: '',
-      matricula: '',
-    });
-    setValidated(false);
-    alert('Vehículo creado exitosamente');
-  } catch (error) {
-    console.error('Error:', error);
-    alert(`Error al crear el vehículo: ${error.message}`);
-  }
-};
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/vehicles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(newVehicle),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Error al crear vehículo');
+      }
+
+      setVehiculos([...vehiculos, responseData.vehicle]);
+      setShowNewVehicleModal(false);
+      setNewVehicle({
+        placa: '',
+        modelo: '',
+        conductor: '',
+        estado_vehiculo: 1,
+        seguro: '',
+        kilometraje: '',
+        marca: '',
+        color: '',
+        capacidad: '',
+        tipo: '',
+        peso: '',
+        matricula: '',
+      });
+      setValidated(false);
+      alert('Vehículo creado exitosamente');
+    } catch (error) {
+      console.error('Error:', error);
+      alert(`Error al crear el vehículo: ${error.message}`);
+    }
+  };
   
   // Componente para el badge de estado
   const EstadoBadge = ({ estado }) => {
@@ -700,7 +700,7 @@ const handleUpdateVehicle = async (e) => {
               key={`conductor-${conductor.id || conductor.id_conductor || index}`} 
               value={conductor.id || conductor.id_conductor}
               >
-            {conductor.nombre}
+            {conductor.nombre_conductor}
             </option>
               ))}
             </Form.Select>
@@ -859,7 +859,7 @@ const handleUpdateVehicle = async (e) => {
                   key={`conductor-${conductor.id || conductor.id_conductor || index}`} 
                   value={conductor.id || conductor.id_conductor}
                 >
-                  {conductor.nombre}
+                  {conductor.nombre_conductor}
                 </option>
               ))}
             </Form.Select>

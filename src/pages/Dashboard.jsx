@@ -1,14 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Row, Col, Card, Button, Table, Badge, Form } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaUsers, FaChartLine, FaCalendarAlt, FaBuilding, FaSearch, FaPlus, FaEdit } from 'react-icons/fa';
+import { 
+  FaUsers, FaCar, FaChartLine, FaBell, 
+  FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog, FaMapMarkedAlt, FaTruckLoading,
+  FaTruck, FaRoute
+} from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 import './Dashboard.css';
+import { FaPeopleCarryBox, FaUser } from 'react-icons/fa6';
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [conductores, setConductores] = useState([]);
   const [reportes, setReportes] = useState([]);
+  const [vehiculos, setVehiculos] = useState([]);
+  const [rutas, setRutas] = useState([]);
+  const [clientes, setClientes] = useState([]);
+  const [cargas, setCargas] = useState([]);
 
   const getAuthToken = useCallback(() => {
       const token = localStorage.getItem('token');
@@ -17,54 +27,103 @@ const Dashboard = () => {
     }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = getAuthToken();
-        if (!token) {
-          setError('No hay token de autenticación');
-          setLoading(false);
-          return;
-        }
-        const [reportesResponse, conductoresResponse] = await Promise.all([
-          fetch('http://localhost:3001/api/reports', {
-            method: 'GET',
-            headers: {
-              'Authorization': token,
-              'Content-Type': 'application/json',
-            },
-          }),
-          fetch('http://localhost:3001/api/drivers', {
-            method: 'GET',
-            headers: {
-              'Authorization': token,
-              'Content-Type': 'application/json',
-            },
-          }),
-        ]);
-
-        if (!reportesResponse.ok || !conductoresResponse.ok) {
-          throw new Error('Error en la respuesta de la API');
-        }
-
-        const reportesData = await reportesResponse.json();
-        const conductoresData = await conductoresResponse.json();
-
-        // Validar que los datos sean arrays y tengan la estructura esperada
-        setReportes(Array.isArray(reportesData) ? reportesData : []);
-        setConductores(Array.isArray(conductoresData) ? conductoresData : []);
-
-      } catch (error) {
-        console.error('Error al obtener datos:', error);
-        // En caso de error, establecer arrays vacíos para evitar errores de renderizado
-        setReportes([]);
-        setConductores([]);
-      } finally {
+  const fetchData = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        setError('No hay token de autenticación');
         setLoading(false);
+        return;
       }
-    };
 
-    fetchData();
-  }, []);
+      const [
+        reportesResponse, 
+        conductoresResponse, 
+        vehiculosResponse, 
+        rutasResponse, 
+        clientesResponse, 
+        cargasResponse
+      ] = await Promise.all([
+        fetch('http://localhost:3001/api/reports', {
+          method: 'GET',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+        }),
+        fetch('http://localhost:3001/api/drivers', {
+          method: 'GET',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+        }),
+        fetch('http://localhost:3001/api/vehicles', {
+          method: 'GET',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+        }),
+        fetch('http://localhost:3001/api/routes', {
+          method: 'GET',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+        }),
+        fetch('http://localhost:3001/api/clients', {
+          method: 'GET',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+        }),
+        fetch('http://localhost:3001/api/loads', {
+          method: 'GET',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json',
+          },
+        }),
+      ]);
+
+      if (!reportesResponse.ok || !conductoresResponse.ok || !vehiculosResponse.ok || 
+          !rutasResponse.ok || !clientesResponse.ok || !cargasResponse.ok) {
+        throw new Error('Error en la respuesta de la API');
+      }
+
+      const reportesData = await reportesResponse.json();
+      const conductoresData = await conductoresResponse.json();
+      const vehiculosData = await vehiculosResponse.json();
+      const rutasData = await rutasResponse.json();
+      const clientesData = await clientesResponse.json();
+      const cargasData = await cargasResponse.json();
+
+      // Validar que los datos sean arrays y tengan la estructura esperada
+      setReportes(Array.isArray(reportesData) ? reportesData : []);
+      setConductores(Array.isArray(conductoresData) ? conductoresData : []);
+      setVehiculos(Array.isArray(vehiculosData) ? vehiculosData : []);
+      setRutas(Array.isArray(rutasData) ? rutasData : []);
+      setClientes(Array.isArray(clientesData) ? clientesData : []);
+      setCargas(Array.isArray(cargasData) ? cargasData : []);
+
+    } catch (error) {
+      console.error('Error al obtener datos:', error);
+      // En caso de error, establecer arrays vacíos para evitar errores de renderizado
+      setReportes([]);
+      setConductores([]);
+      setVehiculos([]);
+      setRutas([]);
+      setClientes([]);
+      setCargas([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
 
   // Formatear fecha a formato español con validación
   const formatDate = (dateString) => {
@@ -114,7 +173,6 @@ const Dashboard = () => {
   const dashboardContent = (
     <>
       <h1 className="mt-4 mb-4">Dashboard</h1>
-
       {/* Tarjetas de estadísticas */}
       <Row className="stats-cards">
         <Col md={3} sm={6} className="mb-4">
@@ -132,8 +190,54 @@ const Dashboard = () => {
             </Card.Body>
           </Card>
         </Col>
-      </Row>
+        <Col md={3} sm={6} className="mb-4">
+    <Card className="stats-card">
+      <Card.Body>
+        <div className="d-flex align-items-center">
+          <div className="stats-icon orange">
+            <FaTruck />
+          </div>
+          <div>
+            <h4 className="stats-number">{vehiculos.length}</h4>
+            <div className="stats-label">Vehículos</div>
+          </div>
+        </div>
+      </Card.Body>
+    </Card>
+  </Col>
 
+  <Col md={3} sm={6} className="mb-4">
+    <Card className="stats-card">
+      <Card.Body>
+        <div className="d-flex align-items-center">
+          <div className="stats-icon orange">
+            <FaRoute />
+          </div>
+          <div>
+            <h4 className="stats-number">{rutas.length}</h4>
+            <div className="stats-label">Rutas</div>
+          </div>
+        </div>
+      </Card.Body>
+    </Card>
+  </Col>
+
+  <Col md={3} sm={6} className="mb-4">
+    <Card className="stats-card">
+      <Card.Body>
+        <div className="d-flex align-items-center">
+          <div className="stats-icon orange">
+            <FaPeopleCarryBox />
+          </div>
+          <div>
+            <h4 className="stats-number">{clientes.length}</h4>
+            <div className="stats-label">Clientes</div>
+          </div>
+        </div>
+      </Card.Body>
+    </Card>
+  </Col>
+      </Row>
       <Row>
         {/* Lista de Empleados Recientes */}
         <Col lg={6} className="mb-4">
@@ -153,7 +257,7 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {conductores[0].map(conductor => (
+                    {conductores.map(conductor => (
                       <tr key={conductor.id_conductor || Math.random()}>
                         <td>{conductor.nombre_conductor || 'Sin nombre'}</td>
                         <td>{formatDate(conductor.fecha_vencimiento)}</td>

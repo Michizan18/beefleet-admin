@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Table, Button, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
+import { Card, Table, Button, Container, Row, Col, InputGroup, Form, Modal, Badge, Alert } from 'react-bootstrap';
 import { 
   FaIdCard, FaUserCircle, FaSearch, FaEdit, FaTrashAlt, FaPlus, 
   FaSave, FaCalendarPlus, FaPhone, FaMapMarkerAlt, FaEnvelope,
-  FaCarSide, FaCamera, FaUser, FaHome, FaCalendarAlt, FaClock, FaTimes
+  FaCarSide, FaCamera, FaUser, FaHome, FaCalendarAlt, FaClock, FaTimes,
+  FaCheckCircle, FaSpinner
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 
@@ -78,6 +79,14 @@ const Conductores = () => {
   // Estados de validación
   const [validated, setValidated] = useState(false);
   const [editValidated, setEditValidated] = useState(false);
+
+  // Estados para alertas y mensajes de éxito
+  const [showSendingAlert, setShowSendingAlert] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showEditSuccessModal, setShowEditSuccessModal] = useState(false);
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [successSubMessage, setSuccessSubMessage] = useState('');
 
   // Función para obtener el token de autenticación
   const getAuthToken = useCallback(() => {
@@ -162,74 +171,86 @@ const Conductores = () => {
 
   // Función para crear un nuevo conductor
   const handleSubmitNewDriver = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const token = getAuthToken();
-    
-    if (!token) {
-      setError('No hay token de autenticación');
-      return;
-    }
+  e.preventDefault();
+  const form = e.currentTarget;
+  const token = getAuthToken();
   
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setValidated(true);
+  if (!token) {
+    setError('No hay token de autenticación');
+    return;
+  }
+
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setValidated(true);
+    return;
+  }
+
+  try {
+    setIsUpdating(true);
+
+    // Validar campos requeridos
+    if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
+      alert('Por favor complete todos los campos requeridos');
       return;
     }
 
-    try {
-      setIsUpdating(true);
+    // Mostrar alert de envío de contraseña
+    setShowSendingAlert(true);
+    setTimeout(() => setShowSendingAlert(false), 3000);
 
-      // Validar campos requeridos
-      if (!newDriver.documento || !newDriver.nombre_conductor || !newDriver.correo_conductor) {
-        alert('Por favor complete todos los campos requeridos');
-        return;
-      }
+    // Preparar payload
+    const payload = {
+      ...newDriver,
+      documento: newDriver.documento.toString(),
+      nombre_conductor: newDriver.nombre_conductor.trim(),
+      apellido_conductor: newDriver.apellido_conductor.trim(),
+      correo_conductor: newDriver.correo_conductor.trim(),
+      experiencia: newDriver.experiencia ? parseInt(newDriver.experiencia, 10) : null,
+      foto: newDriver.foto || null,
+      telefono: newDriver.telefono || null,
+      ciudad: newDriver.ciudad || null,
+      direccion: newDriver.direccion || null,
+      tipo_licencia: newDriver.tipo_licencia || null,
+      fecha_vencimiento: newDriver.fecha_vencimiento || null
+    };
 
-      // Preparar payload
-      const payload = {
-        ...newDriver,
-        documento: newDriver.documento.toString(),
-        nombre_conductor: newDriver.nombre_conductor.trim(),
-        apellido_conductor: newDriver.apellido_conductor.trim(),
-        correo_conductor: newDriver.correo_conductor.trim(),
-        experiencia: newDriver.experiencia ? parseInt(newDriver.experiencia, 10) : null,
-        foto: newDriver.foto || null,
-        telefono: newDriver.telefono || null,
-        ciudad: newDriver.ciudad || null,
-        direccion: newDriver.direccion || null,
-        tipo_licencia: newDriver.tipo_licencia || null,
-        fecha_vencimiento: newDriver.fecha_vencimiento || null
-      };
+    const response = await fetch('http://localhost:3001/api/drivers', {
+      method: 'POST',
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
 
-      const response = await fetch('http://localhost:3001/api/drivers', {
-        method: 'POST',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Error ${response.status}: ${errorData}`);
-      }
-
-      const data = await response.json();
-      alert('Conductor creado exitosamente');
-      setShowNewDriverModal(false);
-      setDrivers(prev => [...prev, normalizeDriverData(data.driver || data)]);
-      setNewDriver(initialDriverState);
-      setValidated(false);
-
-    } catch (error) {
-      console.error('Error:', error);
-      alert(`Hubo un error al crear el conductor: ${error.message}`);
-    } finally {
-      setIsUpdating(false);
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Error ${response.status}: ${errorData}`);
     }
-  };
+
+    const data = await response.json();
+    
+    // Cerrar modal de crear y mostrar modal de éxito
+    setShowNewDriverModal(false);
+    setSuccessMessage('¡Conductor creado exitosamente!');
+    setSuccessSubMessage('Contraseña enviada al correo electrónico');
+    setShowSuccessModal(true);
+    
+    // Ocultar modal de éxito después de 3 segundos
+    setTimeout(() => setShowSuccessModal(false), 3000);
+    
+    setDrivers(prev => [...prev, normalizeDriverData(data.driver || data)]);
+    setNewDriver(initialDriverState);
+    setValidated(false);
+
+  } catch (error) {
+    console.error('Error:', error);
+    alert(`Hubo un error al crear el conductor: ${error.message}`);
+  } finally {
+    setIsUpdating(false);
+  }
+};
 
   // Función para editar un conductor
   const updateDriver = useCallback(async (id_conductor, driverData) => {
@@ -327,49 +348,67 @@ const Conductores = () => {
   }, [drivers]);
 
   // Handler para enviar edición de conductor
-  const handleSubmitEditDriver = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
+const handleSubmitEditDriver = async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setEditValidated(true);
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    const { id_conductor, ...driverData } = editDriver;
+    await updateDriver(id_conductor, driverData);
+    await fetchDrivers();
     
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setEditValidated(true);
-      return;
-    }
+    setShowEditDriverModal(false);
+    setEditValidated(false);
+    setError(null);
     
-    try {
-      setLoading(true);
-      const { id_conductor, ...driverData } = editDriver;
-      await updateDriver(id_conductor, driverData);
-      await fetchDrivers();
-      
-      setShowEditDriverModal(false);
-      setEditValidated(false);
-      setError(null);
-    } catch (error) {
-      setError(`Error al actualizar el conductor: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Mostrar modal de éxito para edición
+    setSuccessMessage('¡Conductor actualizado exitosamente!');
+    setSuccessSubMessage('Los cambios han sido guardados correctamente');
+    setShowEditSuccessModal(true);
+    
+    // Ocultar modal después de 3 segundos
+    setTimeout(() => setShowEditSuccessModal(false), 3000);
+    
+  } catch (error) {
+    setError(`Error al actualizar el conductor: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Confirmar eliminación de conductor
-  const confirmDeleteDriver = async () => {
-    if (!driverToDelete) return;
+const confirmDeleteDriver = async () => {
+  if (!driverToDelete) return;
+  
+  try {
+    setLoading(true);
+    await deleteDriver(driverToDelete.id_conductor);
+    await fetchDrivers();
+    setShowDeleteModal(false);
+    setDriverToDelete(null);
+    setError(null);
     
-    try {
-      setLoading(true);
-      await deleteDriver(driverToDelete.id_conductor);
-      await fetchDrivers();
-      setShowDeleteModal(false);
-      setDriverToDelete(null);
-      setError(null);
-    } catch (error) {
-      setError(`Error al eliminar el conductor: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Mostrar modal de éxito para eliminación
+    setSuccessMessage('¡Conductor eliminado exitosamente!');
+    setSuccessSubMessage('El conductor ha sido removido del sistema');
+    setShowDeleteSuccessModal(true);
+    
+    // Ocultar modal después de 3 segundos
+    setTimeout(() => setShowDeleteSuccessModal(false), 3000);
+    
+  } catch (error) {
+    setError(`Error al eliminar el conductor: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Filtrar conductores
   const filteredDrivers = drivers.filter((driver) => {
@@ -1378,6 +1417,76 @@ const Conductores = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+          {/* Alert flotante para envío de contraseña */}
+    {showSendingAlert && (
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 9999,
+        minWidth: '300px'
+      }}>
+        <Alert variant="info" className="d-flex align-items-center shadow">
+          <FaSpinner className="me-2 fa-spin" />
+          <div>
+            <strong>Enviando contraseña por defecto</strong>
+            <br />
+            <small>Se está enviando al correo del conductor...</small>
+          </div>
+        </Alert>
+      </div>
+    )}
+
+    {/* Modal de éxito para crear conductor */}
+    <Modal
+      show={showSuccessModal}
+      centered
+      backdrop="static"
+      keyboard={false}
+    >
+      <Modal.Body className="text-center py-4">
+        <div className="mb-3">
+          <FaCheckCircle size={50} className="text-success" />
+        </div>
+        <h5 className="text-success mb-2">{successMessage}</h5>
+        <p className="text-muted mb-0">
+          <FaEnvelope className="me-1" />
+          {successSubMessage}
+        </p>
+      </Modal.Body>
+    </Modal>
+
+    {/* Modal de éxito para editar conductor */}
+    <Modal
+      show={showEditSuccessModal}
+      centered
+      backdrop="static"
+      keyboard={false}
+    >
+      <Modal.Body className="text-center py-4">
+        <div className="mb-3">
+          <FaCheckCircle size={50} className="text-success" />
+        </div>
+        <h5 className="text-success mb-2">{successMessage}</h5>
+        <p className="text-muted mb-0">{successSubMessage}</p>
+      </Modal.Body>
+    </Modal>
+
+    {/* Modal de éxito para eliminar conductor */}
+    <Modal
+      show={showDeleteSuccessModal}
+      centered
+      backdrop="static"
+      keyboard={false}
+    >
+      <Modal.Body className="text-center py-4">
+        <div className="mb-3">
+          <FaCheckCircle size={50} className="text-success" />
+        </div>
+        <h5 className="text-success mb-2">{successMessage}</h5>
+        <p className="text-muted mb-0">{successSubMessage}</p>
+      </Modal.Body>
+    </Modal>
     </LayoutBarButton>
   );
 };

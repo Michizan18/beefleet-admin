@@ -40,17 +40,15 @@ const Vehiculos = () => {
   // Estado para nuevo vehículo
   const [newVehicle, setNewVehicle] = useState({
     placa: '',
-    modelo: '',
-    conductor: '',
-    estado_vehiculo: 'Activo',
-    seguro: '',
-    kilometraje: '',
     marca: '',
+    modelo: '',
+    estado_vehiculo: 1,
+    kilometraje: '',
     color: '',
     capacidad: '',
     tipo: '',
     peso: '',
-    matricula: '',
+    conductor: ''
   });
   
   const [validated, setValidated] = useState(false);
@@ -89,68 +87,67 @@ const Vehiculos = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Obtener token del localStorage si existe
-        const token = localStorage.getItem('token');
-        const headers = {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        };
-        
-        // Agregar Authorization header si hay token
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        // Fetch vehículos y conductores en paralelo
-        const [vehiclesResponse, conductoresResponse] = await Promise.all([
-          fetch('http://localhost:3001/api/vehicles', {
-            method: 'GET',
-            headers,
-          }),
-          fetch('http://localhost:3001/api/drivers', { // Ajusta esta URL según tu API
-            method: 'GET',
-            headers,
-          }).catch(error => {
-            console.warn('No se pudieron cargar los conductores:', error);
-            return { ok: false };
-          })
-        ]);
-
-        if (!vehiclesResponse.ok) {
-          throw new Error(`Error al cargar los vehículos: ${vehiclesResponse.status}`);
-        }
-
-        const vehicleData = await vehiclesResponse.json();
-        console.log('Datos de vehículos:', vehicleData);
-        setVehiculos(vehicleData);
-
-        // Cargar conductores si la respuesta es exitosa
-        if (conductoresResponse.ok) {
-          const conductoresData = await conductoresResponse.json();
-          console.log('Datos de conductores:', conductoresData);
-          setConductores(conductoresData);
-        } else {
-          // Datos de conductores hardcodeados como fallback
-          setConductores([]);
-        }
-
-      } catch (error) {
-        console.error("Error al cargar datos:", error);
-        alert(`Error al cargar los datos: ${error.message}`);
-        
-        // En caso de error, usar datos de ejemplo para conductores
-        setConductores([
-        ]);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Obtener token del localStorage si existe
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      };
+      
+      // Agregar Authorization header si hay token
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
-    };
-    
+
+      // Fetch vehículos y conductores en paralelo
+      const [vehiclesResponse, conductoresResponse] = await Promise.all([
+        fetch('http://localhost:3001/api/vehicles', {
+          method: 'GET',
+          headers,
+        }),
+        fetch('http://localhost:3001/api/drivers', { // Ajusta esta URL según tu API
+          method: 'GET',
+          headers,
+        }).catch(error => {
+          console.warn('No se pudieron cargar los conductores:', error);
+          return { ok: false };
+        })
+      ]);
+
+      if (!vehiclesResponse.ok) {
+        throw new Error(`Error al cargar los vehículos: ${vehiclesResponse.status}`);
+      }
+
+      const vehicleData = await vehiclesResponse.json();
+      console.log('Datos de vehículos:', vehicleData);
+      setVehiculos(vehicleData);
+
+      // Cargar conductores si la respuesta es exitosa
+      if (conductoresResponse.ok) {
+        const conductoresData = await conductoresResponse.json();
+        console.log('Datos de conductores:', conductoresData);
+        setConductores(conductoresData);
+      } else {
+        // Datos de conductores hardcodeados como fallback
+        setConductores([]);
+      }
+
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      alert(`Error al cargar los datos: ${error.message}`);
+      
+      // En caso de error, usar datos de ejemplo para conductores
+      setConductores([
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -162,14 +159,11 @@ const Vehiculos = () => {
     modelo: vehiculo.modelo || '',
     conductor: vehiculo.conductor || '',
     estado_vehiculo: vehiculo.estado_vehiculo || 1,
-    seguro: vehiculo.seguro || '',
     kilometraje: vehiculo.kilometraje || '',
     marca: vehiculo.marca || '',
     color: vehiculo.color || '',
     capacidad: vehiculo.capacidad || '',
-    tipo: vehiculo.tipo || '',
-    peso: vehiculo.peso || '',
-    matricula: vehiculo.matricula || '',
+    tipo: vehiculo.tipo || ''
   });
   setShowEditModal(true);
 };
@@ -275,19 +269,18 @@ const handleUpdateVehicle = async (e) => {
       setShowNewVehicleModal(false);
       setNewVehicle({
         placa: '',
-        modelo: '',
-        conductor: '',
-        estado_vehiculo: 1,
-        seguro: '',
-        kilometraje: '',
         marca: '',
+        modelo: '',
+        estado_vehiculo: 1,
+        kilometraje: '',
         color: '',
         capacidad: '',
         tipo: '',
         peso: '',
-        matricula: '',
+        conductor: ''
       });
       setValidated(false);
+      fetchData();
       alert('Vehículo creado exitosamente');
     } catch (error) {
       console.error('Error:', error);

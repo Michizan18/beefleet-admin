@@ -165,9 +165,6 @@ const Conductores = () => {
     }
   }, [getAuthToken, normalizeDriverData]);
 
-  useEffect(() => {
-    fetchDrivers();
-  }, [fetchDrivers]);
 
   // Función para crear un nuevo conductor
   const handleSubmitNewDriver = async (e) => {
@@ -228,9 +225,8 @@ const Conductores = () => {
       const errorData = await response.text();
       throw new Error(`Error ${response.status}: ${errorData}`);
     }
-
+    fetchDrivers();
     const data = await response.json();
-    
     // Cerrar modal de crear y mostrar modal de éxito
     setShowNewDriverModal(false);
     setSuccessMessage('¡Conductor creado exitosamente!');
@@ -269,7 +265,6 @@ const Conductores = () => {
         const errorText = await response.text();
         throw new Error(errorText || 'Error al actualizar el conductor');
       }
-
       return await response.json();
     } catch (error) {
       console.error('Error updating driver:', error.message);
@@ -300,6 +295,10 @@ const Conductores = () => {
       throw error;
     }
   }, [getAuthToken]);
+
+  useEffect(() => {
+    fetchDrivers();
+  }, [fetchDrivers]);
 
   // Handlers para cambios en los inputs
   const handleInputChange = (e) => {

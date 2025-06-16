@@ -649,7 +649,7 @@ const handleUpdateVehicle = async (e) => {
       <Row className="mb-3">
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Capacidad</Form.Label>
+            <Form.Label>Capacidad (kg)</Form.Label>
             <Form.Control
               type="text"
               value={editFormData.capacidad || ''}
@@ -807,7 +807,7 @@ const handleUpdateVehicle = async (e) => {
       <Row className="mb-3">
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Capacidad</Form.Label>
+            <Form.Label>Capacidad (kg)</Form.Label>
             <Form.Control
               type="text"
               name="capacidad"

@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Table, Button, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
+import { Card, Container, Row, Col, Badge } from 'react-bootstrap';
 import { 
-  FaIdCard,  
   FaUserCircle, 
-  FaSearch, FaUsers, 
-  FaEdit, FaTrashAlt, FaPlus, FaSave,
   FaPhone, FaMapMarkerAlt, FaEnvelope,
-  FaUser, FaLock, FaKey, FaClock, FaUserCog, FaTimes
+  FaUser, FaClock, FaUserShield, FaIdCard,
+  FaCalendarAlt, FaEdit
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 
@@ -16,28 +14,6 @@ const AdminProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userData, setUserData] = useState(null);
-  
-  // Estados para modales
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  
-  // Estados para formularios
-  const [editForm, setEditForm] = useState({
-    nombre_usuario: '',
-    apellido_usuario: '',
-    correo_usuario: ''
-  });
-  
-  const [passwordForm, setPasswordForm] = useState({
-    current_password: '',
-    new_password: '',
-    confirm_password: ''
-  });
-  
-  // Estados de validación y guardado
-  const [editErrors, setEditErrors] = useState({});
-  const [passwordErrors, setPasswordErrors] = useState({});
-  const [saving, setSaving] = useState(false);
 
   const processMySQLResponse = useCallback((rawData) => {
       try {
@@ -117,13 +93,6 @@ const AdminProfile = () => {
       console.log('Data received:', data); // Debug
       setAdminData(data);
       
-      // Inicializar el formulario de edición con los datos actuales
-      setEditForm({
-        nombre_usuario: data.nombre_usuario || '',
-        apellido_usuario: data.apellido_usuario || '',
-        correo_usuario: data.correo_usuario || '' 
-      });
-      
     } catch (error) {
       console.error('Error fetching admin profile:', error);
       setError(`Error al cargar el perfil: ${error.message}`);
@@ -132,235 +101,10 @@ const AdminProfile = () => {
     }
   }, [getAuthToken]);
 
-  // Función para actualizar el perfil
-  const updateProfile = useCallback(async (profileData) => {
-    try {
-      const token = getAuthToken();
-      const id_usuario = localStorage.getItem('id_usuario');
-      
-      console.log('Updating profile with data:', profileData); // Debug
-      
-      const response = await fetch(`http://localhost:3001/api/users/${id_usuario}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(profileData)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Update error:', errorText); // Debug
-        throw new Error(errorText || 'Error al actualizar el perfil');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      throw error;
-    }
-  }, [getAuthToken]);
-
-  // Función para cambiar contraseña
-  const changePassword = useCallback(async (passwordData) => {
-    try {
-      const token = getAuthToken();
-      const id_usuario = localStorage.getItem('id_usuario');
-      
-      const response = await fetch(`http://localhost:3001/api/users/${id_usuario}/password`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(passwordData)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Error al cambiar la contraseña');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error changing password:', error);
-      throw error;
-    }
-  }, [getAuthToken]);
-
-  // Validaciones
-  const validateEditForm = () => {
-    const errors = {};
-    
-    if (!editForm.nombre_usuario.trim()) {
-      errors.nombre_usuario = 'El nombre es obligatorio';
-    }
-    
-    if (!editForm.apellido_usuario.trim()) {
-      errors.apellido_usuario = 'El apellido es obligatorio';
-    }
-    
-    if (!editForm.correo_usuario.trim()) {
-      errors.correo_usuario = 'El correo es obligatorio';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.correo_usuario)) {
-      errors.correo_usuario = 'Formato de correo inválido';
-    }
-    
-    setEditErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const validatePasswordForm = () => {
-    const errors = {};
-    
-    if (!passwordForm.current_password) {
-      errors.current_password = 'La contraseña actual es obligatoria';
-    }
-    
-    if (!passwordForm.new_password) {
-      errors.new_password = 'La nueva contraseña es obligatoria';
-    } else if (passwordForm.new_password.length < 6) {
-      errors.new_password = 'La contraseña debe tener al menos 6 caracteres';
-    }
-    
-    if (!passwordForm.confirm_password) {
-      errors.confirm_password = 'Debe confirmar la nueva contraseña';
-    } else if (passwordForm.new_password !== passwordForm.confirm_password) {
-      errors.confirm_password = 'Las contraseñas no coinciden';
-    }
-    
-    setPasswordErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   // Efecto para cargar el perfil al montar el componente
   useEffect(() => {
     fetchAdminProfile();
   }, [fetchAdminProfile]);
-
-  // Handlers para formularios
-  const handleEditInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditForm(prev => ({ ...prev, [name]: value }));
-    
-    // Limpiar error del campo cuando el usuario empieza a escribir
-    if (editErrors[name]) {
-      setEditErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const handlePasswordInputChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordForm(prev => ({ ...prev, [name]: value }));
-    
-    // Limpiar error del campo cuando el usuario empieza a escribir
-    if (passwordErrors[name]) {
-      setPasswordErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  // Submit para editar perfil
-  const handleSubmitEditProfile = async (e) => {
-    e.preventDefault();
-    
-    if (!validateEditForm()) {
-      return;
-    }
-    
-    try {
-      setSaving(true);
-      await updateProfile(editForm);
-      await fetchAdminProfile(); // Recargar datos
-      
-      setShowEditModal(false);
-      setEditErrors({});
-      setError(null);
-      
-      // Mostrar mensaje de éxito
-      alert('Perfil actualizado correctamente');
-    } catch (error) {
-      setError(`Error al actualizar el perfil: ${error.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Submit para cambiar contraseña
-  const handleSubmitPasswordChange = async (e) => {
-    e.preventDefault();
-    
-    if (!validatePasswordForm()) {
-      return;
-    }
-    
-    try {
-      setSaving(true);
-      await changePassword({
-        current_password: passwordForm.current_password,
-        new_password: passwordForm.new_password
-      });
-      
-      setShowPasswordModal(false);
-      setPasswordForm({
-        current_password: '',
-        new_password: '',
-        confirm_password: ''
-      });
-      setPasswordErrors({});
-      setError(null);
-      
-      alert('Contraseña actualizada correctamente');
-    } catch (error) {
-      setError(`Error al cambiar la contraseña: ${error.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Handlers para abrir modales
-  const handleEditClick = () => {
-    setError(null);
-    setEditErrors({});
-    setShowEditModal(true);
-  };
-
-  const handlePasswordClick = () => {
-    setError(null);
-    setPasswordErrors({});
-    setPasswordForm({
-      current_password: '',
-      new_password: '',
-      confirm_password: ''
-    });
-    setShowPasswordModal(true);
-  };
-
-  // Handlers para cerrar modales
-  const handleCloseEditModal = () => {
-    setShowEditModal(false);
-    setEditErrors({});
-    setError(null);
-    // Restaurar valores originales
-    if (adminData) {
-      setEditForm({
-        nombre_usuario: adminData.nombre_usuario || '',
-        apellido_usuario: adminData.apellido_usuario || '',
-        correo_usuario: adminData.correo_usuario || adminData.correo_usuario || ''
-      });
-    }
-  };
-
-  const handleClosePasswordModal = () => {
-    setShowPasswordModal(false);
-    setPasswordErrors({});
-    setPasswordForm({
-      current_password: '',
-      new_password: '',
-      confirm_password: ''
-    });
-    setError(null);
-  };
 
   // Función para formatear fecha
   const formatDate = (dateString) => {
@@ -378,305 +122,275 @@ const AdminProfile = () => {
     }
   };
 
+  // Función para obtener las iniciales del nombre
+  const getInitials = (nombre, apellido) => {
+    const n = nombre ? nombre.charAt(0).toUpperCase() : '';
+    const a = apellido ? apellido.charAt(0).toUpperCase() : '';
+    return n + a;
+  };
+
   return (
     <LayoutBarButton userData={userData}>
-      <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
-        <h1>Mi Perfil de Administrador</h1>
-      </div>
-
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-      )}
-      
-      {/* Tarjeta de perfil */}
-      <Card className="mb-4">
-        <Card.Header className="bg-white">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
-              <FaUser className="text-warning me-2" size={20} />
-              <h5 className="mb-0">Información del Perfil</h5>
+      <Container fluid className="py-4">
+        {/* Header con gradiente */}
+        <div 
+          className="position-relative mb-5 rounded-3 overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg,rgb(255, 143, 7) 0%,rgb(230, 134, 17) 100%)',
+            minHeight: '200px'
+          }}
+        >
+          <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
+            <div className="text-center text-white">
+              <h1 className="display-5 fw-bold mb-2">Mi Perfil</h1>
+              <p className="lead mb-0">Panel de Administrador</p>
             </div>
           </div>
-        </Card.Header>
-        <Card.Body>
-          {loading ? (
-            <div className="text-center py-4">
-              <div className="spinner-border text-warning" role="status">
-                <span className="visually-hidden">Cargando...</span>
-              </div>
+        </div>
+
+        {error && (
+          <div className="alert alert-danger rounded-3 mb-4" role="alert">
+            <i className="fas fa-exclamation-triangle me-2"></i>
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-warning mb-3" style={{ width: '3rem', height: '3rem' }}>
+              <span className="visually-hidden">Cargando...</span>
             </div>
-          ) : adminData ? (
-            <Row>
-              <Col md={4} className="text-center mb-4 mb-md-0">
-                <div className="mb-3">
-                  <div 
-                    className="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto"
-                    style={{ width: '150px', height: '150px' }}
-                  >
-                    <FaUserCircle className="text-warning" size={80} />
+            <p className="text-muted">Cargando información del perfil...</p>
+          </div>
+        ) : adminData ? (
+          <Row className="justify-content-center">
+            <Col xxl={10}>
+              {/* Tarjeta principal del perfil */}
+              <Card className="shadow-lg border-0 rounded-4 mb-4" style={{ marginTop: '-80px' }}>
+                <Card.Body className="p-0">
+                  {/* Header del perfil con avatar */}
+                  <div className="bg-light rounded-top-4 p-4 pb-0">
+                    <div className="text-center position-relative">
+                      {/* Avatar principal */}
+                      <div 
+                        className="rounded-circle border border-4 border-white shadow-lg mx-auto mb-3 d-flex align-items-center justify-content-center position-relative"
+                        style={{ 
+                          width: '140px', 
+                          height: '140px',
+                          background: 'linear-gradient(135deg, #ffc107 0%, #ff8c00 100%)',
+                          marginTop: '-70px'
+                        }}
+                      >
+                        <span className="text-white fw-bold" style={{ fontSize: '3rem' }}>
+                          {getInitials(adminData.nombre_usuario, adminData.apellido_usuario)}
+                        </span>
+                      </div>
+                      
+                      {/* Información básica */}
+                      <h2 className="fw-bold mb-2 text-dark">
+                        {adminData.nombre_usuario} {adminData.apellido_usuario}
+                      </h2>
+                      
+                      <div className="d-flex justify-content-center align-items-center gap-2 mb-3">
+                        <Badge 
+                          bg="warning" 
+                          className="px-3 py-2 rounded-pill text-dark fw-semibold"
+                          style={{ fontSize: '0.9rem' }}
+                        >
+                          <FaUserShield className="me-2" />
+                          Administrador
+                        </Badge>
+                        <Badge 
+                          bg="success" 
+                          className="px-3 py-2 rounded-pill fw-semibold"
+                          style={{ fontSize: '0.9rem' }}
+                        >
+                          Activo
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <h4 className="mb-1">
-                  {adminData.nombre_usuario} {adminData.apellido_usuario}
-                </h4>
-                <p className="text-muted">
-                  <Badge bg="info">Administrador</Badge>
-                </p>
-              </Col>
-              <Col md={8}>
-                <Row>
-                  <Col md={6}>
-                    <h5 className="border-bottom pb-2 mb-3">
-                      <FaUser className="me-2 text-warning" />
-                      Información Personal
-                    </h5>
-                    
-                    <div className="mb-3">
-                      <p className="mb-1"><strong>ID de Usuario:</strong></p>
-                      <p>{adminData.id_usuario}</p>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <p className="mb-1"><strong>Nombre:</strong></p>
-                      <p>{adminData.nombre_usuario}</p>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <p className="mb-1"><strong>Apellido:</strong></p>
-                      <p>{adminData.apellido_usuario}</p>
-                    </div>
-                  </Col>
-                  
-                  <Col md={6}>
-                    <h5 className="border-bottom pb-2 mb-3">
-                      <FaUserCog className="me-2 text-warning" />
-                      Información de Cuenta
-                    </h5>
-                    
-                    <div className="mb-3">
-                      <p className="mb-1"><strong>Correo Electrónico:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <FaEnvelope className="me-2 text-warning" />
-                        {adminData.correo_usuario || ''}
-                      </p>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <p className="mb-1"><strong>Fecha de Registro:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <FaClock className="me-2 text-warning" />
-                        {formatDate(adminData.fecha_creacion)}
-                      </p>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <p className="mb-1"><strong>Última Actualización:</strong></p>
-                      <p className="d-flex align-items-center">
-                        <FaClock className="me-2 text-warning" />
-                        {formatDate(adminData.fecha_actualizacion)}
-                      </p>
-                    </div>
-                  </Col>
-                </Row>
-                
-                <div className="mt-4 pt-3 border-top">
-                  <Button 
-                    variant="warning" 
-                    className="me-2"
-                    onClick={handleEditClick}
-                  >
-                    <FaEdit className="me-2" /> Editar Perfil
-                  </Button>
-                  <Button 
-                    variant="outline-warning"
-                    onClick={handlePasswordClick}
-                  >
-                    <FaKey className="me-2" /> Cambiar Contraseña
-                  </Button>
-                </div>
-              </Col>
-            </Row>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-muted">No se encontraron datos del perfil.</p>
+
+                  {/* Información detallada */}
+                  <div className="p-4">
+                    <Row className="g-4">
+                      {/* Información personal */}
+                      <Col lg={6}>
+                        <div className="h-100">
+                          <div className="d-flex align-items-center mb-3">
+                            <div 
+                              className="rounded-circle d-flex align-items-center justify-content-center me-3"
+                              style={{ 
+                                width: '40px', 
+                                height: '40px', 
+                                background: 'linear-gradient(135deg, #ffc107 0%, #ff8c00 100%)' 
+                              }}
+                            >
+                              <FaUser className="text-white" />
+                            </div>
+                            <h4 className="mb-0 text-dark">Información Personal</h4>
+                          </div>
+                          
+                          <div className="ps-5">
+                            <div className="mb-4">
+                              <div className="d-flex align-items-center mb-2">
+                                <FaIdCard className="text-warning me-2" />
+                                <small className="text-muted text-uppercase fw-semibold">ID de Usuario</small>
+                              </div>
+                              <p className="fs-5 mb-0 text-dark fw-semibold">#{adminData.id_usuario}</p>
+                            </div>
+
+                            <div className="mb-4">
+                              <div className="d-flex align-items-center mb-2">
+                                <FaUser className="text-warning me-2" />
+                                <small className="text-muted text-uppercase fw-semibold">Nombre Completo</small>
+                              </div>
+                              <p className="fs-5 mb-0 text-dark">
+                                {adminData.nombre_usuario} {adminData.apellido_usuario}
+                              </p>
+                            </div>
+
+                            <div className="mb-4">
+                              <div className="d-flex align-items-center mb-2">
+                                <FaEnvelope className="text-warning me-2" />
+                                <small className="text-muted text-uppercase fw-semibold">Correo Electrónico</small>
+                              </div>
+                              <p className="fs-5 mb-0 text-dark">
+                                {adminData.correo_usuario || 'No especificado'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </Col>
+
+                      {/* Información de cuenta */}
+                      <Col lg={6}>
+                        <div className="h-100">
+                          <div className="d-flex align-items-center mb-3">
+                            <div 
+                              className="rounded-circle d-flex align-items-center justify-content-center me-3"
+                              style={{ 
+                                width: '40px', 
+                                height: '40px', 
+                                background: 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)' 
+                              }}
+                            >
+                              <FaClock className="text-white" />
+                            </div>
+                            <h4 className="mb-0 text-dark">Información de Cuenta</h4>
+                          </div>
+                          
+                          <div className="ps-5">
+                            <div className="mb-4">
+                              <div className="d-flex align-items-center mb-2">
+                                <FaCalendarAlt className="text-info me-2" />
+                                <small className="text-muted text-uppercase fw-semibold">Fecha de Registro</small>
+                              </div>
+                              <p className="fs-6 mb-0 text-dark">
+                                {formatDate(adminData.fecha_creacion)}
+                              </p>
+                            </div>
+
+                            <div className="mb-4">
+                              <div className="d-flex align-items-center mb-2">
+                                <FaEdit className="text-info me-2" />
+                                <small className="text-muted text-uppercase fw-semibold">Última Actualización</small>
+                              </div>
+                              <p className="fs-6 mb-0 text-dark">
+                                {formatDate(adminData.fecha_actualizacion)}
+                              </p>
+                            </div>
+
+                            <div className="mb-4">
+                              <div className="d-flex align-items-center mb-2">
+                                <FaUserShield className="text-info me-2" />
+                                <small className="text-muted text-uppercase fw-semibold">Rol del Usuario</small>
+                              </div>
+                              <p className="fs-6 mb-0">
+                                <Badge bg="warning" className="text-dark">
+                                  Administrador del Sistema
+                                </Badge>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </Col>
+                    </Row>
+                  </div>
+                </Card.Body>
+              </Card>
+
+              {/* Tarjetas de estadísticas adicionales */}
+              <Row className="g-4">
+                <Col md={4}>
+                  <Card className="border-0 shadow-sm h-100 text-center rounded-3">
+                    <Card.Body className="p-4">
+                      <div 
+                        className="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                        style={{ 
+                          width: '60px', 
+                          height: '60px', 
+                          background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)' 
+                        }}
+                      >
+                        <FaUserShield className="text-white" size={24} />
+                      </div>
+                      <h5 className="text-dark mb-2">Privilegios</h5>
+                      <p className="text-muted mb-0">Acceso completo al sistema</p>
+                    </Card.Body>
+                  </Card>
+                </Col>
+
+                <Col md={4}>
+                  <Card className="border-0 shadow-sm h-100 text-center rounded-3">
+                    <Card.Body className="p-4">
+                      <div 
+                        className="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                        style={{ 
+                          width: '60px', 
+                          height: '60px', 
+                          background: 'linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%)' 
+                        }}
+                      >
+                        <FaClock className="text-white" size={24} />
+                      </div>
+                      <h5 className="text-dark mb-2">Estado</h5>
+                      <p className="text-muted mb-0">Sesión activa</p>
+                    </Card.Body>
+                  </Card>
+                </Col>
+
+                <Col md={4}>
+                  <Card className="border-0 shadow-sm h-100 text-center rounded-3">
+                    <Card.Body className="p-4">
+                      <div 
+                        className="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                        style={{ 
+                          width: '60px', 
+                          height: '60px', 
+                          background: 'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)' 
+                        }}
+                      >
+                        <FaIdCard className="text-white" size={24} />
+                      </div>
+                      <h5 className="text-dark mb-2">Identificación</h5>
+                      <p className="text-muted mb-0">ID #{adminData.id_usuario}</p>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+        ) : (
+          <div className="text-center py-5">
+            <div className="mb-4">
+              <FaUserCircle className="text-muted" size={80} />
             </div>
-          )}
-        </Card.Body>
-      </Card>
-      
-      {/* Modal para editar perfil */}
-      <Modal 
-        show={showEditModal} 
-        onHide={handleCloseEditModal}
-        centered
-      >
-        <Modal.Header closeButton className="border-bottom border-warning">
-          <Modal.Title>
-            <FaEdit className="me-2 text-warning" />
-            Editar Perfil
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleSubmitEditProfile}>
-            <Form.Group className="mb-3">
-              <Form.Label>Nombre</Form.Label>
-              <Form.Control
-                type="text"
-                name="nombre_usuario"
-                value={editForm.nombre_usuario}
-                onChange={handleEditInputChange}
-                isInvalid={!!editErrors.nombre_usuario}
-                required
-              />
-              <Form.Control.Feedback type="invalid">
-                {editErrors.nombre_usuario}
-              </Form.Control.Feedback>
-            </Form.Group>
-            
-            <Form.Group className="mb-3">
-              <Form.Label>Apellido</Form.Label>
-              <Form.Control
-                type="text"
-                name="apellido_usuario"
-                value={editForm.apellido_usuario}
-                onChange={handleEditInputChange}
-                isInvalid={!!editErrors.apellido_usuario}
-                required
-              />
-              <Form.Control.Feedback type="invalid">
-                {editErrors.apellido_usuario}
-              </Form.Control.Feedback>
-            </Form.Group>
-            
-            <Form.Group className="mb-3">
-              <Form.Label>Correo Electrónico</Form.Label>
-              <Form.Control
-                type="email"
-                name="correo_usuario"
-                value={editForm.correo_usuario}
-                onChange={handleEditInputChange}
-                isInvalid={!!editErrors.correo_usuario}
-                required
-              />
-              <Form.Control.Feedback type="invalid">
-                {editErrors.correo_usuario}
-              </Form.Control.Feedback>
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseEditModal}>
-            Cancelar
-          </Button>
-          <Button 
-            variant="warning" 
-            onClick={handleSubmitEditProfile}
-            disabled={saving}
-          >
-            {saving ? (
-              <>
-                <div className="spinner-border spinner-border-sm me-2" role="status">
-                  <span className="visually-hidden">Guardando...</span>
-                </div>
-                Guardando...
-              </>
-            ) : (
-              <>
-                <FaSave className="me-2" />
-                Guardar Cambios
-              </>
-            )}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-      
-      {/* Modal para cambiar contraseña */}
-      <Modal 
-        show={showPasswordModal} 
-        onHide={handleClosePasswordModal}
-        centered
-      >
-        <Modal.Header closeButton className="border-bottom border-warning">
-          <Modal.Title>
-            <FaLock className="me-2 text-warning" />
-            Cambiar Contraseña
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleSubmitPasswordChange}>
-            <Form.Group className="mb-3">
-              <Form.Label>Contraseña Actual</Form.Label>
-              <Form.Control
-                type="password"
-                name="current_password"
-                value={passwordForm.current_password}
-                onChange={handlePasswordInputChange}
-                isInvalid={!!passwordErrors.current_password}
-                required
-              />
-              <Form.Control.Feedback type="invalid">
-                {passwordErrors.current_password}
-              </Form.Control.Feedback>
-            </Form.Group>
-            
-            <Form.Group className="mb-3">
-              <Form.Label>Nueva Contraseña</Form.Label>
-              <Form.Control
-                type="password"
-                name="new_password"
-                value={passwordForm.new_password}
-                onChange={handlePasswordInputChange}
-                isInvalid={!!passwordErrors.new_password}
-                required
-              />
-              <Form.Control.Feedback type="invalid">
-                {passwordErrors.new_password}
-              </Form.Control.Feedback>
-            </Form.Group>
-            
-            <Form.Group className="mb-3">
-              <Form.Label>Confirmar Nueva Contraseña</Form.Label>
-              <Form.Control
-                type="password"
-                name="confirm_password"
-                value={passwordForm.confirm_password}
-                onChange={handlePasswordInputChange}
-                isInvalid={!!passwordErrors.confirm_password}
-                required
-              />
-              <Form.Control.Feedback type="invalid">
-                {passwordErrors.confirm_password}
-              </Form.Control.Feedback>
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClosePasswordModal}>
-            Cancelar
-          </Button>
-          <Button 
-            variant="warning" 
-            onClick={handleSubmitPasswordChange}
-            disabled={saving}
-          >
-            {saving ? (
-              <>
-                <div className="spinner-border spinner-border-sm me-2" role="status">
-                  <span className="visually-hidden">Actualizando...</span>
-                </div>
-                Actualizando...
-              </>
-            ) : (
-              <>
-                <FaSave className="me-2" />
-                Cambiar Contraseña
-              </>
-            )}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+            <h4 className="text-muted mb-2">No se encontraron datos del perfil</h4>
+            <p className="text-muted">No pudimos cargar la información de tu perfil.</p>
+          </div>
+        )}
+      </Container>
     </LayoutBarButton>
   );
 };

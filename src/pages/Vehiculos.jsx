@@ -43,14 +43,11 @@ const Vehiculos = () => {
     modelo: '',
     conductor: '',
     estado_vehiculo: 'Activo',
-    seguro: '',
     kilometraje: '',
     marca: '',
     color: '',
     capacidad: '',
     tipo: '',
-    peso: '',
-    matricula: '',
   });
   
   const [validated, setValidated] = useState(false);
@@ -162,14 +159,11 @@ const Vehiculos = () => {
     modelo: vehiculo.modelo || '',
     conductor: vehiculo.conductor || '',
     estado_vehiculo: vehiculo.estado_vehiculo || 1,
-    seguro: vehiculo.seguro || '',
     kilometraje: vehiculo.kilometraje || '',
     marca: vehiculo.marca || '',
     color: vehiculo.color || '',
     capacidad: vehiculo.capacidad || '',
     tipo: vehiculo.tipo || '',
-    peso: vehiculo.peso || '',
-    matricula: vehiculo.matricula || '',
   });
   setShowEditModal(true);
 };
@@ -278,14 +272,12 @@ const handleUpdateVehicle = async (e) => {
         modelo: '',
         conductor: '',
         estado_vehiculo: 1,
-        seguro: '',
         kilometraje: '',
         marca: '',
         color: '',
         capacidad: '',
         tipo: '',
-        peso: '',
-        matricula: '',
+
       });
       setValidated(false);
       alert('Vehículo creado exitosamente');
@@ -509,23 +501,8 @@ const handleUpdateVehicle = async (e) => {
                       <p>{currentVehicle.tipo || 'N/A'}</p>
                     </Col>
                   </Row>
-                  <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Matrícula:</strong></p>
-                      <p>{currentVehicle.matricula || 'N/A'}</p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Peso:</strong></p>
-                      <p>{currentVehicle.peso ? `${currentVehicle.peso} kg` : 'N/A'}</p>
-                    </Col>
-                  </Row>
-                  
                   <h5 className="mb-3 mt-4">Mantenimiento</h5>
                   <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Seguro:</strong></p>
-                      <p>{currentVehicle.seguro || 'N/A'}</p>
-                    </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Kilometraje:</strong></p>
                       <p>{currentVehicle.kilometraje ? `${currentVehicle.kilometraje} km` : 'N/A'}</p>

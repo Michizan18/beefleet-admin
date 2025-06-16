@@ -44,7 +44,6 @@ const Vehiculos = () => {
     modelo: '',
     estado_vehiculo: 1,
     conductor: '',
-    estado_vehiculo: 'Activo',
     kilometraje: '',
     color: '',
     capacidad: '',
@@ -165,7 +164,6 @@ const Vehiculos = () => {
     color: vehiculo.color || '',
     capacidad: vehiculo.capacidad || '',
     tipo: vehiculo.tipo || ''
-    tipo: vehiculo.tipo || '',
   });
   setShowEditModal(true);
 };

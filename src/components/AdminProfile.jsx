@@ -136,7 +136,7 @@ const AdminProfile = () => {
         <div 
           className="position-relative mb-5 rounded-3 overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg,rgb(255, 143, 7) 0%,rgb(230, 134, 17) 100%)',
+            background: 'linear-gradient(135deg,rgb(255, 140, 0) 0%,rgb(255, 140, 0) 100%)',
             minHeight: '200px'
           }}
         >

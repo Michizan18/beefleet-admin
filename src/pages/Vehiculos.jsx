@@ -43,11 +43,12 @@ const Vehiculos = () => {
     marca: '',
     modelo: '',
     estado_vehiculo: 1,
+    conductor: '',
+    estado_vehiculo: 'Activo',
     kilometraje: '',
     color: '',
     capacidad: '',
     tipo: '',
-    peso: '',
     conductor: ''
   });
   
@@ -164,6 +165,7 @@ const Vehiculos = () => {
     color: vehiculo.color || '',
     capacidad: vehiculo.capacidad || '',
     tipo: vehiculo.tipo || ''
+    tipo: vehiculo.tipo || '',
   });
   setShowEditModal(true);
 };
@@ -278,6 +280,7 @@ const handleUpdateVehicle = async (e) => {
         tipo: '',
         peso: '',
         conductor: ''
+
       });
       setValidated(false);
       fetchData();
@@ -502,23 +505,8 @@ const handleUpdateVehicle = async (e) => {
                       <p>{currentVehicle.tipo || 'N/A'}</p>
                     </Col>
                   </Row>
-                  <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Matrícula:</strong></p>
-                      <p>{currentVehicle.matricula || 'N/A'}</p>
-                    </Col>
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Peso:</strong></p>
-                      <p>{currentVehicle.peso ? `${currentVehicle.peso} kg` : 'N/A'}</p>
-                    </Col>
-                  </Row>
-                  
                   <h5 className="mb-3 mt-4">Mantenimiento</h5>
                   <Row className="mb-3">
-                    <Col sm={6}>
-                      <p className="mb-1"><strong>Seguro:</strong></p>
-                      <p>{currentVehicle.seguro || 'N/A'}</p>
-                    </Col>
                     <Col sm={6}>
                       <p className="mb-1"><strong>Kilometraje:</strong></p>
                       <p>{currentVehicle.kilometraje ? `${currentVehicle.kilometraje} km` : 'N/A'}</p>
@@ -642,7 +630,7 @@ const handleUpdateVehicle = async (e) => {
       <Row className="mb-3">
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Capacidad</Form.Label>
+            <Form.Label>Capacidad (kg)</Form.Label>
             <Form.Control
               type="text"
               value={editFormData.capacidad || ''}
@@ -800,7 +788,7 @@ const handleUpdateVehicle = async (e) => {
       <Row className="mb-3">
         <Col md={6}>
           <Form.Group className="mb-3">
-            <Form.Label>Capacidad</Form.Label>
+            <Form.Label>Capacidad (kg)</Form.Label>
             <Form.Control
               type="text"
               name="capacidad"

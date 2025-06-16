@@ -18,9 +18,6 @@ const DOCUMENT_TYPES = [
 
 // Constantes para tipos de licencia
 const LICENSE_TYPES = [
-  { value: 'A1', label: 'A1 - Motocicletas' },
-  { value: 'A2', label: 'A2 - Motocicletas, motocarros, cuatrimotos' },
-  { value: 'B1', label: 'B1 - Automóviles, camionetas' },
   { value: 'B2', label: 'B2 - Camiones rígidos, buses' },
   { value: 'B3', label: 'B3 - Vehículos articulados' },
   { value: 'C1', label: 'C1 - Automóviles, camionetas servicio público' },
@@ -236,7 +233,8 @@ const Conductores = () => {
     // Ocultar modal de éxito después de 3 segundos
     setTimeout(() => setShowSuccessModal(false), 3000);
     
-    setDrivers(prev => [...prev, normalizeDriverData(data.driver || data)]);
+    // Actualizar el estado local con el nuevo conductor
+setDrivers(prevDrivers => [normalizeDriverData(data.driver || data), ...prevDrivers]);
     setNewDriver(initialDriverState);
     setValidated(false);
 
@@ -371,9 +369,9 @@ const handleSubmitEditDriver = async (e) => {
     setSuccessMessage('¡Conductor actualizado exitosamente!');
     setSuccessSubMessage('Los cambios han sido guardados correctamente');
     setShowEditSuccessModal(true);
-    
-    // Ocultar modal después de 3 segundos
-    setTimeout(() => setShowEditSuccessModal(false), 3000);
+
+    // Ocultar modal después de 2 segundos
+    setTimeout(() => setShowEditSuccessModal(false), 2000);
     
   } catch (error) {
     setError(`Error al actualizar el conductor: ${error.message}`);
@@ -398,9 +396,9 @@ const confirmDeleteDriver = async () => {
     setSuccessMessage('¡Conductor eliminado exitosamente!');
     setSuccessSubMessage('El conductor ha sido removido del sistema');
     setShowDeleteSuccessModal(true);
-    
-    // Ocultar modal después de 3 segundos
-    setTimeout(() => setShowDeleteSuccessModal(false), 3000);
+
+    // Ocultar modal después de 2 segundos
+    setTimeout(() => setShowDeleteSuccessModal(false), 2000);
     
   } catch (error) {
     setError(`Error al eliminar el conductor: ${error.message}`);

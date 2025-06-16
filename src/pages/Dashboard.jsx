@@ -170,6 +170,13 @@ const Dashboard = () => {
     );
   }
 
+  // Función para obtener los últimos 5 empleados recientes
+  const getRecentEmployees = () => {
+  return conductores
+    .sort((a, b) => new Date(b.fecha_creacion || b.created_at || 0) - new Date(a.fecha_creacion || a.created_at || 0))
+    .slice(0, 5);
+};
+
   const dashboardContent = (
     <>
       <h1 className="mt-4 mb-4">Dashboard</h1>
@@ -247,7 +254,7 @@ const Dashboard = () => {
               <Button as={Link} to="/conductores" variant="outline-warning" size="sm">Ver Todos</Button>
             </Card.Header>
             <Card.Body>
-              {conductores.length > 0 ? (
+              { getRecentEmployees().length > 0 ? (
                 <Table responsive className="table-hover">
                   <thead>
                     <tr>
@@ -257,7 +264,7 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {conductores.map(conductor => (
+                    {getRecentEmployees().map(conductor => (
                       <tr key={conductor.id_conductor || Math.random()}>
                         <td>{conductor.nombre_conductor || 'Sin nombre'}</td>
                         <td>{formatDate(conductor.fecha_vencimiento)}</td>

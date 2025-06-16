@@ -43,7 +43,6 @@ const Vehiculos = () => {
     marca: '',
     modelo: '',
     estado_vehiculo: 1,
-    conductor: '',
     kilometraje: '',
     color: '',
     capacidad: '',
@@ -276,7 +275,6 @@ const handleUpdateVehicle = async (e) => {
         color: '',
         capacidad: '',
         tipo: '',
-        peso: '',
         conductor: ''
 
       });

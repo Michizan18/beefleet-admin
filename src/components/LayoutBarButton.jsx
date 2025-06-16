@@ -5,6 +5,7 @@ import MenuNotificaciones from './MenuNotificaciones';
 import { 
   FaUsers, FaCar, FaChartLine, FaBell, 
   FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog, FaMapMarkedAlt, FaTruckLoading,
+  FaTruck, FaRoute
 } from 'react-icons/fa';
 import { FaPeopleCarryBox, FaMoneyBillWave } from "react-icons/fa6";
 import { GiReceiveMoney } from "react-icons/gi";
@@ -93,13 +94,13 @@ const LayoutBarButton = ({ children} ) => {
             to="/vehiculos" 
             className={`header-button ${currentPath === '/vehiculos' ? 'active' : ''}`}
           >
-            <FaCar className="icon" /> Vehículos
+            <FaTruck className="icon" /> Vehículos
           </Link>
           <Link 
             to="/rutas" 
             className={`header-button ${currentPath === '/rutas' ? 'active' : ''}`}
           >
-            <FaMapMarkedAlt className="icon" /> Rutas
+            <FaRoute className="icon" /> Rutas
           </Link>
           <Link 
             to="/cargas" 

@@ -174,7 +174,7 @@ const Dashboard = () => {
   const getRecentEmployees = () => {
   return conductores
     .sort((a, b) => new Date(b.fecha_creacion || b.created_at || 0) - new Date(a.fecha_creacion || a.created_at || 0))
-    .slice(0, 5);
+    .slice(0, 2);
 };
 
   const dashboardContent = (

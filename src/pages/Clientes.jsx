@@ -37,8 +37,7 @@ const Clientes = () => {
     direccion: '',
     ciudad: '',
     telefono: '',
-    empresa: '',
-    email: '',
+    empresa: ''
   });
   
   const [editClient, setEditClient] = useState({
@@ -47,8 +46,7 @@ const Clientes = () => {
     direccion: '',
     ciudad: '',
     telefono: '',
-    empresa: '',
-    email: '',
+    empresa: ''
   });
   
   // Estados de validación
@@ -275,8 +273,7 @@ const Clientes = () => {
         direccion: '',
         ciudad: '',
         telefono: '',
-        empresa: '',
-        email: '',
+        empresa: ''
       });
       setValidated(false);
       setError(null);
@@ -323,7 +320,6 @@ const Clientes = () => {
         ciudad: client.ciudad || '',
         telefono: client.telefono || '',
         direccion: client.direccion || '',
-        email: client.email || '',
         empresa: client.empresa || ''
       });
       setShowEditClientModal(true);

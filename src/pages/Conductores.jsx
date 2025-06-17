@@ -75,51 +75,12 @@ const Conductores = () => {
   
   // Estados de validación
   const [validated, setValidated] = useState(false);
-  const [editValidated, setEditValidated] = useState(false);
-
-  // Estados para alertas y mensajes de éxito
-  const [showSendingAlert, setShowSendingAlert] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showEditSuccessModal, setShowEditSuccessModal] = useState(false);
-  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [successSubMessage, setSuccessSubMessage] = useState('');
-
-  // Función para obtener el token de autenticación
-  const getAuthToken = useCallback(() => {
-    const token = localStorage.getItem('token');
-    console.log(token ? `Bearer ${token}` : "XXXX")
-    return token ? `Bearer ${token}` : null;
-  }, []);
-
-  // Función para normalizar datos de conductores
-  const normalizeDriverData = useCallback((driver) => {
-    return {
-      id_conductor: driver.id_conductor || driver.id || '',
-      tipo_documento: driver.tipo_documento || 'CC',
-      documento: driver.documento || '',
-      nombre_conductor: driver.nombre_conductor || '',
-      apellido_conductor: driver.apellido_conductor || '',
-      correo_conductor: driver.correo_conductor || '',
-      foto: driver.foto || '',
-      telefono: driver.telefono || '',
-      ciudad: driver.ciudad || '',
-      direccion: driver.direccion || '',
-      tipo_licencia: driver.tipo_licencia || '',
-      fecha_vencimiento: driver.fecha_vencimiento || '',
-      experiencia: driver.experiencia || '',
-      estado: driver.estado || 'Activo',
-      fecha_registro: driver.fecha_registro || ''
-    };
-  }, []);
-
-  // Función para obtener todos los conductores
-  const fetchDrivers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
+  
+  const conductoresPorPagina = 8;
+  const fetchConductores = async () => {
     try {
-      const token = getAuthToken();
+      const token = localStorage.getItem('token');
+      
       if (!token) {
         setError('No hay token de autenticación');
         setLoading(false);
@@ -136,35 +97,174 @@ const Conductores = () => {
       
       if (!response.ok) {
         const errorText = await response.text();
-        if (response.status === 401 || response.status === 403) {
-          localStorage.removeItem('token');
-          setError('Sesión expirada. Por favor, inicie sesión nuevamente.');
-          return;
-        }
-        throw new Error(errorText || 'Error al obtener los conductores');
+        console.log('Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      const processedData = Array.isArray(data) ? data.map(normalizeDriverData) : [normalizeDriverData(data)];
-      
-      if (!processedData.length) {
-        setError('No se encontraron conductores');
-      }
-      
-      setDrivers(processedData);
-      
+      const driverData = await response.json();
+      setConductores(driverData);
+      setFilteredConductores(driverData);
     } catch (error) {
-      console.error('Error fetching drivers:', error);
-      setError(`Error al cargar los conductores: ${error.message}`);
-      setDrivers([]);
+      console.error("Error al cargar datos de conductores:", error);
     } finally {
       setLoading(false);
     }
-  }, [getAuthToken, normalizeDriverData]);
+  };
+  useEffect(() => {
+    // Filtrar conductores según búsqueda y estado
+    let filtered = conductores;
+    
+    // Aplicar filtro por término de búsqueda
+    if (searchTerm) {
+      filtered = filtered.filter(conductor => 
+        conductor.nombre_conductor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conductor.documento?.includes(searchTerm)
+      );
+    }
+    
+    // Aplicar filtro por estado
+    if (filterStatus !== 'todos') {
+      filtered = filtered.filter(conductor => conductor.estado === filterStatus);
+    }
+    
+    setFilteredConductores(filtered);
+    setCurrentPage(1); // Resetear a primera página al filtrar
+    fetchConductores();
+  }, [searchTerm, filterStatus, conductores]);
+  
+  // Formatear fecha a formato español
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('es-ES', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+  
+  // Gestionar el cambio de página
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+  
+  // Calcular índices para paginación
+  const indexOfLastConductor = currentPage * conductoresPorPagina;
+  const indexOfFirstConductor = indexOfLastConductor - conductoresPorPagina;
+  const currentConductores = filteredConductores.slice(indexOfFirstConductor, indexOfLastConductor);
+  
+  // Calcular total de páginas
+  const totalPages = Math.ceil(filteredConductores.length / conductoresPorPagina);
+  
+  // Mostrar detalles de conductor
+  const handleShowDetails = (driver) => {
+    setCurrentDriver(driver);
+    setShowModal(true);
+  };
 
+  // Manejar cambios en el formulario
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Manejar campos numéricos específicamente
+    let processedValue = value;
+    
+    if (name === 'documento') {
+      // Solo permitir números para documento
+      processedValue = value.replace(/\D/g, '');
+    } else if (name === 'experiencia') {
+      // Solo permitir números para experiencia
+      processedValue = value.replace(/\D/g, '');
+    }
+    
+    setNewDriver({
+      ...newDriver,
+      [name]: processedValue
+    });
+  };
 
-  // Función para crear un nuevo conductor
-  const handleSubmitNewDriver = async (e) => {
+  const getAuthToken = () => {
+    const token = localStorage.getItem('token');
+    return token ? `Bearer ${token}` : null; // Agregar Bearer prefix
+  };
+
+  const handleDeleteDriver = async (id_conductor, nombre_conductor, apellido_conductor, documento) => {
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que quieres eliminar al conductor?\n\n` +
+      `Nombre: ${nombre_conductor} ${apellido_conductor}\n` +
+      `Documento: ${documento}`
+    );
+    
+    if (confirmDelete) {
+      try {
+        const token = getAuthToken(); 
+        if (!token) {
+          throw new Error('No hay token de autenticación');
+        }
+        const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Error al eliminar el cliente');
+        }
+        // Actualiza la lista de conductores después de eliminar
+        setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
+        // Mostrar mensaje de éxito
+        alert(`Conductor ${nombre_conductor} ${apellido_conductor} eliminado exitosamente`);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert(`Hubo un error al eliminar el conductor: ${error.message}`);
+      }
+    }
+  };
+
+  // const updateConductor = async(id_conductor, updatedData) => {
+  //   try {
+  //     setIsUpdating(true);
+  //     const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type' : 'application/json'
+  //       },
+  //       body: JSON.stringify(updatedData)
+  //     });
+  //     if (!response.ok){
+  //       throw new Error('Error al actualizar el conductor')
+  //     }
+  //     const data = await response.json();
+  //     setConductores(data);
+  //   } catch (error) {
+  //     console.error('Error:', error);
+  //     alert('Hubo un error al crear el conductor');
+  //   } finally{
+  //     setIsUpdating(false)
+  //   }
+  // }
+
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   const formData = new FormData(e.target);
+  //   const updateConductor = {
+  //     tipo_documento: formData.get('tipo_documento'),
+  //     documento: formData.get('documento'),
+  //     nombre_conductor: formData.get('nombre_conductor'),
+  //     apellido_conductor: formData.get('apellido_conductor'),
+  //     correo_conductor: formData.get('correo_conductor'),
+  //     foto: formData.get('foto'),
+  //     telefono: formData.get('telefono'),
+  //     ciudad: formData.get('ciudad'),
+  //     direccion: formData.get('direccion')
+  //   }
+  //   updateConductor(conductor.id_conductor, updateConductor);
+  // }
+
+// Función corregida para manejar el envío del formulario
+const handleSubmitNewDriver = async (e) => {
   e.preventDefault();
   const form = e.currentTarget;
   const token = getAuthToken();
@@ -209,6 +309,8 @@ const Conductores = () => {
       fecha_vencimiento: newDriver.fecha_vencimiento || null
     };
 
+    const token = localStorage.getItem('token');
+    
     const response = await fetch('http://localhost:3001/api/drivers', {
       method: 'POST',
       headers: {
@@ -226,16 +328,27 @@ const Conductores = () => {
     const data = await response.json();
     // Cerrar modal de crear y mostrar modal de éxito
     setShowNewDriverModal(false);
-    setSuccessMessage('¡Conductor creado exitosamente!');
-    setSuccessSubMessage('Contraseña enviada al correo electrónico');
-    setShowSuccessModal(true);
     
-    // Ocultar modal de éxito después de 3 segundos
-    setTimeout(() => setShowSuccessModal(false), 3000);
+    // Actualizar la lista de conductores
+    setConductores(prev => [...prev, data.driver || data]);
     
-    // Actualizar el estado local con el nuevo conductor
-setDrivers(prevDrivers => [normalizeDriverData(data.driver || data), ...prevDrivers]);
-    setNewDriver(initialDriverState);
+    // Limpiar el formulario
+    setNewDriver({
+      tipo_documento: '',
+      documento: '',
+      nombre_conductor: '',
+      apellido_conductor: '',
+      correo_conductor: '',
+      foto: '',
+      telefono: '',
+      ciudad: '',
+      direccion: '',
+      tipo_licencia: '',
+      fecha_vencimiento: '',
+      experiencia: '',
+      estado: 'Activo',
+    });
+    
     setValidated(false);
 
   } catch (error) {
@@ -245,184 +358,67 @@ setDrivers(prevDrivers => [normalizeDriverData(data.driver || data), ...prevDriv
     setIsUpdating(false);
   }
 };
-
-  // Función para editar un conductor
-  const updateDriver = useCallback(async (id_conductor, driverData) => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`http://localhost:3001/api/drivers/${id_conductor}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(driverData)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Error al actualizar el conductor');
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error updating driver:', error.message);
-      throw error;
-    }
-  }, [getAuthToken]);
-
-  // Función para eliminar un conductor
-  const deleteDriver = useCallback(async (driverId) => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`http://localhost:3001/api/drivers/${driverId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Error al eliminar el conductor');
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error deleting driver:', error);
-      throw error;
-    }
-  }, [getAuthToken]);
-
-  useEffect(() => {
-    fetchDrivers();
-  }, [fetchDrivers]);
-
-  // Handlers para cambios en los inputs
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewDriver(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleEditInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditDriver(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Handler para mostrar detalles del conductor
-  const handleShowDetails = useCallback((driver) => {
-    if (!driver) {
-      setError('Conductor inválido seleccionado');
-      return;
-    }
-    
-    setCurrentDriver(normalizeDriverData(driver));
-    setShowDriverModal(true);
-    setError(null);
-  }, [normalizeDriverData]);
-
-  // Handler para editar conductor
-  const handleEditDriver = useCallback((driver) => {
-    if (!driver) {
-      setError('Conductor inválido para editar');
-      return;
-    }
-    
-    setShowDriverModal(false);
-    setEditDriver(normalizeDriverData(driver));
-    setShowEditDriverModal(true);
-    setEditValidated(false);
-    setError(null);
-  }, [normalizeDriverData]);
-
-  // Handler para eliminar conductor
-  const handleDeleteDriver = useCallback((driverId) => {
-    const driver = drivers.find(d => d.id_conductor === driverId);
-    if (driver) {
-      setDriverToDelete(driver);
-      setShowDeleteModal(true);
-    }
-  }, [drivers]);
-
-  // Handler para enviar edición de conductor
-const handleSubmitEditDriver = async (e) => {
-  e.preventDefault();
-  const form = e.currentTarget;
   
-  if (form.checkValidity() === false) {
-    e.stopPropagation();
-    setEditValidated(true);
-    return;
-  }
-  
-  try {
-    setLoading(true);
-    const { id_conductor, ...driverData } = editDriver;
-    await updateDriver(id_conductor, driverData);
-    await fetchDrivers();
+  // Componente de Paginación
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
     
-    setShowEditDriverModal(false);
-    setEditValidated(false);
-    setError(null);
-    
-    // Mostrar modal de éxito para edición
-    setSuccessMessage('¡Conductor actualizado exitosamente!');
-    setSuccessSubMessage('Los cambios han sido guardados correctamente');
-    setShowEditSuccessModal(true);
-
-    // Ocultar modal después de 2 segundos
-    setTimeout(() => setShowEditSuccessModal(false), 2000);
-    
-  } catch (error) {
-    setError(`Error al actualizar el conductor: ${error.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // Confirmar eliminación de conductor
-const confirmDeleteDriver = async () => {
-  if (!driverToDelete) return;
-  
-  try {
-    setLoading(true);
-    await deleteDriver(driverToDelete.id_conductor);
-    await fetchDrivers();
-    setShowDeleteModal(false);
-    setDriverToDelete(null);
-    setError(null);
-    
-    // Mostrar modal de éxito para eliminación
-    setSuccessMessage('¡Conductor eliminado exitosamente!');
-    setSuccessSubMessage('El conductor ha sido removido del sistema');
-    setShowDeleteSuccessModal(true);
-
-    // Ocultar modal después de 2 segundos
-    setTimeout(() => setShowDeleteSuccessModal(false), 2000);
-    
-  } catch (error) {
-    setError(`Error al eliminar el conductor: ${error.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // Filtrar conductores
-  const filteredDrivers = drivers.filter((driver) => {
-    if (!driver?.id_conductor) return false;
-    
-    const searchLower = searchTerm.toLowerCase();
     return (
-      (driver.documento?.toString() || '').toLowerCase().includes(searchLower) ||
-      (driver.nombre_conductor?.toLowerCase() || '').includes(searchLower) ||
-      (driver.apellido_conductor?.toLowerCase() || '').includes(searchLower) ||
-      (driver.ciudad?.toLowerCase() || '').includes(searchLower) ||
-      (driver.correo_conductor?.toLowerCase() || '').includes(searchLower)
+      <div className="pagination-container d-flex justify-content-between align-items-center mt-3">
+        <div className="showing-entries">
+          Mostrando {indexOfFirstConductor + 1} a {Math.min(indexOfLastConductor, filteredConductores.length)} de {filteredConductores.length} registros
+        </div>
+        <ul className="pagination mb-0">
+          <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+            <a className="page-link" href="#!" onClick={() => handlePageChange(Math.max(1, currentPage - 1))}>
+              Anterior
+            </a>
+          </li>
+          {[...Array(totalPages)].map((_, i) => (
+            <li key={i} className={`page-item ${i + 1 === currentPage ? 'active' : ''}`}>
+              <a className="page-link" href="#!" onClick={() => handlePageChange(i + 1)}>
+                {i + 1}
+              </a>
+            </li>
+          ))}
+          <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+            <a className="page-link" href="#!" onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}>
+              Siguiente
+            </a>
+          </li>
+        </ul>
+      </div>
     );
-  });
-
-  return (
-    <LayoutBarButton userData={userData}>
+  };
+  
+  // Componente para el badge de estado
+  const EstadoBadge = ({ estado }) => {
+    let variant;
+    switch (estado) {
+      case 'Activo':
+        variant = 'success';
+        break;
+      case 'En ruta':
+        variant = 'primary';
+        break;
+      case 'Descanso':
+      case 'Entrenamiento':
+        variant = 'warning';
+        break;
+      case 'Inactivo':
+        variant = 'danger';
+        break;
+      default:
+        variant = 'secondary';
+    }
+    
+    return <span className={`badge bg-${variant} rounded-pill`}>{estado}</span>;
+  };
+  
+  
+  const conductoresContent = (
+    <>
+      
       <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
         <h1>Gestión de Conductores</h1>
         <Button 
@@ -746,8 +742,8 @@ const confirmDeleteDriver = async () => {
                   <p className="mb-1"><strong>Fecha de Registro:</strong></p>
                   <p className="d-flex align-items-center">
                     <FaCalendarPlus className="me-2 text-warning" />
-                    {currentDriver.fecha_registro ? 
-                      new Date(currentDriver.fecha_registro).toLocaleDateString('es-CO') : 
+                    {currentDriver.fecha_ingreso ? 
+                      new Date(currentDriver.fecha_ingreso).toLocaleDateString('es-CO') : 
                       'No disponible'
                     }
                   </p>

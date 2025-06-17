@@ -105,7 +105,7 @@ const LoginForm = () => {
                 </Form>
                 
                 <div className="text-center mt-3">
-                  <a href="/recuperar-password" className="text-white">¿Olvidaste tu contraseña?</a>
+                  <a href="/forgot-password" className="text-white">¿Olvidaste tu contraseña?</a>
                 </div>
               </Card.Body>
             </Card>

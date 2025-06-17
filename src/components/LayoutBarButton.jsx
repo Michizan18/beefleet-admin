@@ -224,9 +224,6 @@ const LayoutBarButton = ({ children }) => {
                   <Dropdown.Item as={Link} to="/profile">
                     <FaUserCircle className="me-2" /> Mi Perfil
                   </Dropdown.Item>
-                  <Dropdown.Item as={Link} to="/configuraciones">
-                    <FaCog className="me-2" /> Configuración
-                  </Dropdown.Item>
                   <Dropdown.Divider />
                   <Dropdown.Item href="#!" onClick={() => {
                     // Limpiar datos del usuario al cerrar sesión

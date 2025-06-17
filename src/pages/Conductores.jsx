@@ -766,8 +766,8 @@ const confirmDeleteDriver = async () => {
                   <p className="mb-1"><strong>Fecha de Registro:</strong></p>
                   <p className="d-flex align-items-center">
                     <FaCalendarPlus className="me-2 text-warning" />
-                    {currentDriver.fecha_registro ? 
-                      new Date(currentDriver.fecha_registro).toLocaleDateString('es-CO') : 
+                    {currentDriver.fecha_ingreso ? 
+                      new Date(currentDriver.fecha_ingreso).toLocaleDateString('es-CO') : 
                       'No disponible'
                     }
                   </p>

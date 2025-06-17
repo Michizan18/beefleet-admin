@@ -93,25 +93,25 @@ const Conductores = () => {
   }, []);
 
   // Función para normalizar datos de conductores
-  const normalizeDriverData = useCallback((driver) => {
-    return {
-      id_conductor: driver.id_conductor || driver.id || '',
-      tipo_documento: driver.tipo_documento || 'CC',
-      documento: driver.documento || '',
-      nombre_conductor: driver.nombre_conductor || '',
-      apellido_conductor: driver.apellido_conductor || '',
-      correo_conductor: driver.correo_conductor || '',
-      foto: driver.foto || '',
-      telefono: driver.telefono || '',
-      ciudad: driver.ciudad || '',
-      direccion: driver.direccion || '',
-      tipo_licencia: driver.tipo_licencia || '',
-      fecha_vencimiento: driver.fecha_vencimiento || '',
-      experiencia: driver.experiencia || '',
-      estado: driver.estado || 'Activo',
-      fecha_registro: driver.fecha_registro || ''
-    };
-  }, []);
+const normalizeDriverData = useCallback((driver) => {
+  return {
+    id_conductor: driver.id_conductor || driver.id || '',
+    tipo_documento: driver.tipo_documento || 'CC',
+    documento: driver.documento || '',
+    nombre_conductor: driver.nombre_conductor || '',
+    apellido_conductor: driver.apellido_conductor || '',
+    correo_conductor: driver.correo_conductor || '',
+    foto: driver.foto || '',
+    telefono: driver.telefono || '',
+    ciudad: driver.ciudad || '',
+    direccion: driver.direccion || '',
+    tipo_licencia: driver.tipo_licencia || '',
+    fecha_vencimiento: formatDateForInput(driver.fecha_vencimiento), // Formatear aquí
+    experiencia: driver.experiencia || '',
+    estado: driver.estado || 'Activo',
+    fecha_registro: driver.fecha_registro || ''
+  };
+}, []);
 
   // Función para obtener todos los conductores
   const fetchDrivers = useCallback(async () => {
@@ -308,6 +308,26 @@ setDrivers(prevDrivers => [normalizeDriverData(data.driver || data), ...prevDriv
     const { name, value } = e.target;
     setEditDriver(prev => ({ ...prev, [name]: value }));
   };
+
+  const formatDateForInput = (dateString) => {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    // Verificar si la fecha es válida
+    if (isNaN(date.getTime())) return '';
+    
+    // Formatear a YYYY-MM-DD
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return '';
+  }
+};
 
   // Handler para mostrar detalles del conductor
   const handleShowDetails = useCallback((driver) => {

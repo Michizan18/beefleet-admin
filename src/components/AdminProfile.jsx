@@ -64,7 +64,7 @@ const AdminProfile = () => {
         return;
       }
       
-      const response = await fetch(`http://localhost:3001/api/users`, {
+      const response = await fetch(`http://localhost:3001/api/admin`, {
         method: 'GET',
         headers: {
           'Authorization': token,
@@ -92,6 +92,7 @@ const AdminProfile = () => {
       const data = await response.json();
       console.log('Data received:', data); // Debug
       setAdminData(data);
+      setUserData(data);
       
     } catch (error) {
       console.error('Error fetching admin profile:', error);

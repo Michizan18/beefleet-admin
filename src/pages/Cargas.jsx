@@ -559,7 +559,7 @@ const Cargas = () => {
                     <th>Fechas</th>
                     <th>Cliente</th>
                     <th>Vehículo</th>
-                    <th>Conductor</th>
+                    <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -607,7 +607,7 @@ const Cargas = () => {
                       <td>
                         <div className="d-flex align-items-center">
                           <FaUser className="me-2 text-muted" />
-                          {getDriverInfo(carga.vehiculo)}
+                          {(carga.estado)}
                         </div>
                       </td>
                       <td>
@@ -729,7 +729,7 @@ const Cargas = () => {
                       <p className="mb-1"><strong>Conductor:</strong></p>
                       <p className="d-flex align-items-center">
                         <FaUser className="me-2 text-warning" />
-                        {getDriverName(currentCarga.conductor)}
+                        {getDriverName(currentCarga.estado)}
                       </p>
                     </Col>
                   </Row>

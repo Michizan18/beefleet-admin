@@ -306,17 +306,32 @@ const Cargas = () => {
     return client ? (client.empresa || 'Cliente') : 'N/A';
   }, [clients]);
 
+  
+
   // Función para obtener información del vehículo
   const getVehicleInfo = useCallback((vehicleId) => {
     const vehicle = vehicles.find(v => v.id_vehiculo === vehicleId);
     return vehicle ? (vehicle.placa || vehicle.modelo || 'Vehículo') : 'N/A';
   }, [vehicles]);
 
+  const getClientInfo = useCallback((clientId) => {
+    const client = clients.find(d => d.id_cliente === clientId);
+    return client ? (client.empresa || 'Cliente') : 'N/A';
+  }, [clients]);
+
   // Función para obtener nombre del conductor
   const getDriverName = useCallback((driverId) => {
     const driver = drivers.find(d => d.id_conductor === driverId);
-    return driver ? (driver.nombre || 'Conductor') : 'N/A';
+    return driver;
   }, [drivers]);
+
+  const getDriverInfo = useCallback((vehicleId) => {
+    const vehicle = vehicles.find(v => v.id_vehiculo === vehicleId);
+    if (vehicle) {
+        const driverName = getDriverName(vehicle.id_conductor); // Obtener el nombre del conductor
+        return driverName ? (driverName.nombre_conductor || 'Conductor') : 'N/A';
+    }
+}, [vehicles, getDriverName]);
 
   // Handlers
   const handleShowDetails = useCallback((carga) => {
@@ -580,13 +595,19 @@ const Cargas = () => {
                       <td>
                         <div className="d-flex align-items-center">
                           <FaCar className="me-2 text-muted" />
+                          {getClientInfo(carga.cliente)}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <FaCar className="me-2 text-muted" />
                           {getVehicleInfo(carga.vehiculo)}
                         </div>
                       </td>
                       <td>
                         <div className="d-flex align-items-center">
                           <FaUser className="me-2 text-muted" />
-                          {getDriverName(carga.conductor)}
+                          {getDriverInfo(carga.vehiculo)}
                         </div>
                       </td>
                       <td>

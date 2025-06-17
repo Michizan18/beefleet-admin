@@ -42,8 +42,7 @@ const Cargas = () => {
     fecha_inicio: '',
     fecha_fin: '',
     vehiculo: '',
-    cliente: '',
-    conductor: ''
+    cliente: ''
   });
   
   const [editCarga, setEditCarga] = useState({
@@ -54,8 +53,7 @@ const Cargas = () => {
     fecha_inicio: '',
     fecha_fin: '',
     vehiculo: '',
-    cliente: '',
-    conductor: ''
+    cliente: ''
   });
   
   // Estados de validación
@@ -391,8 +389,7 @@ const Cargas = () => {
         fecha_inicio: '',
         fecha_fin: '',
         vehiculo: '',
-        cliente: '',
-        conductor: ''
+        cliente: ''
       });
       setValidated(false);
       setError(null);
@@ -454,8 +451,7 @@ const Cargas = () => {
         fecha_inicio: carga.fecha_inicio ? carga.fecha_inicio.split('T')[0] : '',
         fecha_fin: carga.fecha_fin ? carga.fecha_fin.split('T')[0] : '',
         vehiculo: carga.vehiculo || '',
-        cliente: carga.cliente || '',
-        conductor: carga.conductor || ''
+        cliente: carga.cliente || ''
       };
       
       console.log('✅ Datos preparados para edición:', editData);
@@ -726,10 +722,10 @@ const Cargas = () => {
                       </p>
                     </Col>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Conductor:</strong></p>
+                      <p className="mb-1"><strong>Estado:</strong></p>
                       <p className="d-flex align-items-center">
                         <FaUser className="me-2 text-warning" />
-                        {getDriverName(currentCarga.estado)}
+                        {currentCarga.estado}
                       </p>
                     </Col>
                   </Row>
@@ -884,7 +880,7 @@ const Cargas = () => {
                       value={newCarga.vehiculo}
                       onChange={handleInputChange}
                     >
-                      <option value="">Seleccione un vehículo (opcional)</option>
+                      <option value="">Seleccione un vehículo</option>
                       {vehicles.map(vehicle => (
                         <option key={vehicle.id_vehiculo} value={vehicle.id_vehiculo}>
                           {vehicle.placa} - {vehicle.modelo}
@@ -895,13 +891,13 @@ const Cargas = () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Conductor</Form.Label>
+                    <Form.Label>Estado</Form.Label>
                     <Form.Select
                       name="conductor"
-                      value={newCarga.conductor}
+                      value={newCarga.estado}
                       onChange={handleInputChange}
                     >
-                      <option value="">Seleccione un conductor (opcional)</option>
+                      <option value="">Estado</option>
                       {drivers.map(driver => (
                         <option key={driver.id_conductor} value={driver.id_conductor}>
                           {driver.nombre_conductor} {driver.apellido_conductor}

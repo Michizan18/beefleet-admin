@@ -67,7 +67,7 @@ const Conductores = () => {
     tipo_licencia: '',
     fecha_vencimiento: '',
     experiencia: '',
-    estado: 'Activo',
+    estado: '',
   };
   
   const [newDriver, setNewDriver] = useState(initialDriverState);
@@ -108,7 +108,7 @@ const Conductores = () => {
       tipo_licencia: driver.tipo_licencia || '',
       fecha_vencimiento: driver.fecha_vencimiento || '',
       experiencia: driver.experiencia || '',
-      estado: driver.estado || 'Activo',
+      estado: driver.estado || '',
       fecha_registro: driver.fecha_registro || ''
     };
   }, []);
@@ -206,7 +206,8 @@ const Conductores = () => {
       ciudad: newDriver.ciudad || null,
       direccion: newDriver.direccion || null,
       tipo_licencia: newDriver.tipo_licencia || null,
-      fecha_vencimiento: newDriver.fecha_vencimiento || null
+      fecha_vencimiento: newDriver.fecha_vencimiento || null,
+      estado: newDriver.estado || 'Activo'
     };
 
     const response = await fetch('http://localhost:3001/api/drivers', {
@@ -222,7 +223,6 @@ const Conductores = () => {
       const errorData = await response.text();
       throw new Error(`Error ${response.status}: ${errorData}`);
     }
-    fetchDrivers();
     const data = await response.json();
     // Cerrar modal de crear y mostrar modal de éxito
     setShowNewDriverModal(false);
@@ -244,6 +244,7 @@ setDrivers(prevDrivers => [normalizeDriverData(data.driver || data), ...prevDriv
   } finally {
     setIsUpdating(false);
   }
+  fetchDrivers();
 };
 
   // Función para editar un conductor
@@ -1003,6 +1004,7 @@ const confirmDeleteDriver = async () => {
                       value={newDriver.estado}
                       onChange={handleInputChange}
                     >
+                      <option value="">Seleccionar...</option>
                       {DRIVER_STATUS.map(status => (
                         <option key={status.value} value={status.value}>
                           {status.label}
@@ -1293,7 +1295,9 @@ const confirmDeleteDriver = async () => {
                       name="estado"
                       value={editDriver.estado}
                       onChange={handleEditInputChange}
+                      required
                     >
+                      <option value="">Seleccionar...</option>
                       {DRIVER_STATUS.map(status => (
                         <option key={status.value} value={status.value}>
                           {status.label}

@@ -210,7 +210,6 @@ const handleUpdateVehicle = async (e) => {
     setVehiculos(vehiculos.map(v => 
     v.id_vehiculo === editingVehicle.id_vehiculo ? vehicleWithId : v
     ));
-    
     setShowEditModal(false);
     alert('Vehículo actualizado exitosamente');
   } catch (error) {

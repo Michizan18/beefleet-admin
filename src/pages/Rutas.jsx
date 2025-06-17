@@ -13,7 +13,7 @@ const Rutas = () => {
   const [selectedRuta, setSelectedRuta] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [cargasDisponibles, setCargasDisponibles] = useState([]);
+  const [cargas, setCargas] = useState([]);
 
   const initialFormState = {
     origen: '',
@@ -24,10 +24,12 @@ const Rutas = () => {
 
   const [formData, setFormData] = useState(initialFormState);
 
-  useEffect(() => {
-    fetchRutas();
-    fetchCargas(); 
-  }, []);
+
+  const getCargaDescription = (id_carga) => {
+    if (!id_carga) return 'Sin carga asignada';
+    const carga = cargas.find(c => c.id_carga === id_carga);
+    return carga ? carga.descripcion : `Carga ID: ${id_carga}`;
+};
 
   // FILTRO CORREGIDO
   useEffect(() => {
@@ -46,73 +48,69 @@ const Rutas = () => {
     setFilteredRutas(filtered);
   }, [searchTerm, rutasData]);
 
-  const fetchRutas = async () => {
-    console.log('🚀 INICIANDO fetchRutas...');
-    setLoading(true);
-    setError(null);
-    
+  const fetchData = async () => {
     try {
+      setLoading(true);
+      
+      // Obtener token del localStorage si existe
       const token = localStorage.getItem('token');
-      if (!token) {
-        setError('No hay sesión activa. Por favor, inicia sesión.');
-        setLoading(false);
-        return;
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      };
+      
+      // Agregar Authorization header si hay token
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('http://localhost:3001/api/routes', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Fetch vehículos y conductores en paralelo
+      const [routesResponse, loadsResponse] = await Promise.all([
+        fetch('http://localhost:3001/api/routes', {
+          method: 'GET',
+          headers,
+        }),
+        fetch('http://localhost:3001/api/loads', { // Ajusta esta URL según tu API
+          method: 'GET',
+          headers,
+        }).catch(error => {
+          console.warn('No se pudieron cargar las cargas:', error);
+          return { ok: false };
+        })
+      ]);
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al cargar rutas');
+      if (!loadsResponse.ok) {
+        throw new Error(`Error al cargar las rutas: ${loadsResponse.status}`);
       }
 
-      const data = await response.json();
-      console.log('📦 Datos recibidos del servidor:', data);
+      const routesData = await routesResponse.json();
+      console.log('Datos de Rutas:', routesData);
+      setRutasData(routesData);
+
+      // Cargar conductores si la respuesta es exitosa
+      if (loadsResponse.ok) {
+        const loadsData = await loadsResponse.json();
+        console.log('Datos de Cargas:', loadsData);
+        setCargas(loadsData);
+      } else {
+        // Datos de conductores hardcodeados como fallback
+        setCargas([]);
+      }
+
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      alert(`Error al cargar los datos: ${error.message}`);
       
-      // NORMALIZACIÓN DE DATOS CORREGIDA
-      const normalizedData = Array.isArray(data) 
-        ? data.flat().map(ruta => ({
-            id_ruta: ruta.id_ruta,
-            origen: ruta.origen || 'Sin origen',
-            destino: ruta.destino || 'Sin destino',
-            distancia: parseFloat(ruta.distancia) || 0,
-            carga: parseInt(ruta.carga) || 0
-          }))
-        : [];
-      
-      console.log('✅ Datos normalizados finales:', normalizedData);
-      
-      // DEBUG ADICIONAL
-      normalizedData.forEach((ruta, index) => {
-        console.log(`🔍 RUTA ${index} FINAL:`, {
-          id: ruta.id_ruta,
-          origen: `"${ruta.origen}"`,
-          origenLength: ruta.origen?.length,
-          destino: `"${ruta.destino}"`,
-          destinoLength: ruta.destino?.length
-        });
-      });
-      
-      setRutasData(normalizedData);
-      setFilteredRutas(normalizedData);
-      
-    } catch (err) {
-      console.error("❌ Error al cargar rutas:", err);
-      setError(err.message);
+      // En caso de error, usar datos de ejemplo para conductores
+      setCargas([
+      ]);
     } finally {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleCreateRuta = () => {
     setFormData(initialFormState);
@@ -133,13 +131,13 @@ const Rutas = () => {
     setShowModal(true);
   };
 
-  const handleDeleteRuta = async (id) => {
+  const handleDeleteRuta = async (id_ruta) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar esta ruta?')) return;
     
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/routes/${id}`, {
+      const response = await fetch(`http://localhost:3001/api/routes/${id_ruta}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -150,7 +148,7 @@ const Rutas = () => {
         throw new Error('Error al eliminar la ruta');
       }
 
-      await fetchRutas();
+      await fetchData();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -207,6 +205,8 @@ const Rutas = () => {
           carga: parseInt(formData.carga)
         })
       });
+
+      fetchData();
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -381,64 +381,70 @@ const Rutas = () => {
                 </thead>
                 <tbody>
                   {filteredRutas.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" className="text-center py-4">
-                        <div className="text-muted">
-                          <FaSearch size={32} className="mb-2 opacity-50" />
-                          <p>No se encontraron rutas que coincidan con tu búsqueda</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredRutas.map((ruta, index) => (
-                      <tr key={`ruta-${ruta.id_ruta}-${index}`}>
-                        <td>
-                        <span className="fw-bold">{ruta.id_ruta}</span>
-                        </td>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <FaMapMarkerAlt className="text-success me-2" />
-                            {ruta.origen && ruta.origen.length > 0 
-                              ? ruta.origen.charAt(0).toUpperCase() + ruta.origen.slice(1).toLowerCase()
-                              : 'Sin origen'
-                            }
-                          </div>
-                        </td>
-                        <td>
-                          <div className="d-flex align-items-center">
-                            <FaMapMarkerAlt className="text-danger me-2" />
-                            {ruta.destino && ruta.destino.length > 0
-                              ? ruta.destino.charAt(0).toUpperCase() + ruta.destino.slice(1).toLowerCase()
-                              : 'Sin destino'
-                            }
-                          </div>
-                        </td>
-                        <td className="text-end">{ruta.distancia.toFixed(1)}</td>
-                        <td className="text-end">{ruta.carga.toLocaleString()}</td>
-                        <td>
-                          <div className="d-flex gap-2">
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              onClick={() => handleEditRuta(ruta)}
-                              title="Editar ruta"
-                              disabled={isSubmitting}
-                            >
-                              <FaEdit />
-                            </Button>
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              onClick={() => handleDeleteRuta(ruta.id_ruta)}
-                              title="Eliminar ruta"
-                              disabled={isSubmitting}
-                            >
-                              <FaTrash />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                  <tr>
+                    <td colSpan="6" className="text-center py-4">
+                      <div className="text-muted">
+                        <FaSearch size={32} className="mb-2 opacity-50" />
+                        <p>No se encontraron rutas que coincidan con tu búsqueda</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                    filteredRutas.map((ruta) => {
+                      console.log('Ruta:', ruta); // Verifica la ruta actual
+                      console.log('Carga ID:', ruta.carga); // Verifica el ID de carga
+                      console.log('Cargas:', cargas); // Verifica el array de cargas
+                      const descripcionCarga = getCargaDescription(ruta.carga);
+                      return (
+                        <tr key={ruta.id_ruta}>
+                          <td>
+                            <span className="fw-bold">{ruta.id_ruta}</span>
+                          </td>
+                          <td>
+                            <div className="d-flex align-items-center">
+                              <FaMapMarkerAlt className="text-success me-2" />
+                              {ruta.origen && ruta.origen.length > 0 
+                                ? ruta.origen.charAt(0).toUpperCase() + ruta.origen.slice(1).toLowerCase()
+                                : 'Sin origen'
+                              }
+                            </div>
+                          </td>
+                          <td>
+                            <div className="d-flex align-items-center">
+                              <FaMapMarkerAlt className="text-danger me-2" />
+                              {ruta.destino && ruta.destino.length > 0
+                                ? ruta.destino.charAt(0).toUpperCase() + ruta.destino.slice(1).toLowerCase()
+                                : 'Sin destino'
+                              }
+                            </div>
+                          </td>
+                          <td className="text-end">{ruta.distancia.toFixed(1)}</td>
+                          <td className="text-end">{descripcionCarga}</td> {/* Aquí se llama a la función */}
+                          <td>
+                            <div className="d-flex gap-2">
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                onClick={() => handleEditRuta(ruta)}
+                                title="Editar ruta"
+                                disabled={isSubmitting}
+                              >
+                                <FaEdit />
+                              </Button>
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                onClick={() => handleDeleteRuta(ruta.id_ruta)}
+                                title="Eliminar ruta"
+                                disabled={isSubmitting}
+                              >
+                                <FaTrash />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </Table>
@@ -525,18 +531,23 @@ const Rutas = () => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Carga (kg) *</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min="1"
-                    name="carga"
-                    value={formData.carga}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="0"
-                    disabled={isSubmitting}
-                  />
-                </Form.Group>
+  <Form.Label>Carga disponible (kg) *</Form.Label>
+    <Form.Control
+        as="select"
+        name="carga"
+        value={formData.carga}
+        onChange={handleInputChange}
+        required
+        disabled={isSubmitting}
+    >
+        <option value="">Selecciona una carga</option>
+        {cargas.map((carga, index) => (
+            <option key={`carga-${index}`} value={carga.id}>
+                {carga.descripcion} - {carga.peso} kg
+            </option>
+        ))}
+    </Form.Control>
+</Form.Group>
               </Col>
             </Row>
           </Modal.Body>

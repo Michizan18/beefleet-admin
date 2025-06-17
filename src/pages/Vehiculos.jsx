@@ -59,6 +59,17 @@ const Vehiculos = () => {
     return conductor ? conductor.nombre_conductor : `Conductor ID: ${conductorId}`;
   };
 
+  const getActiveConductorsNames = () => {
+    // Filtrar conductores con estado "Activo"
+    const activeConductors = conductores.filter(conductor => conductor.estado === 'Activo');
+    
+    // Obtener solo los nombres de los conductores activos
+    const activeConductorNames = activeConductors.map(conductor => conductor.nombre_conductor);
+    
+    return activeConductorNames;
+}
+
+
   // Función para eliminar vehículo
   const handleDeleteVehicle = async (id_vehiculo) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar este vehículo?')) {
@@ -672,13 +683,13 @@ const handleUpdateVehicle = async (e) => {
               onChange={(e) => setEditFormData({...editFormData, conductor: e.target.value})}
             >
               <option value="">Sin asignar</option>
-              {conductores.map((conductor, index) => (
+              {conductores.filter(conductor => conductor.estado === 'Activo').map((conductor, index) => (
               <option 
               key={`conductor-${conductor.id || conductor.id_conductor || index}`} 
-              value={conductor.id || conductor.id_conductor}
-              >
-            {conductor.nombre_conductor}
-            </option>
+               value={conductor.id || conductor.id_conductor}
+               >
+              {conductor.nombre_conductor}
+               </option>
               ))}
             </Form.Select>
           </Form.Group>
@@ -830,14 +841,14 @@ const handleUpdateVehicle = async (e) => {
               value={newVehicle.conductor}
               onChange={handleInputChange}
             >
-              <option value="">Sin asignar</option>
-              {conductores.map((conductor, index) => (
-                <option 
-                  key={`conductor-${conductor.id || conductor.id_conductor || index}`} 
-                  value={conductor.id || conductor.id_conductor}
-                >
-                  {conductor.nombre_conductor}
-                </option>
+             <option value="">Sin asignar</option>
+              {conductores.filter(conductor => conductor.estado === 'Activo').map((conductor, index) => (
+              <option 
+              key={`conductor-${conductor.id || conductor.id_conductor || index}`} 
+               value={conductor.id || conductor.id_conductor}
+               >
+              {conductor.nombre_conductor}
+               </option>
               ))}
             </Form.Select>
           </Form.Group>

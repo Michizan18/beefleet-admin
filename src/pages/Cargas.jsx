@@ -42,7 +42,8 @@ const Cargas = () => {
     fecha_inicio: '',
     fecha_fin: '',
     vehiculo: '',
-    cliente: ''
+    cliente: '',
+    estado: ''
   });
   
   const [editCarga, setEditCarga] = useState({
@@ -53,7 +54,8 @@ const Cargas = () => {
     fecha_inicio: '',
     fecha_fin: '',
     vehiculo: '',
-    cliente: ''
+    cliente: '',
+    estado: ''
   });
   
   // Estados de validación

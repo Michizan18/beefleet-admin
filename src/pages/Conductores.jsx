@@ -109,7 +109,7 @@ const Conductores = () => {
       fecha_vencimiento: driver.fecha_vencimiento || '',
       experiencia: driver.experiencia || '',
       estado: driver.estado || '',
-      fecha_registro: driver.fecha_registro || ''
+      fecha_ingreso: driver.fecha_ingreso || ''
     };
   }, []);
 
@@ -207,6 +207,7 @@ const Conductores = () => {
       direccion: newDriver.direccion || null,
       tipo_licencia: newDriver.tipo_licencia || null,
       fecha_vencimiento: newDriver.fecha_vencimiento || null,
+      fecha_ingreso: newDriver.fecha_ingreso || null,
       estado: newDriver.estado || 'Activo'
     };
 
@@ -744,11 +745,11 @@ const confirmDeleteDriver = async () => {
                   </p>
                 </Col>
                 <Col sm={6}>
-                  <p className="mb-1"><strong>Fecha de Registro:</strong></p>
+                  <p className="mb-1"><strong>Fecha de ingreso:</strong></p>
                   <p className="d-flex align-items-center">
                     <FaCalendarPlus className="me-2 text-warning" />
-                    {currentDriver.fecha_registro ? 
-                      new Date(currentDriver.fecha_registro).toLocaleDateString('es-CO') : 
+                    {currentDriver.fecha_ingreso ? 
+                      new Date(currentDriver.fecha_ingreso).toLocaleDateString('es-CO') : 
                       'No disponible'
                     }
                   </p>

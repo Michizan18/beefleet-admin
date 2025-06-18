@@ -568,6 +568,10 @@ const handleUpdateVehicle = async (e) => {
                       <p className="mb-1"><strong>Marca:</strong></p>
                       <p>{currentVehicle.marca || 'N/A'}</p>
                     </Col>
+                    <Col sm={6}>
+                      <p className="mb-1"><strong>Capcidad:</strong></p>
+                      <p>{currentVehicle.capacidad || 'N/A'}</p>
+                    </Col>
                   </Row>
                   <Row className="mb-3">
                     <Col sm={6}>

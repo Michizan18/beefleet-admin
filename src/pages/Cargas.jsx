@@ -986,41 +986,6 @@ const handleDeleteCarga = useCallback(async (cargaId) => {
               <h5 className="border-bottom pb-2 mb-3">Información de la Carga</h5>
             <div className="new-carga-form">
               </div>
-              {/* Información básica */}
-              <h5 className="border-bottom pb-2 mb-3">Información Básica</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Referencia</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="referencia"
-                      value={newCarga.referencia}
-                      onChange={handleInputChange}
-                      placeholder="Se generará automáticamente"
-                    />
-                    <Form.Text className="text-muted">
-                      Deje vacío para generar automáticamente
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Cliente</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="cliente"
-                      value={newCarga.cliente}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Nombre del cliente"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El cliente es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
               
               <Row className="mb-3">
                 <Col md={12}>
@@ -1108,7 +1073,7 @@ const handleDeleteCarga = useCallback(async (cargaId) => {
               
               <h5 className="border-bottom pb-2 mb-3 mt-4">Asignaciones</h5>
               <Row className="mb-3">
-                <Col md={12}>
+                <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>Cliente *</Form.Label>
                     <Form.Select
@@ -1129,9 +1094,6 @@ const handleDeleteCarga = useCallback(async (cargaId) => {
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
-              </Row>
-              
-              <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>Vehículo</Form.Label>
@@ -1144,23 +1106,6 @@ const handleDeleteCarga = useCallback(async (cargaId) => {
                       {vehicles.map(vehicle => (
                         <option key={vehicle.id_vehiculo} value={vehicle.id_vehiculo}>
                           {vehicle.placa} - {vehicle.modelo}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Conductor</Form.Label>
-                    <Form.Select
-                      name="conductor"
-                      value={editCarga.conductor}
-                      onChange={handleEditInputChange}
-                    >
-                      <option value="">Seleccione un conductor (opcional)</option>
-                      {drivers.map(driver => (
-                        <option key={driver.id_conductor} value={driver.id_conductor}>
-                          {driver.nombre}
                         </option>
                       ))}
                     </Form.Select>

@@ -794,7 +794,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Tipo de Documento</Form.Label>
+                    <Form.Label>Tipo de Documento *</Form.Label>
                     <Form.Select
                       name="tipo_documento"
                       value={newDriver.tipo_documento}
@@ -814,7 +814,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Número de Documento</Form.Label>
+                    <Form.Label>Número de Documento *</Form.Label>
                     <Form.Control
                       type="text"
                       name="documento"
@@ -834,7 +834,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Nombre</Form.Label>
+                    <Form.Label>Nombre *</Form.Label>
                     <Form.Control
                       type="text"
                       name="nombre_conductor"
@@ -850,7 +850,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Apellido</Form.Label>
+                    <Form.Label>Apellido *</Form.Label>
                     <Form.Control
                       type="text"
                       name="apellido_conductor"
@@ -870,7 +870,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Email</Form.Label>
+                    <Form.Label>Email *</Form.Label>
                     <Form.Control
                       type="email"
                       name="correo_conductor"
@@ -886,7 +886,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Teléfono</Form.Label>
+                    <Form.Label>Teléfono *</Form.Label>
                     <Form.Control
                       type="tel"
                       name="telefono"
@@ -905,7 +905,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Municipio</Form.Label>
+                    <Form.Label>Municipio *</Form.Label>
                     <Form.Control
                       type="text"
                       name="ciudad"
@@ -921,7 +921,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Dirección</Form.Label>
+                    <Form.Label>Dirección *</Form.Label>
                     <Form.Control
                       type="text"
                       name="direccion"
@@ -941,7 +941,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Tipo de Licencia</Form.Label>
+                    <Form.Label>Tipo de Licencia *</Form.Label>
                     <Form.Select
                       name="tipo_licencia"
                       value={newDriver.tipo_licencia}
@@ -962,7 +962,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Fecha de Vencimiento</Form.Label>
+                    <Form.Label>Fecha de Vencimiento *</Form.Label>
                     <Form.Control
                       type="date"
                       name="fecha_vencimiento"
@@ -980,7 +980,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Años de Experiencia</Form.Label>
+                    <Form.Label>Años de Experiencia *</Form.Label>
                     <Form.Control
                       type="text"
                       name="experiencia"
@@ -998,7 +998,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Estado</Form.Label>
+                    <Form.Label>Estado *</Form.Label>
                     <Form.Select
                       name="estado"
                       value={newDriver.estado}

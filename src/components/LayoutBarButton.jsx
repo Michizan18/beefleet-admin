@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar, Container, Dropdown, Modal, Button } from 'react-bootstrap';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import MenuNotificaciones from './MenuNotificaciones';
-import { 
+import {
   FaUsers, FaCar, FaChartLine, FaBell, 
   FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog, FaMapMarkedAlt, FaTruckLoading,
   FaTruck, FaRoute

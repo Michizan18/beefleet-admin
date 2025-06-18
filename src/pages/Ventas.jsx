@@ -24,12 +24,10 @@ const Ventas = () => {
   
   // Estado para nueva venta
   const [newSale, setNewSale] = useState({
-    fecha: new Date().toISOString().split('T')[0],
-    valor: '',
-    descripcion: '',
-    carga: ''
+    valor: 0,
+    carga: 0
   });
-  
+
   const [validated, setValidated] = useState(false);
 
   // Función para obtener el token de autenticación
@@ -38,113 +36,81 @@ const Ventas = () => {
     console.log('Token obtenido:', token);
     return token;
   };
-
-  // Función para hacer peticiones autenticadas con mejor manejo de errores
-  const makeAuthenticatedRequest = async (url, options = {}) => {
-    const token = getAuthToken();
-    
-    if (!token) {
-      console.error('No hay token de autenticación');
-      window.location.href = '/login';
-      return null;
-    }
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`, // Asegúrate de usar el formato correcto
-      ...options.headers
-    };
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers
-      });
-
-      // Verificar si la respuesta es exitosa
-      if (!response.ok) {
-        if (response.status === 401) {
-          console.error('Token expirado o inválido');
-          localStorage.removeItem('token');
-          window.location.href = '/login';
-          return null;
-        }
-        
-        if (response.status === 404) {
-          console.error(`Endpoint no encontrado: ${url}`);
-          throw new Error(`Endpoint no encontrado: ${url}`);
-        }
-        
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Verificar si la respuesta es JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('La respuesta no es JSON:', text.substring(0, 200));
-        throw new Error('El servidor no devolvió JSON válido');
-      }
-
-      return response;
-    } catch (error) {
-      console.error(`Error en petición a ${url}:`, error);
-      throw error;
-    }
-  };
+  
 
   // Obtener ventas de la base de datos
-  const fetchSales = async () => {
-    setLoading(true);
-    setError('');
+  const fetchData = async () => {
     try {
-      const response = await makeAuthenticatedRequest('/api/sales');
-      if (response && response.ok) {
-        const data = await response.json();
-        setSales(Array.isArray(data) ? data : []);
-        console.log('Ventas cargadas:', data);
+      setLoading(true);
+      const token = getAuthToken();
+      if (!token) {
+        setError('No hay token de autenticación');
+        setLoading(false);
+        return;
       }
+      // Obtener token del localStorage si existe
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      };
+      
+      // Agregar Authorization header si hay token
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Fetch vehículos y conductores en paralelo
+      const [salesResponse, loadsResponse] = await Promise.all([
+        fetch('http://localhost:3001/api/sales/', {
+          method: 'GET',
+          headers,
+        }),
+        fetch('http://localhost:3001/api/loads/', {
+          method: 'GET',
+          headers,
+        }).catch(error => {
+          console.warn('No se pudieron cargar las ventas:', error);
+          return { ok: false };
+        })
+      ]);
+
+      if (!loadsResponse.ok) {
+        throw new Error(`Error al cargar las cargas: ${loadsResponse.status}`);
+      }
+
+      const salesData = await salesResponse.json();
+      console.log('Datos de Ventas:', salesData);
+      setSales(salesData);
+
+      // Cargar conductores si la respuesta es exitosa
+      if (loadsResponse.ok) {
+        const loadsData = await loadsResponse.json();
+        console.log('Datos de Cargas:', loadsData);
+        setCargas(loadsData);
+      } else {
+        // Datos de conductores hardcodeados como fallback
+        setCargas([]);
+      }
+
     } catch (error) {
-      console.error('Error fetching sales:', error);
-      setError(`Error al cargar ventas: ${error.message}`);
-      setSales([]); // Asegurar que sales sea un array
+      console.error("Error al cargar datos:", error.message);
+      alert(`Error al cargar los datos: ${error.message}`);
+      
+      // En caso de error, usar datos de ejemplo para conductores
+      setCargas([
+      ]);
     } finally {
       setLoading(false);
     }
   };
-
-  // Obtener cargas para el dropdown
-  const fetchCargas = async () => {
-    setError('');
-    try {
-      // Usar la ruta correcta según tu backend
-      const response = await makeAuthenticatedRequest('/api/loads');
-      if (response && response.ok) {
-        const data = await response.json();
-        setCargas(Array.isArray(data) ? data : []);
-        console.log('Cargas cargadas:', data);
-      }
-    } catch (error) {
-      console.error('Error fetching cargas:', error);
-      setError(`Error al cargar cargas: ${error.message}`);
-      setCargas([]); // Asegurar que cargas sea un array
-      
-      // Si las cargas fallan, al menos permitir crear ventas sin carga
-      console.warn('Continuando sin cargas disponibles');
-    }
-  };
-
-  // useEffect para cargar datos al montar el componente
   useEffect(() => {
-    console.log('Componente montado, cargando datos...');
-    fetchSales();
-    fetchCargas();
+    fetchData();
   }, []);
+
 
   const filteredSales = sales.filter((sale) => {
     // Filtrar por término de búsqueda
     const matchesSearch = 
-      sale.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.valor?.toString().includes(searchTerm) ||
       sale.id_venta?.toString().includes(searchTerm);
     
@@ -172,7 +138,7 @@ const Ventas = () => {
   };
   
   // Manejar envío del formulario
-  const handleSubmitNewSale = async (e) => {
+ const handleSubmitNewSale = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
     
@@ -183,44 +149,51 @@ const Ventas = () => {
     }
     
     try {
-      const response = await makeAuthenticatedRequest('/api/sales', {
+      const response = await fetch('http://localhost:3001/api/sales', {
         method: 'POST',
-        body: JSON.stringify(newSale)
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}` // Asegúrate de incluir el token
+        },
+        body: JSON.stringify({
+          valor: newSale.valor,
+          carga: newSale.carga
+        }) // Asegúrate de que esto esté correctamente formateado
       });
       
-      if (response && response.ok) {
+      if (response.ok) {
         // Recargar ventas
-        await fetchSales();
+        await fetchData();
         
         // Cerrar modal y resetear form
         setShowNewSaleModal(false);
         setNewSale({
-          fecha: new Date().toISOString().split('T')[0],
           valor: '',
-          descripcion: '',
           carga: ''
         });
         setValidated(false);
         setError('');
       } else {
-        setError('Error al crear la venta');
+        const errorData = await response.json(); // Obtener el cuerpo de la respuesta
+        setError(errorData.message || 'Error al crear la venta');
       }
     } catch (error) {
       console.error('Error creating sale:', error);
       setError(`Error al crear venta: ${error.message}`);
     }
-  };
+};
+
 
   // Eliminar venta
   const handleDeleteSale = async (saleId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar esta venta?')) {
       try {
-        const response = await makeAuthenticatedRequest(`/api/sales/${saleId}`, {
+        const response = await fetch(`http://localhost:3001/api/sales${saleId}`, {
           method: 'DELETE'
         });
         
         if (response && response.ok) {
-          await fetchSales();
+          await fetchData();
           setError('');
         } else {
           setError('Error al eliminar la venta');
@@ -328,7 +301,6 @@ const Ventas = () => {
                     <th>ID</th>
                     <th>Fecha</th>
                     <th>Valor</th>
-                    <th>Descripción</th>
                     <th>Carga</th>
                     <th>Acciones</th>
                   </tr>
@@ -341,7 +313,6 @@ const Ventas = () => {
                       <td className="fw-bold text-success">
                         {formatCurrency(sale.valor)}
                       </td>
-                      <td>{sale.descripcion}</td>
                       <td>
                         <Badge bg="info" className="rounded-pill">
                           Carga #{sale.carga}
@@ -414,12 +385,6 @@ const Ventas = () => {
                 <Col md={8}>
                   <h5 className="mb-3">Información de la Venta</h5>
                   <Row className="mb-3">
-                    <Col sm={12}>
-                      <p className="mb-1"><strong>Descripción:</strong></p>
-                      <p>{currentSale.descripcion}</p>
-                    </Col>
-                  </Row>
-                  <Row className="mb-3">
                     <Col sm={6}>
                       <p className="mb-1"><strong>Fecha:</strong></p>
                       <p>{formatDate(currentSale.fecha)}</p>
@@ -474,21 +439,6 @@ const Ventas = () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Fecha</Form.Label>
-                    <Form.Control
-                      type="date"
-                      name="fecha"
-                      value={newSale.fecha}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La fecha es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
                     <Form.Label>Valor</Form.Label>
                     <InputGroup>
                       <InputGroup.Text>$</InputGroup.Text>
@@ -509,25 +459,6 @@ const Ventas = () => {
                 </Col>
               </Row>
               
-              <Row className="mb-3">
-                <Col md={12}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Descripción</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      name="descripcion"
-                      value={newSale.descripcion}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Descripción detallada de la venta"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La descripción es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
               
               <Row className="mb-3">
                 <Col md={12}>

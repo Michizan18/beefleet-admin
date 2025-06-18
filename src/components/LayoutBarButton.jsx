@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-import React, { useState , useCallback, useEffect} from 'react';
-=======
 import React, { useState, useEffect } from 'react';
->>>>>>> 4e3ae9c8b4cf5f6ac0ed955c47fc150ec8d72b4a
-import { Navbar, Container, Dropdown } from 'react-bootstrap';
+import { Navbar, Container, Dropdown, Modal, Button } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import MenuNotificaciones from './MenuNotificaciones';
 import { 
@@ -16,80 +12,13 @@ import { GiReceiveMoney } from "react-icons/gi";
 import './LayoutBarButton.css';
 import logo from './img/logo.png';
 
-<<<<<<< HEAD
-const LayoutBarButton = ({ children} ) => {
-  const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState([]);
-  const [error, setError] = useState(null);
-  const getAuthToken = useCallback(() => {
-    const token = localStorage.getItem('token');
-    return token ? `Bearer ${token}` : null;
-  }, []);
-
-  // Función para obtener los datos del perfil del administrador
-    const fetchAdminProfile = useCallback(async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const token = getAuthToken();
-        const id_usuario = localStorage.getItem('id_usuario');
-        
-        console.log('Token:', token); // Debug
-        console.log('ID Usuario:', id_usuario); // Debug
-        
-        if (!token || !id_usuario) {
-          setError('No hay información de autenticación');
-          setLoading(false);
-          return;
-        }
-        
-        const response = await fetch(`http://localhost:3001/api/admin`, {
-          method: 'GET',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('Response status:', response.status); // Debug
-        console.log('Response ok:', response.ok); // Debug
-        
-        if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('id_usuario');
-            setError('Sesión expirada. Por favor, inicie sesión nuevamente.');
-            return;
-          }
-          
-          // Obtener texto del error para más información
-          const errorText = await response.text();
-          console.error('Error response:', errorText); // Debug
-          throw new Error(`Error ${response.status}: ${errorText || 'Error al obtener los datos del perfil'}`);
-        }
-  
-        const data = await response.json();
-        console.log('Data received:', data); // Debug
-        setUserData(data);
-        
-      } catch (error) {
-        console.error('Error fetching admin profile:', error);
-        setError(`Error al cargar el perfil: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
-    }, [getAuthToken]);
-
-    useEffect(() => {
-        fetchAdminProfile();
-    }, [fetchAdminProfile]);
-  // Usar useLocation para determinar la ruta actual y aplicar estilos active
-=======
 const LayoutBarButton = ({ children }) => {
->>>>>>> 4e3ae9c8b4cf5f6ac0ed955c47fc150ec8d72b4a
   const location = useLocation();
   const currentPath = location.pathname;
+  
+  // Estado para el modal de confirmación de cierre de sesión
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  
   const [userData, setUserData] = useState({
     nombre_usuario: '',
     apellido_usuario: '',
@@ -267,6 +196,31 @@ const LayoutBarButton = ({ children }) => {
     return 'Admin';
   };
 
+  // Función para manejar el cierre de sesión
+  const handleLogout = () => {
+    // Limpiar datos del usuario al cerrar sesión
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('token');
+    // Redirigir a login
+    window.location.href = '/login';
+  };
+
+  // Función para abrir el modal de confirmación
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  // Función para cerrar el modal sin hacer logout
+  const handleCancelLogout = () => {
+    setShowLogoutModal(false);
+  };
+
+  // Función para confirmar y proceder con el logout
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    handleLogout();
+  };
+
   return (
     <div className="dashboard-container">
       {/* Barra de navegación superior */}
@@ -291,11 +245,7 @@ const LayoutBarButton = ({ children }) => {
                 <Dropdown.Toggle variant="transparent" id="user-dropdown" className="nav-link">
                   <FaUserCircle className="icon" />
                   <span className="d-none d-md-inline-block ms-1">
-<<<<<<< HEAD
-                    {userData.nombre_usuario + ' ' + userData.apellido_usuario || 'Usuario'}
-=======
                     {getDisplayName()}
->>>>>>> 4e3ae9c8b4cf5f6ac0ed955c47fc150ec8d72b4a
                   </span>
                 </Dropdown.Toggle>
                 
@@ -304,12 +254,7 @@ const LayoutBarButton = ({ children }) => {
                     <FaUserCircle className="me-2" /> Mi Perfil
                   </Dropdown.Item>
                   <Dropdown.Divider />
-                  <Dropdown.Item href="#!" onClick={() => {
-                    // Limpiar datos del usuario al cerrar sesión
-                    localStorage.removeItem('usuario');
-                    // Redirigir a login o página principal
-                    window.location.href = '/login';
-                  }}>
+                  <Dropdown.Item href="#!" onClick={handleLogoutClick}>
                     <FaSignOutAlt className="me-2" /> Cerrar Sesión
                   </Dropdown.Item>
                 </Dropdown.Menu>
@@ -379,6 +324,31 @@ const LayoutBarButton = ({ children }) => {
           {children}
         </Container>
       </main>
+
+      {/* Modal de confirmación de cierre de sesión */}
+      <Modal show={showLogoutModal} onHide={handleCancelLogout} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <FaSignOutAlt className="me-2 text-warning" />
+            Confirmar Cierre de Sesión
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-0">¿Estás seguro de que deseas cerrar sesión?</p>
+          <small className="text-muted">
+            Serás redirigido a la página de inicio de sesión.
+          </small>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCancelLogout}>
+            Cancelar
+          </Button>
+          <Button variant="warning" onClick={handleConfirmLogout}>
+            <FaSignOutAlt className="me-1" />
+            Cerrar Sesión
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

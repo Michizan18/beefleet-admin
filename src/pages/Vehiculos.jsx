@@ -17,8 +17,26 @@ const Vehiculos = () => {
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [currentVehicle, setCurrentVehicle] = useState(null);
   const [showNewVehicleModal, setShowNewVehicleModal] = useState(false);
-  const [vehicles, setVehicles] = useState([]);
+  const [vehiculos, setVehiculos] = useState([]);
+  const [conductores, setConductores] = useState([]); // Nuevo estado para conductores
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+
   
+   // Funciónpara mapear números a texto
+  const mapearEstado = (estado) => {
+  const estadosMap = {
+    1: 'Activo',
+    2: 'En mantenimiento', 
+    3: 'Disponible',
+    4: 'Fuera de servicio'
+  };
+  return estadosMap[estado] || 'Desconocido';
+
+
+  };
+
   // Estado para nuevo vehículo
   const [newVehicle, setNewVehicle] = useState({
     placa: '',
@@ -34,54 +52,181 @@ const Vehiculos = () => {
   
   const [validated, setValidated] = useState(false);
 
-   useEffect(() => {
-    const fetchVehiculos = async () => {
-      try {
-        const response = await fetch('http://localhost:3001/api/vehicles', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-
-        const vehicleData = await response.json();
-        setVehicles(vehicleData);
-        console.log(vehicleData);
-      } catch (error) {
-        console.error("Error al cargar datos de Vehiculos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchVehiculos();
-  }, []);
-  console.log(vehicles);
-
-  const handleDeleteVehicle = async (id_vehiculo) => {
-      try {
-        const response = await fetch(`http://localhost:3001/api/vehicles/${id_vehiculo}`, {
-          method: 'DELETE',
-        });
-        if (!response.ok) {
-          throw new Error('Error al eliminar el Vehiculo');
-        }
-        // setConductores(conductores.filter(conductor => conductor.id_conductor !== id_conductor));
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Hubo un error al eliminar el conductor');
-      }
+  // Función para obtener el nombre del conductor por ID
+  const getConductorName = (conductorId) => {
+    if (!conductorId) return 'Sin asignar';
+    const conductor = conductores.find(c => c.id === conductorId || c.id_conductor === conductorId);
+    return conductor ? conductor.nombre_conductor : `Conductor ID: ${conductorId}`;
   };
 
-  // const filteredVehicles = vehiculos.filter((vehiculos) => {
-  //   // Filtrar por término de búsqueda
-  //   const matchesSearch = 
-  //     vehiculos.placa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //     vehiculos.modelo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //     (vehiculos.conductor && vehiculos.conductor.toLowerCase().includes(searchTerm.toLowerCase()));
+  const getActiveConductorsNames = () => {
+    // Filtrar conductores con estado "Activo"
+    const activeConductors = conductores.filter(conductor => conductor.estado === 'Activo');
     
-  //   // Filtrar por estado
-  //   const matchesStatus = 
-  //     statusFilter === 'Todos' || vehiculos.estado === statusFilter;
+    // Obtener solo los nombres de los conductores activos
+    const activeConductorNames = activeConductors.map(conductor => conductor.nombre_conductor);
+    
+    return activeConductorNames;
+}
+
+
+  // Función para eliminar vehículo
+  const handleDeleteVehicle = async (id_vehiculo) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este vehículo?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`http://localhost:3001/api/vehicles/${id_vehiculo}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Agregar token si es necesario
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al eliminar el vehículo');
+      }
+      
+      setVehiculos(vehiculos.filter(vehiculo => vehiculo.id_vehiculo !== id_vehiculo));
+      alert('Vehículo eliminado exitosamente');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Hubo un error al eliminar el vehículo');
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Obtener token del localStorage si existe
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      };
+      
+      // Agregar Authorization header si hay token
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Fetch vehículos y conductores en paralelo
+      const [vehiclesResponse, conductoresResponse] = await Promise.all([
+        fetch('http://localhost:3001/api/vehicles', {
+          method: 'GET',
+          headers,
+        }),
+        fetch('http://localhost:3001/api/drivers', { // Ajusta esta URL según tu API
+          method: 'GET',
+          headers,
+        }).catch(error => {
+          console.warn('No se pudieron cargar los conductores:', error);
+          return { ok: false };
+        })
+      ]);
+
+      if (!vehiclesResponse.ok) {
+        throw new Error(`Error al cargar los vehículos: ${vehiclesResponse.status}`);
+      }
+
+      const vehicleData = await vehiclesResponse.json();
+      console.log('Datos de vehículos:', vehicleData);
+      setVehiculos(vehicleData);
+
+      // Cargar conductores si la respuesta es exitosa
+      if (conductoresResponse.ok) {
+        const conductoresData = await conductoresResponse.json();
+        console.log('Datos de conductores:', conductoresData);
+        setConductores(conductoresData);
+      } else {
+        // Datos de conductores hardcodeados como fallback
+        setConductores([]);
+      }
+
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      alert(`Error al cargar los datos: ${error.message}`);
+      
+      // En caso de error, usar datos de ejemplo para conductores
+      setConductores([
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Función para abrir modal de edición
+  const handleEditVehicle = (vehiculo) => {
+  setEditingVehicle(vehiculo);
+  setEditFormData({
+    placa: vehiculo.placa || '',
+    modelo: vehiculo.modelo || '',
+    conductor: vehiculo.conductor || '',
+    estado_vehiculo: vehiculo.estado_vehiculo || 1,
+    kilometraje: vehiculo.kilometraje || '',
+    marca: vehiculo.marca || '',
+    color: vehiculo.color || '',
+    capacidad: vehiculo.capacidad || '',
+    tipo: vehiculo.tipo || ''
+  });
+  setShowEditModal(true);
+};
+ //Función para guardar cambios
+const handleUpdateVehicle = async (e) => {
+  e.preventDefault();
+  
+  console.log('Datos a enviar:', editFormData);
+  try {
+
+     // Asegurar que estado_vehiculo sea un número
+    const dataToSend = {
+      ...editFormData,
+      estado_vehiculo: parseInt(editFormData.estado_vehiculo) || 1
+    };
+
+    const response = await fetch(`http://localhost:3001/api/vehicles/${editingVehicle.id_vehiculo}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify(editFormData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al actualizar el vehículo');
+    }
+    
+    const updatedVehicle = await response.json();
+    const vehicleWithId = { ...editFormData, id_vehiculo: editingVehicle.id_vehiculo };
+    
+    // Actualizar la lista de vehículos
+    setVehiculos(vehiculos.map(v => 
+    v.id_vehiculo === editingVehicle.id_vehiculo ? vehicleWithId : v
+    ));
+    setShowEditModal(false);
+    alert('Vehículo actualizado exitosamente');
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error al actualizar el vehículo');
+  }
+};
+
+  // Filtrar vehículos
+  const filteredVehicles = vehiculos.filter((vehiculo) => {
+    const conductorName = getConductorName(vehiculo.conductor);
+    const matchesSearch = searchTerm === '' ||
+    vehiculo.placa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehiculo.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    conductorName.toLowerCase().includes(searchTerm.toLowerCase());
+    console.log('Estado original:', vehiculo.estado_vehiculo, 'Tipo:', typeof vehiculo.estado_vehiculo);
+    const matchesStatus = statusFilter === 'Todos' || mapearEstado(vehiculo.estado_vehiculo) === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -260,36 +405,41 @@ const Vehiculos = () => {
                 </tr>
               </thead>
               <tbody>
-                {vehicles.map((vehicle) => (
-                  <tr key={vehicle.id_vehiculo}>
-                    <td>{vehicle.placa}</td>
-                    <td>{vehicle.modelo}</td>
-                    <td>{vehicle.matricula}</td>
-                    <td>
-                      {vehicle.asignado ? (
-                        <div className="d-flex align-items-center">
-                          <FaUserCircle className="me-2 text-warning" />
-                          {vehicle.conductor}
-                        </div>
-                      ) : (
-                        <span className="text-muted">{vehicle.conductor}</span>
-                      )}
-                    </td>
-                    <td>
-                      <EstadoBadge estado={vehicle.estado_vehiculo} />
-                    </td>
-                    <td>{vehicle.seguro}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <Button 
+                {filteredVehicles.map((vehiculo) => {
+                  const conductorName = getConductorName(vehiculo.conductor);
+                  return (
+                    <tr key={vehiculo.id_vehiculo}>
+                      <td>{vehiculo.placa}</td>
+                      <td>{vehiculo.modelo}</td>
+                      <td>
+                        {vehiculo.conductor ? (
+                          <div className="d-flex align-items-center">
+                            <FaUserCircle className="me-2 text-warning" />
+                            {conductorName}
+                          </div>
+                        ) : (
+                          <span className="text-muted">Sin asignar</span>
+                        )}
+                      </td>
+                      <td>
+                        <EstadoBadge estado={mapearEstado(vehiculo.estado_vehiculo)} />
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <Button 
+                            variant="outline-warning" 
+                            size="sm" 
+                            className="me-1"
+                            onClick={() => handleShowDetails(vehiculo)}
+                          >
+                            Ver
+                          </Button>
+                          <Button 
                           variant="outline-warning" 
                           size="sm" 
                           className="me-1"
-                          onClick={() => handleShowDetails(vehicle)}
-                        >
-                          Ver
-                        </Button>
-                        <Button variant="outline-warning" size="sm" className="me-1">
+                          onClick={() => handleEditVehicle(vehiculo)}
+                          >
                           <FaEdit />
                           </Button>
                           <Button 

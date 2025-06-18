@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar, Container, Dropdown, Modal, Button } from 'react-bootstrap';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import MenuNotificaciones from './MenuNotificaciones';
 import { 
   FaUsers, FaCar, FaChartLine, FaBell, 
@@ -14,6 +14,7 @@ import logo from './img/logo.png';
 
 const LayoutBarButton = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
   
   // Estado para el modal de confirmación de cierre de sesión
@@ -25,6 +26,34 @@ const LayoutBarButton = ({ children }) => {
     loading: true,
     error: null
   });
+
+  // PROTECCIÓN CONTRA EL BOTÓN ATRÁS
+  useEffect(() => {
+    const preventBack = () => {
+      window.history.pushState(null, null, window.location.pathname);
+    };
+
+    const handlePopState = (event) => {
+      const token = localStorage.getItem('token');
+      const usuario = localStorage.getItem('usuario');
+      
+      if (!token || !usuario) {
+        window.history.pushState(null, null, '/login');
+        navigate('/login', { replace: true });
+      } else {
+        preventBack();
+      }
+    };
+
+    // Agregar estado al historial para prevenir el botón atrás
+    preventBack();
+    
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [navigate]);
 
   const fetchUserData = async () => {
     try {
@@ -196,13 +225,36 @@ const LayoutBarButton = ({ children }) => {
     return 'Admin';
   };
 
-  // Función para manejar el cierre de sesión
+  // FUNCIÓN DE LOGOUT MEJORADA
   const handleLogout = () => {
-    // Limpiar datos del usuario al cerrar sesión
-    localStorage.removeItem('usuario');
-    localStorage.removeItem('token');
-    // Redirigir a login
-    window.location.href = '/login';
+    try {
+      // Limpiar TODOS los datos
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Limpiar cookies si las hay
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+      
+      // Prevenir el botón atrás agregando múltiples entradas al historial
+      window.history.pushState(null, null, '/login');
+      window.history.pushState(null, null, '/login');
+      window.history.pushState(null, null, '/login');
+      
+      // Navegar al login
+      navigate('/login', { replace: true });
+      
+      // Como respaldo adicional, forzar la recarga de la página
+      setTimeout(() => {
+        window.location.replace('/login');
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error durante el logout:', error);
+      // Como último recurso
+      window.location.href = '/login';
+    }
   };
 
   // Función para abrir el modal de confirmación

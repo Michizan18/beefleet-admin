@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Table, Modal, Form, Spinner, Alert } from 'react-bootstrap';
 import { FaRoute, FaPlus, FaEdit, FaTrash, FaSearch, FaMapMarkerAlt } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
+import Swal from 'sweetalert2';
 
 const Rutas = () => {
   const [rutasData, setRutasData] = useState([]);
@@ -99,7 +100,13 @@ const Rutas = () => {
 
     } catch (error) {
       console.error("Error al cargar datos:", error);
-      alert(`Error al cargar los datos: ${error.message}`);
+      Swal.fire({
+        title: 'Error al cargar datos',
+        text: `No se pudieron cargar los datos: ${error.message}`,
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ffc107'
+      });
       
       // En caso de error, usar datos de ejemplo para conductores
       setCargas([
@@ -132,7 +139,19 @@ const Rutas = () => {
   };
 
   const handleDeleteRuta = async (id_ruta) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar esta ruta?')) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar ruta?',
+      text: '¿Estás seguro de que deseas eliminar esta ruta? Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
     
     setIsSubmitting(true);
     try {
@@ -149,6 +168,15 @@ const Rutas = () => {
       }
 
       await fetchData();
+      Swal.fire({
+  title: '¡Eliminada!',
+  text: 'La ruta ha sido eliminada correctamente.',
+  icon: 'success',
+  confirmButtonText: 'OK',
+  confirmButtonColor: '#ffc107',
+  timer: 2000,
+  timerProgressBar: true
+});
     } catch (err) {
       setError(err.message);
     } finally {
@@ -224,6 +252,16 @@ const Rutas = () => {
       );
 
       setShowModal(false);
+      // Después de setShowModal(false);
+      Swal.fire({
+        title: '¡Éxito!',
+        text: `La ruta ha sido ${modalMode === 'create' ? 'creada' : 'actualizada'} correctamente.`,
+        icon: 'success',
+        confirmButtonText: 'Perfecto',
+        confirmButtonColor: '#ffc107',
+        timer: 2000,
+        timerProgressBar: true
+      });
     } catch (err) {
       setError(err.message);
     } finally {

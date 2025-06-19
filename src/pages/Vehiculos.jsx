@@ -23,6 +23,7 @@ const Vehiculos = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [editFormData, setEditFormData] = useState({});
+  
 
   
    // Funciónpara mapear números a texto
@@ -253,6 +254,7 @@ const handleUpdateVehicle = async (e) => {
         title: 'custom-swal-title'
       }
     });
+    fetchData();
   } catch (error) {
     console.error('Error:', error);
     Swal.fire({

@@ -237,7 +237,7 @@ const Dashboard = () => {
             <FaPeopleCarryBox />
           </div>
           <div>
-            <h4 className="stats-number">{clientes.length - 1}</h4>
+            <h4 className="stats-number">{clientes.length}</h4>
             <div className="stats-label">Clientes</div>
           </div>
         </div>

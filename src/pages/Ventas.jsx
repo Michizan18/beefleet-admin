@@ -1,17 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Card, Table, Button, Dropdown, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, Table, Button, Container, Row, Col, InputGroup, Form, Modal, Badge } from 'react-bootstrap';
 import { 
-  FaReceipt,  
-  FaUserCircle, 
-  FaSearch, FaFilter, FaDollarSign, 
-  FaEdit, FaTrashAlt, FaPlus, FaSave,
-  FaCalendarAlt, FaFileInvoiceDollar
+  FaSearch, FaCalendarAlt, FaFileInvoiceDollar,
+  FaEdit, FaTrashAlt, FaPlus, FaSave
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
 
 const Ventas = () => {
-  const [userData, setUserData] = useState(null);
+  // Estados
+  const [userData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -21,7 +18,8 @@ const Ventas = () => {
   const [sales, setSales] = useState([]);
   const [cargas, setCargas] = useState([]);
   const [error, setError] = useState('');
-  
+  const [validated, setValidated] = useState(false);
+
   // Estado para nueva venta
   const [newSale, setNewSale] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -29,149 +27,99 @@ const Ventas = () => {
     descripcion: '',
     carga: ''
   });
-  
-  const [validated, setValidated] = useState(false);
 
-  // Función para obtener el token de autenticación
-  const getAuthToken = () => {
+  // Obtener token de autenticación
+  const getAuthToken = useCallback(() => {
     const token = localStorage.getItem('token');
-    console.log('Token obtenido:', token);
+    if (!token) {
+      window.location.href = '/login';
+      throw new Error('No hay token de autenticación');
+    }
     return token;
-  };
+  }, []);
 
-  // Función para hacer peticiones autenticadas con mejor manejo de errores
-  const makeAuthenticatedRequest = async (url, options = {}) => {
+  // Función para hacer peticiones autenticadas
+  const makeAuthenticatedRequest = useCallback(async (url, options = {}) => {
     const token = getAuthToken();
     
-    if (!token) {
-      console.error('No hay token de autenticación');
-      window.location.href = '/login';
-      return null;
-    }
-
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`, // Asegúrate de usar el formato correcto
+      'Authorization': `Bearer ${token}`,
       ...options.headers
     };
 
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers
-      });
+      const response = await fetch(url, { ...options, headers });
 
-      // Verificar si la respuesta es exitosa
       if (!response.ok) {
         if (response.status === 401) {
-          console.error('Token expirado o inválido');
           localStorage.removeItem('token');
           window.location.href = '/login';
           return null;
         }
-        
-        if (response.status === 404) {
-          console.error(`Endpoint no encontrado: ${url}`);
-          throw new Error(`Endpoint no encontrado: ${url}`);
-        }
-        
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Verificar si la respuesta es JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('La respuesta no es JSON:', text.substring(0, 200));
-        throw new Error('El servidor no devolvió JSON válido');
-      }
-
-      return response;
+      return await response.json();
     } catch (error) {
       console.error(`Error en petición a ${url}:`, error);
       throw error;
     }
-  };
+  }, [getAuthToken]);
 
-  // Obtener ventas de la base de datos
-  const fetchSales = async () => {
+  // Obtener ventas
+  const fetchSales = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await makeAuthenticatedRequest('/api/sales');
-      if (response && response.ok) {
-        const data = await response.json();
-        setSales(Array.isArray(data) ? data : []);
-        console.log('Ventas cargadas:', data);
-      }
+      const data = await makeAuthenticatedRequest('/api/sales');
+      setSales(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching sales:', error);
       setError(`Error al cargar ventas: ${error.message}`);
-      setSales([]); // Asegurar que sales sea un array
+      setSales([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [makeAuthenticatedRequest]);
 
-  // Obtener cargas para el dropdown
-  const fetchCargas = async () => {
-    setError('');
+  // Obtener cargas
+  const fetchCargas = useCallback(async () => {
     try {
-      // Usar la ruta correcta según tu backend
-      const response = await makeAuthenticatedRequest('/api/loads');
-      if (response && response.ok) {
-        const data = await response.json();
-        setCargas(Array.isArray(data) ? data : []);
-        console.log('Cargas cargadas:', data);
-      }
+      const data = await makeAuthenticatedRequest('/api/loads');
+      setCargas(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching cargas:', error);
       setError(`Error al cargar cargas: ${error.message}`);
-      setCargas([]); // Asegurar que cargas sea un array
-      
-      // Si las cargas fallan, al menos permitir crear ventas sin carga
-      console.warn('Continuando sin cargas disponibles');
+      setCargas([]);
     }
-  };
+  }, [makeAuthenticatedRequest]);
 
-  // useEffect para cargar datos al montar el componente
+  // Cargar datos iniciales
   useEffect(() => {
-    console.log('Componente montado, cargando datos...');
     fetchSales();
     fetchCargas();
-  }, []);
+  }, [fetchSales, fetchCargas]);
 
-  const filteredSales = sales.filter((sale) => {
-    // Filtrar por término de búsqueda
+  // Filtrar ventas
+  const filteredSales = sales.filter(sale => {
     const matchesSearch = 
       sale.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sale.valor?.toString().includes(searchTerm) ||
       sale.id_venta?.toString().includes(searchTerm);
     
-    // Filtrar por fecha
-    const matchesDate = 
-      dateFilter === '' || 
-      (sale.fecha && sale.fecha.includes(dateFilter));
+    const matchesDate = dateFilter === '' || (sale.fecha && sale.fecha.includes(dateFilter));
     
     return matchesSearch && matchesDate;
   });
-  
-  // Mostrar detalles de la venta
-  const handleShowDetails = (sale) => {
-    setCurrentSale(sale);
-    setShowSaleModal(true);
-  };
-  
+
   // Manejar cambios en el formulario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewSale({
-      ...newSale,
-      [name]: value
-    });
+    setNewSale(prev => ({ ...prev, [name]: value }));
   };
-  
-  // Manejar envío del formulario
+
+  // Crear nueva venta
   const handleSubmitNewSale = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -183,28 +131,21 @@ const Ventas = () => {
     }
     
     try {
-      const response = await makeAuthenticatedRequest('/api/sales', {
+      await makeAuthenticatedRequest('/api/sales', {
         method: 'POST',
         body: JSON.stringify(newSale)
       });
       
-      if (response && response.ok) {
-        // Recargar ventas
-        await fetchSales();
-        
-        // Cerrar modal y resetear form
-        setShowNewSaleModal(false);
-        setNewSale({
-          fecha: new Date().toISOString().split('T')[0],
-          valor: '',
-          descripcion: '',
-          carga: ''
-        });
-        setValidated(false);
-        setError('');
-      } else {
-        setError('Error al crear la venta');
-      }
+      await fetchSales();
+      setShowNewSaleModal(false);
+      setNewSale({
+        fecha: new Date().toISOString().split('T')[0],
+        valor: '',
+        descripcion: '',
+        carga: ''
+      });
+      setValidated(false);
+      setError('');
     } catch (error) {
       console.error('Error creating sale:', error);
       setError(`Error al crear venta: ${error.message}`);
@@ -215,43 +156,35 @@ const Ventas = () => {
   const handleDeleteSale = async (saleId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar esta venta?')) {
       try {
-        const response = await makeAuthenticatedRequest(`/api/sales/${saleId}`, {
+        await makeAuthenticatedRequest(`/api/sales/${saleId}`, {
           method: 'DELETE'
         });
-        
-        if (response && response.ok) {
-          await fetchSales();
-          setError('');
-        } else {
-          setError('Error al eliminar la venta');
-        }
+        await fetchSales();
+        setError('');
       } catch (error) {
         console.error('Error deleting sale:', error);
         setError(`Error al eliminar venta: ${error.message}`);
       }
     }
   };
-  
-  // Formatear valor monetario
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('es-CO', {
+
+  // Formateadores
+  const formatCurrency = (value) => 
+    new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
       minimumFractionDigits: 0
-    }).format(value);
-  };
+    }).format(value || 0);
 
-  // Formatear fecha
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-CO', {
+    return new Date(dateString).toLocaleDateString('es-CO', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
   };
-  
+
   return (
     <LayoutBarButton userData={userData}>
       <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
@@ -265,12 +198,7 @@ const Ventas = () => {
         </Button>
       </div>
       
-      {/* Mostrar errores si los hay */}
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
       
       {/* Filtros y búsqueda */}
       <Card className="mb-4">
@@ -278,7 +206,7 @@ const Ventas = () => {
           <Row>
             <Col md={6} lg={6}>
               <InputGroup>
-                <InputGroup.Text id="basic-addon1" className="bg-warning text-white">
+                <InputGroup.Text className="bg-warning text-white">
                   <FaSearch />
                 </InputGroup.Text>
                 <Form.Control
@@ -290,7 +218,7 @@ const Ventas = () => {
             </Col>
             <Col md={6} lg={6} className="mt-3 mt-md-0">
               <InputGroup>
-                <InputGroup.Text id="filter-addon" className="bg-warning text-white">
+                <InputGroup.Text className="bg-warning text-white">
                   <FaCalendarAlt />
                 </InputGroup.Text>
                 <Form.Control
@@ -334,8 +262,8 @@ const Ventas = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSales.map((sale, index) => (
-                    <tr key={sale.id_venta || index}>
+                  {filteredSales.map((sale) => (
+                    <tr key={sale.id_venta}>
                       <td>#{sale.id_venta}</td>
                       <td>{formatDate(sale.fecha)}</td>
                       <td className="fw-bold text-success">
@@ -348,16 +276,15 @@ const Ventas = () => {
                         </Badge>
                       </td>
                       <td>
-                        <div className="action-buttons">
+                        <div className="d-flex gap-1">
                           <Button 
                             variant="outline-warning" 
-                            size="sm" 
-                            className="me-1"
+                            size="sm"
                             onClick={() => handleShowDetails(sale)}
                           >
                             Ver
                           </Button>
-                          <Button variant="outline-warning" size="sm" className="me-1">
+                          <Button variant="outline-warning" size="sm">
                             <FaEdit />
                           </Button>
                           <Button 
@@ -384,7 +311,7 @@ const Ventas = () => {
         </Card.Body>
       </Card>
       
-      {/* Modal de detalles de la venta */}
+      {/* Modal de detalles */}
       <Modal 
         show={showSaleModal} 
         onHide={() => setShowSaleModal(false)}
@@ -399,9 +326,7 @@ const Ventas = () => {
             <div className="sale-detail">
               <Row>
                 <Col md={4} className="text-center mb-4 mb-md-0">
-                  <div className="sale-avatar mb-3">
-                    <FaFileInvoiceDollar size={100} className="text-warning" />
-                  </div>
+                  <FaFileInvoiceDollar size={100} className="text-warning mb-3" />
                   <h4>Venta #{currentSale.id_venta}</h4>
                   <p className="mb-1 h5 text-success">
                     {formatCurrency(currentSale.valor)}
@@ -415,26 +340,26 @@ const Ventas = () => {
                   <h5 className="mb-3">Información de la Venta</h5>
                   <Row className="mb-3">
                     <Col sm={12}>
-                      <p className="mb-1"><strong>Descripción:</strong></p>
-                      <p>{currentSale.descripcion}</p>
+                      <p><strong>Descripción:</strong> {currentSale.descripcion}</p>
                     </Col>
                   </Row>
                   <Row className="mb-3">
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Fecha:</strong></p>
-                      <p>{formatDate(currentSale.fecha)}</p>
+                      <p><strong>Fecha:</strong> {formatDate(currentSale.fecha)}</p>
                     </Col>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Valor:</strong></p>
-                      <p className="text-success fw-bold">{formatCurrency(currentSale.valor)}</p>
+                      <p><strong>Valor:</strong> <span className="text-success fw-bold">
+                        {formatCurrency(currentSale.valor)}
+                      </span></p>
                     </Col>
                   </Row>
-                  <Row className="mb-3">
+                  <Row>
                     <Col sm={12}>
-                      <p className="mb-1"><strong>Carga Asociada:</strong></p>
-                      <Badge bg="info" className="rounded-pill">
-                        Carga #{currentSale.carga}
-                      </Badge>
+                      <p><strong>Carga Asociada:</strong> {' '}
+                        <Badge bg="info" className="rounded-pill">
+                          Carga #{currentSale.carga}
+                        </Badge>
+                      </p>
                     </Col>
                   </Row>
                 </Col>
@@ -447,12 +372,12 @@ const Ventas = () => {
             Cerrar
           </Button>
           <Button variant="warning">
-            <FaEdit className="me-2" /> Editar Información
+            <FaEdit className="me-2" /> Editar
           </Button>
         </Modal.Footer>
       </Modal>
       
-      {/* Modal para crear nueva venta */}
+      {/* Modal para nueva venta */}
       <Modal
         show={showNewSaleModal}
         onHide={() => setShowNewSaleModal(false)}
@@ -468,100 +393,84 @@ const Ventas = () => {
             </Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <div className="new-sale-form">
-              {/* Información de la venta */}
-              <h5 className="border-bottom pb-2 mb-3">Información de la Venta</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Fecha</Form.Label>
+            <h5 className="border-bottom pb-2 mb-3">Información de la Venta</h5>
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Fecha</Form.Label>
+                  <Form.Control
+                    type="date"
+                    name="fecha"
+                    value={newSale.fecha}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    La fecha es obligatoria
+                  </Form.Control.Feedback>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Valor</Form.Label>
+                  <InputGroup>
+                    <InputGroup.Text>$</InputGroup.Text>
                     <Form.Control
-                      type="date"
-                      name="fecha"
-                      value={newSale.fecha}
+                      type="number"
+                      name="valor"
+                      value={newSale.valor}
                       onChange={handleInputChange}
                       required
+                      min="0"
+                      step="1000"
                     />
                     <Form.Control.Feedback type="invalid">
-                      La fecha es obligatoria
+                      El valor es obligatorio
                     </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Valor</Form.Label>
-                    <InputGroup>
-                      <InputGroup.Text>$</InputGroup.Text>
-                      <Form.Control
-                        type="number"
-                        name="valor"
-                        value={newSale.valor}
-                        onChange={handleInputChange}
-                        required
-                        min="0"
-                        step="1000"
-                      />
-                      <Form.Control.Feedback type="invalid">
-                        El valor es obligatorio
-                      </Form.Control.Feedback>
-                    </InputGroup>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Row className="mb-3">
-                <Col md={12}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Descripción</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={3}
-                      name="descripcion"
-                      value={newSale.descripcion}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Descripción detallada de la venta"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      La descripción es obligatoria
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
-              
-              <Row className="mb-3">
-                <Col md={12}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Carga Asociada</Form.Label>
-                    <Form.Select
-                      name="carga"
-                      value={newSale.carga}
-                      onChange={handleInputChange}
-                      required={cargas.length > 0} // Solo requerido si hay cargas disponibles
-                    >
-                      <option value="">
-                        {cargas.length > 0 ? 'Seleccionar carga...' : 'No hay cargas disponibles'}
-                      </option>
-                      {cargas.map((carga) => (
-                        <option key={carga.id_carga} value={carga.id_carga}>
-                          Carga #{carga.id_carga} - {carga.descripcion || 'Sin descripción'}
-                        </option>
-                      ))}
-                    </Form.Select>
-                    {cargas.length > 0 && (
-                      <Form.Control.Feedback type="invalid">
-                        Seleccione una carga
-                      </Form.Control.Feedback>
-                    )}
-                    {cargas.length === 0 && (
-                      <Form.Text className="text-warning">
-                        No se pudieron cargar las cargas disponibles
-                      </Form.Text>
-                    )}
-                  </Form.Group>
-                </Col>
-              </Row>
-            </div>
+                  </InputGroup>
+                </Form.Group>
+              </Col>
+            </Row>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Descripción</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                name="descripcion"
+                value={newSale.descripcion}
+                onChange={handleInputChange}
+                required
+                placeholder="Descripción detallada de la venta"
+              />
+              <Form.Control.Feedback type="invalid">
+                La descripción es obligatoria
+              </Form.Control.Feedback>
+            </Form.Group>
+            
+            <Form.Group className="mb-3">
+              <Form.Label>Carga Asociada</Form.Label>
+              <Form.Select
+                name="carga"
+                value={newSale.carga}
+                onChange={handleInputChange}
+                required={cargas.length > 0}
+              >
+                <option value="">
+                  {cargas.length > 0 ? 'Seleccionar carga...' : 'No hay cargas disponibles'}
+                </option>
+                {cargas.map((carga) => (
+                  <option key={carga.id_carga} value={carga.id_carga}>
+                    Carga #{carga.id_carga} - {carga.descripcion || 'Sin descripción'}
+                  </option>
+                ))}
+              </Form.Select>
+              {cargas.length > 0 && (
+                <Form.Control.Feedback type="invalid">
+                  Seleccione una carga
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={() => setShowNewSaleModal(false)}>

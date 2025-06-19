@@ -13,7 +13,8 @@ import {
 import LayoutBarButton from '../components/LayoutBarButton';
 
 const Ventas = () => {
-  const [userData, setUserData] = useState(null);
+  // Estados
+  const [userData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -138,33 +139,21 @@ const Ventas = () => {
   }, []);
 
 
-  const filteredSales = sales.filter((sale) => {
-    // Filtrar por término de búsqueda
+  // Filtrar ventas
+  const filteredSales = sales.filter(sale => {
     const matchesSearch = 
       sale.valor?.toString().includes(searchTerm) ||
       sale.id_venta?.toString().includes(searchTerm);
     
-    // Filtrar por fecha
-    const matchesDate = 
-      dateFilter === '' || 
-      (sale.fecha && sale.fecha.includes(dateFilter));
+    const matchesDate = dateFilter === '' || (sale.fecha && sale.fecha.includes(dateFilter));
     
     return matchesSearch && matchesDate;
   });
-  
-  // Mostrar detalles de la venta
-  const handleShowDetails = (sale) => {
-    setCurrentSale(sale);
-    setShowSaleModal(true);
-  };
-  
+
   // Manejar cambios en el formulario
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewSale({
-      ...newSale,
-      [name]: value
-    });
+    setNewSale(prev => ({ ...prev, [name]: value }));
   };
   
   // Manejar envío del formulario
@@ -300,20 +289,17 @@ const handleDeleteSale = useCallback((saleId) => {
       style: 'currency',
       currency: 'COP',
       minimumFractionDigits: 0
-    }).format(value);
-  };
+    }).format(value || 0);
 
-  // Formatear fecha
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-CO', {
+    return new Date(dateString).toLocaleDateString('es-CO', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
   };
-  
+
   return (
     <LayoutBarButton userData={userData}>
       <div className="page-header d-flex justify-content-between align-items-center mt-4 mb-4">
@@ -327,12 +313,7 @@ const handleDeleteSale = useCallback((saleId) => {
         </Button>
       </div>
       
-      {/* Mostrar errores si los hay */}
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-      )}
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
       
       {/* Filtros y búsqueda */}
       <Card className="mb-4">
@@ -340,7 +321,7 @@ const handleDeleteSale = useCallback((saleId) => {
           <Row>
             <Col md={6} lg={6}>
               <InputGroup>
-                <InputGroup.Text id="basic-addon1" className="bg-warning text-white">
+                <InputGroup.Text className="bg-warning text-white">
                   <FaSearch />
                 </InputGroup.Text>
                 <Form.Control
@@ -352,7 +333,7 @@ const handleDeleteSale = useCallback((saleId) => {
             </Col>
             <Col md={6} lg={6} className="mt-3 mt-md-0">
               <InputGroup>
-                <InputGroup.Text id="filter-addon" className="bg-warning text-white">
+                <InputGroup.Text className="bg-warning text-white">
                   <FaCalendarAlt />
                 </InputGroup.Text>
                 <Form.Control
@@ -395,8 +376,8 @@ const handleDeleteSale = useCallback((saleId) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSales.map((sale, index) => (
-                    <tr key={sale.id_venta || index}>
+                  {filteredSales.map((sale) => (
+                    <tr key={sale.id_venta}>
                       <td>#{sale.id_venta}</td>
                       <td>{formatDate(sale.fecha)}</td>
                       <td className="fw-bold text-success">
@@ -408,11 +389,10 @@ const handleDeleteSale = useCallback((saleId) => {
                         </Badge>
                       </td>
                       <td>
-                        <div className="action-buttons">
+                        <div className="d-flex gap-1">
                           <Button 
                             variant="outline-warning" 
-                            size="sm" 
-                            className="me-1"
+                            size="sm"
                             onClick={() => handleShowDetails(sale)}
                           >
                             Ver
@@ -449,7 +429,7 @@ const handleDeleteSale = useCallback((saleId) => {
         </Card.Body>
       </Card>
       
-      {/* Modal de detalles de la venta */}
+      {/* Modal de detalles */}
       <Modal 
         show={showSaleModal} 
         onHide={() => setShowSaleModal(false)}
@@ -464,9 +444,7 @@ const handleDeleteSale = useCallback((saleId) => {
             <div className="sale-detail">
               <Row>
                 <Col md={4} className="text-center mb-4 mb-md-0">
-                  <div className="sale-avatar mb-3">
-                    <FaFileInvoiceDollar size={100} className="text-warning" />
-                  </div>
+                  <FaFileInvoiceDollar size={100} className="text-warning mb-3" />
                   <h4>Venta #{currentSale.id_venta}</h4>
                   <p className="mb-1 h5 text-success">
                     {formatCurrency(currentSale.valor)}
@@ -480,20 +458,21 @@ const handleDeleteSale = useCallback((saleId) => {
                   <h5 className="mb-3">Información de la Venta</h5>
                   <Row className="mb-3">
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Fecha:</strong></p>
-                      <p>{formatDate(currentSale.fecha)}</p>
+                      <p><strong>Fecha:</strong> {formatDate(currentSale.fecha)}</p>
                     </Col>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Valor:</strong></p>
-                      <p className="text-success fw-bold">{formatCurrency(currentSale.valor)}</p>
+                      <p><strong>Valor:</strong> <span className="text-success fw-bold">
+                        {formatCurrency(currentSale.valor)}
+                      </span></p>
                     </Col>
                   </Row>
-                  <Row className="mb-3">
+                  <Row>
                     <Col sm={12}>
-                      <p className="mb-1"><strong>Carga Asociada:</strong></p>
-                      <Badge bg="info" className="rounded-pill">
-                        Carga #{currentSale.carga}
-                      </Badge>
+                      <p><strong>Carga Asociada:</strong> {' '}
+                        <Badge bg="info" className="rounded-pill">
+                          Carga #{currentSale.carga}
+                        </Badge>
+                      </p>
                     </Col>
                   </Row>
                 </Col>

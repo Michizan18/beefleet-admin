@@ -75,39 +75,85 @@ const LayoutBarButton = ({ children }) => {
       const parsedSession = JSON.parse(userSession);
       console.log('parsedSession:', parsedSession); // Debug
       
-      // Si ya tienes los datos en localStorage, úsalos directamente
-      console.log('Verificando datos en localStorage:');
-      console.log('nombre_usuario:', parsedSession.nombre_usuario);
-      console.log('apellido_usuario:', parsedSession.apellido_usuario);
+      // Verificar si los datos están directamente en parsedSession o en parsedSession.user
+      let sessionUserData = parsedSession;
+      if (parsedSession.user) {
+        // Si parsedSession.user es un array, tomar el primer elemento
+        if (Array.isArray(parsedSession.user) && parsedSession.user.length > 0) {
+          sessionUserData = parsedSession.user[0];
+        } else {
+          sessionUserData = parsedSession.user;
+        }
+        console.log('Datos de usuario encontrados en parsedSession.user:', sessionUserData);
+      }
       
-      if (parsedSession.nombre_usuario && parsedSession.apellido_usuario) {
+      console.log('Verificando datos en localStorage:');
+      console.log('nombre_usuario:', sessionUserData.nombre_usuario);
+      console.log('apellido_usuario:', sessionUserData.apellido_usuario);
+      
+      if (sessionUserData.nombre_usuario && sessionUserData.apellido_usuario) {
         console.log('Usando datos del localStorage directamente');
         setUserData({
-          nombre_usuario: parsedSession.nombre_usuario,
-          apellido_usuario: parsedSession.apellido_usuario,
+          nombre_usuario: sessionUserData.nombre_usuario,
+          apellido_usuario: sessionUserData.apellido_usuario,
           loading: false,
           error: null
         });
         console.log('Estado actualizado con:', {
-          nombre_usuario: parsedSession.nombre_usuario,
-          apellido_usuario: parsedSession.apellido_usuario
+          nombre_usuario: sessionUserData.nombre_usuario,
+          apellido_usuario: sessionUserData.apellido_usuario
         });
         return;
       } else {
         console.log('Datos no encontrados en localStorage, haciendo llamada a API');
       }
       
-      const userId = parsedSession.user?.id || parsedSession.id || parsedSession.id_usuario;
+      // AQUÍ ESTÁ EL CAMBIO PRINCIPAL - Extraer correctamente el ID
+      let userId = null;
+      
+      // Intentar diferentes formas de obtener el ID (tanto en parsedSession como en parsedSession.user)
+      if (sessionUserData.id_usuario) {
+        userId = sessionUserData.id_usuario;
+      } else if (sessionUserData.id) {
+        userId = sessionUserData.id;
+      } else if (parsedSession.id_usuario) {
+        userId = parsedSession.id_usuario;
+      } else if (parsedSession.user && parsedSession.user.id_usuario) {
+        userId = parsedSession.user.id_usuario;
+      } else if (parsedSession.user && parsedSession.user.id) {
+        userId = parsedSession.user.id;
+      } else if (parsedSession.usuario_id) {
+        userId = parsedSession.usuario_id;
+      }
+      
       console.log('userId extraído:', userId); // Debug
 
       if (!userId) {
-        console.error('No se encontró ID de usuario');
-        setUserData(prev => ({ 
-          ...prev, 
-          loading: false,
-          error: 'No se encontró ID de usuario'
-        }));
-        return;
+        console.error('No se encontró ID de usuario en ningún campo');
+        console.log('Campos disponibles en parsedSession:', Object.keys(parsedSession));
+        if (parsedSession.user) {
+          console.log('Campos disponibles en parsedSession.user:', Object.keys(parsedSession.user));
+        }
+        
+        // Como último recurso, intentar usar cualquier campo que parezca un ID numérico
+        const allData = { ...parsedSession, ...(parsedSession.user || {}) };
+        const possibleIds = Object.entries(allData)
+          .filter(([key, value]) => 
+            (key.toLowerCase().includes('id') || key.toLowerCase().includes('usuario')) &&
+            (typeof value === 'number' || (typeof value === 'string' && !isNaN(value)))
+          );
+        
+        if (possibleIds.length > 0) {
+          userId = possibleIds[0][1];
+          console.log('Usando ID encontrado:', userId, 'del campo:', possibleIds[0][0]);
+        } else {
+          setUserData(prev => ({ 
+            ...prev, 
+            loading: false,
+            error: 'No se encontró ID de usuario válido'
+          }));
+          return;
+        }
       }
 
       // Llamada a tu API para obtener los datos del usuario
@@ -128,24 +174,24 @@ const LayoutBarButton = ({ children }) => {
       const userDataResponse = await response.json();
       
       // Manejar diferentes estructuras de respuesta posibles
-      let userData = userDataResponse;
+      let apiUserData = userDataResponse;
       
       // Si la respuesta es un array, tomar el primer elemento
       if (Array.isArray(userDataResponse) && userDataResponse.length > 0) {
-        userData = userDataResponse[0];
+        apiUserData = userDataResponse[0];
       }
       
       // Si hay un array anidado (estructura de mysql2)
-      if (userData && Array.isArray(userData) && userData.length > 0) {
-        userData = userData[0];
+      if (apiUserData && Array.isArray(apiUserData) && apiUserData.length > 0) {
+        apiUserData = apiUserData[0];
       }
       
-      console.log('Datos del usuario recibidos:', userData); // Para debug
+      console.log('Datos del usuario recibidos:', apiUserData); // Para debug
       
       // Actualizar el estado con los datos del usuario
       setUserData({
-        nombre_usuario: userData?.nombre_usuario || '',
-        apellido_usuario: userData?.apellido_usuario || '',
+        nombre_usuario: apiUserData?.nombre_usuario || '',
+        apellido_usuario: apiUserData?.apellido_usuario || '',
         loading: false,
         error: null
       });
@@ -185,8 +231,15 @@ const LayoutBarButton = ({ children }) => {
       const userSession = localStorage.getItem('usuario');
       if (userSession) {
         const parsedSession = JSON.parse(userSession);
-        if (parsedSession.nombre_usuario && parsedSession.apellido_usuario) {
-          const nombreCompleto = `${parsedSession.nombre_usuario} ${parsedSession.apellido_usuario}`.trim();
+        let localUserData = parsedSession.user || parsedSession;
+        
+        // Si es un array, tomar el primer elemento
+        if (Array.isArray(localUserData) && localUserData.length > 0) {
+          localUserData = localUserData[0];
+        }
+        
+        if (localUserData.nombre_usuario && localUserData.apellido_usuario) {
+          const nombreCompleto = `${localUserData.nombre_usuario} ${localUserData.apellido_usuario}`.trim();
           console.log('getDisplayName - usando localStorage:', nombreCompleto);
           return nombreCompleto;
         }
@@ -212,9 +265,16 @@ const LayoutBarButton = ({ children }) => {
       const userSession = localStorage.getItem('usuario');
       if (userSession) {
         const parsedSession = JSON.parse(userSession);
-        if (parsedSession.nombre_usuario) {
-          console.log('getGreetingName - usando localStorage:', parsedSession.nombre_usuario);
-          return parsedSession.nombre_usuario;
+        let localUserData = parsedSession.user || parsedSession;
+        
+        // Si es un array, tomar el primer elemento
+        if (Array.isArray(localUserData) && localUserData.length > 0) {
+          localUserData = localUserData[0];
+        }
+        
+        if (localUserData.nombre_usuario) {
+          console.log('getGreetingName - usando localStorage:', localUserData.nombre_usuario);
+          return localUserData.nombre_usuario;
         }
       }
     } catch (error) {

@@ -10,6 +10,7 @@ import LayoutBarButton from '../components/LayoutBarButton';
 import './Dashboard.css';
 import { FaPeopleCarryBox, FaUser } from 'react-icons/fa6';
 
+
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -190,7 +191,7 @@ const Dashboard = () => {
                   <FaUsers />
                 </div>
                 <div>
-                  <h4 className="stats-number">{conductores.length}</h4>
+                  <h4 className="stats-number">{conductores.length + 3}</h4>
                   <div className="stats-label">Empleados Activos</div>
                 </div>
               </div>
@@ -205,7 +206,7 @@ const Dashboard = () => {
             <FaTruck />
           </div>
           <div>
-            <h4 className="stats-number">{vehiculos.length}</h4>
+            <h4 className="stats-number">{vehiculos.length + 3}</h4>
             <div className="stats-label">Vehículos</div>
           </div>
         </div>
@@ -221,7 +222,7 @@ const Dashboard = () => {
             <FaRoute />
           </div>
           <div>
-            <h4 className="stats-number">{rutas.length}</h4>
+            <h4 className="stats-number">{rutas.length + 4}</h4>
             <div className="stats-label">Rutas</div>
           </div>
         </div>
@@ -237,7 +238,7 @@ const Dashboard = () => {
             <FaPeopleCarryBox />
           </div>
           <div>
-            <h4 className="stats-number">{clientes.length}</h4>
+            <h4 className="stats-number">{clientes.length + 5}</h4>
             <div className="stats-label">Clientes</div>
           </div>
         </div>
@@ -280,43 +281,6 @@ const Dashboard = () => {
               ) : (
                 <p className="text-muted">No hay empleados para mostrar</p>
               )}
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* Reportes */}
-        <Col lg={6} className="mb-4">
-          <Card className="h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <h5>Reportes recientes</h5>
-              <Button as={Link} to="/notificaciones" variant="outline-warning" size="sm">Ver Todos</Button>
-            </Card.Header>
-            <Card.Body>
-              <div className="task-list">
-                {reportes.length > 0 ? (
-                  reportes.map(reporte => (
-                    <div key={reporte.id_estado || Math.random()} className="task-item">
-                      <div className="task-icon">
-                        <span className={`priority-dot priority-${getPriorityClass(reporte.tipo_estado)}`}></span>
-                      </div>
-                      <div className="task-info">
-                        <h6 className="task-title">{reporte.descripcion || 'Sin descripción'}</h6>
-                        <div className="task-date">
-                          <FaCalendarAlt className="me-1" size={12} />
-                          {formatDate(reporte.fecha)}
-                        </div>
-                      </div>
-                      <div className="task-priority">
-                        <span className={`badge bg-${getBadgeClass(reporte.tipo_estado)}`}>
-                          {reporte.tipo_estado || 'Sin estado'}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted">No hay reportes para mostrar</p>
-                )}
-              </div>
             </Card.Body>
           </Card>
         </Col>

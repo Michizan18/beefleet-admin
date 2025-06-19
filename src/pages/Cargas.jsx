@@ -43,7 +43,7 @@ const Cargas = () => {
     fecha_fin: '',
     vehiculo: '',
     cliente: '',
-    estado: ''
+    estado: 'sin confirmar'
   });
   
   const [editCarga, setEditCarga] = useState({
@@ -912,23 +912,6 @@ const handleDeleteCarga = useCallback(async (cargaId) => {
                       {vehicles.map(vehicle => (
                         <option key={vehicle.id_vehiculo} value={vehicle.id_vehiculo}>
                           {vehicle.placa} - {vehicle.modelo}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Estado</Form.Label>
-                    <Form.Select
-                      name="conductor"
-                      value={newCarga.estado}
-                      onChange={handleInputChange}
-                    >
-                      <option value="">Estado</option>
-                      {drivers.map(driver => (
-                        <option key={driver.id_conductor} value={driver.id_conductor}>
-                          {driver.nombre_conductor} {driver.apellido_conductor}
                         </option>
                       ))}
                     </Form.Select>

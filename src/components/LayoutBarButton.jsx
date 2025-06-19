@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar, Container, Dropdown, Modal, Button } from 'react-bootstrap';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import MenuNotificaciones from './MenuNotificaciones';
+// import MenuNotificaciones from './MenuNotificaciones';
 import {
   FaUsers, FaCar, FaChartLine, FaBell, 
   FaCalendarAlt, FaUserCircle, FaSignOutAlt, FaCog, FaMapMarkedAlt, FaTruckLoading,
@@ -349,7 +349,7 @@ const LayoutBarButton = ({ children }) => {
           
           <ul className="navbar-nav ms-auto">
             <li className="nav-item">
-              <MenuNotificaciones />
+             
             </li>
             
             <li className="nav-item dropdown">

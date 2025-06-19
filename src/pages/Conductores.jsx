@@ -209,7 +209,7 @@ const Conductores = () => {
       tipo_licencia: newDriver.tipo_licencia || null,
       fecha_vencimiento: newDriver.fecha_vencimiento || null,
       fecha_ingreso: newDriver.fecha_ingreso || null,
-      estado: newDriver.estado || 'Activo'
+      estado: newDriver.estado || null
     };
 
     const response = await fetch('http://localhost:3001/api/drivers', {
@@ -1006,7 +1006,6 @@ const confirmDeleteDriver = async () => {
                       value={newDriver.estado}
                       onChange={handleInputChange}
                     >
-                      <option value="">Seleccionar...</option>
                       {DRIVER_STATUS.map(status => (
                         <option key={status.value} value={status.value}>
                           {status.label}

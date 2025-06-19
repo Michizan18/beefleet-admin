@@ -53,7 +53,27 @@ const AdminProfile = () => {
     
     try {
       const token = getAuthToken();
-      const id_usuario = localStorage.getItem('id_usuario');
+      const getUserId = () => {
+  try {
+    const userSession = localStorage.getItem('usuario');
+    if (userSession) {
+      const parsedSession = JSON.parse(userSession);
+      let userData = parsedSession.user || parsedSession;
+      
+      // Si es un array, tomar el primer elemento
+      if (Array.isArray(userData) && userData.length > 0) {
+        userData = userData[0];
+      }
+      
+      return userData.id_usuario || userData.id || null;
+    }
+  } catch (error) {
+    console.error('Error extrayendo ID de usuario:', error);
+  }
+  return null;
+};
+
+    const id_usuario = getUserId();
       
       console.log('Token:', token); // Debug
       console.log('ID Usuario:', id_usuario); // Debug

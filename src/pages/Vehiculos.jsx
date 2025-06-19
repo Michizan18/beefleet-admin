@@ -700,6 +700,7 @@ const handleUpdateVehicle = async (e) => {
               <option value="Caja Cerrada">Caja Cerrada</option>
               <option value="Caja refrigerada">Caja refrigerada</option>
               <option value="Doble semirremolque">Doble semirremolque</option>
+              <option value="Tracto Camión">Tracto Camión</option>
             </Form.Select>
           </Form.Group>
         </Col>
@@ -858,6 +859,7 @@ const handleUpdateVehicle = async (e) => {
               <option value="Caja Cerrada">Caja Cerrada</option>
               <option value="Caja refrigerada">Caja refrigerada</option>
               <option value="Doble semirremolque">Doble semirremolque</option>
+              <option value="Tracto Camión">Tracto Camión</option>
             </Form.Select>
           </Form.Group>
         </Col>

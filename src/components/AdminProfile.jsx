@@ -295,7 +295,7 @@ const AdminProfile = () => {
               <FaUserCircle className="text-muted" size={80} />
             </div>
             <h4 className="text-muted mb-2">No se encontraron datos del perfil</h4>
-            <p className="text-muted">No pudimos cargar la información de tu perfil.</p>
+            <p className="text-muted">No pudimos cargar la información de tu perfil!</p>
           </div>
         )}
       </Container>

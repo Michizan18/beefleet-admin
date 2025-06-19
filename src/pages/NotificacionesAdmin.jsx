@@ -1,471 +1,546 @@
 import { useState, useEffect } from 'react';
-import { Card, Badge, Button, Row, Col, Dropdown, Form, InputGroup, Modal } from 'react-bootstrap';
-import { FaSearch, FaBell, FaMapMarkerAlt, FaTrash, FaCheckCircle, FaImage, FaExclamationTriangle } from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
+import { Row, Col, Card, Button, Table, Modal, Spinner, Alert, Badge } from 'react-bootstrap';
+import { FaBell, FaTrash, FaCheck, FaEye, FaExclamationTriangle, FaCar, FaCalendarAlt } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
+import Swal from 'sweetalert2';
 
 const NotificacionesAdmin = () => {
-  const [notificaciones, setNotificaciones] = useState([]);
-  const [filteredNotificaciones, setFilteredNotificaciones] = useState([]);
+  const [reportesData, setReportesData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filtroTipo, setFiltroTipo] = useState('Todos');
-  const [filtroEstado, setFiltroEstado] = useState('Todos');
+  const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [notificacionSeleccionada, setNotificacionSeleccionada] = useState(null);
-  const [userData, setUserData] = useState(null);
+  const [selectedReporte, setSelectedReporte] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [vehiculos, setVehiculos] = useState([]);
 
-  // Obtener datos del usuario y notificaciones
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Simulación de llamada API
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Datos de usuario simulados
-        const userData = {
-          adminName: "Carlos Rodríguez",
-        };
-        
-        // Datos simulados de notificaciones
-        const notificacionesData = [
-          {
-            id: 1,
-            conductor: "Luis Martínez",
-            vehiculo: "ABC-123",
-            tipo: "Problema con el vehículo",
-            descripcion: "Llanta desinflada en la ruta hacia Medellín",
-            fecha: "2025-05-20T10:30:00",
-            estado: "Pendiente",
-            ubicacion: "Carretera 45, Km 80, Medellín",
-            imagenes: ["imagen1.jpg"],
-            etapa: "Viajando",
-            prioridad: "Alta"
-          },
-          {
-            id: 2,
-            conductor: "Pablo Cárdenas",
-            vehiculo: "XYZ-789",
-            tipo: "Carga exitosa",
-            descripcion: "Carga entregada en la terminal de Cali",
-            fecha: "2025-05-20T08:15:00",
-            estado: "Recibido",
-            ubicacion: "Terminal de Carga, Cali",
-            imagenes: [],
-            etapa: "Descarga completa",
-            prioridad: "Baja"
-          },
-          {
-            id: 3,
-            conductor: "Mario López",
-            vehiculo: "DEF-456",
-            tipo: "Problema con la carga",
-            descripcion: "Error con carga asignada. Mercancía no coincide con la orden",
-            fecha: "2025-05-19T14:45:00",
-            estado: "Resuelto",
-            ubicacion: "Bodega Central, Bogotá",
-            imagenes: ["imagen2.jpg", "imagen3.jpg"],
-            etapa: "Descargando",
-            prioridad: "Alta"
-          },
-          {
-            id: 4,
-            conductor: "Juan González",
-            vehiculo: "GHI-123",
-            tipo: "Emergencia",
-            descripcion: "Accidente en la vía. Choque leve con otro vehículo",
-            fecha: "2025-05-18T16:20:00",
-            estado: "En proceso",
-            ubicacion: "Autopista Sur, Km 15, Bogotá",
-            imagenes: ["imagen4.jpg"],
-            etapa: "Viajando",
-            prioridad: "Crítica"
-          },
-          {
-            id: 5,
-            conductor: "Roberto Sánchez",
-            vehiculo: "JKL-789",
-            tipo: "Otro",
-            descripcion: "Control policía en la vía, revisión de documentos",
-            fecha: "2025-05-17T11:10:00",
-            estado: "Resuelto",
-            ubicacion: "Peaje Los Patios, Norte de Santander",
-            imagenes: [],
-            etapa: "Viajando",
-            prioridad: "Baja"
-          }
-        ];
-        
-        setUserData(userData);
-        setNotificaciones(notificacionesData);
-        setFilteredNotificaciones(notificacionesData);
-      } catch (error) {
-        console.error("Error al cargar los datos:", error);
-      } finally {
-        setLoading(false);
-      }
+  const getVehiculoDescription = (id_vehiculo) => {
+    if (!id_vehiculo) return 'Sin vehículo asignado';
+    const vehiculo = vehiculos.find(v => v.id === id_vehiculo);
+    return vehiculo ? `${vehiculo.marca} ${vehiculo.modelo} - ${vehiculo.placa}` : `Vehículo ID: ${id_vehiculo}`;
+  };
+
+  const getTipoReporteBadge = (tipo) => {
+    const tipos = {
+      'mantenimiento': { variant: 'warning', icon: <FaCar className="me-1" />, text: 'Mantenimiento' },
+      'accidente': { variant: 'danger', icon: <FaExclamationTriangle className="me-1" />, text: 'Accidente' },
+      'revision': { variant: 'info', icon: <FaCheck className="me-1" />, text: 'Revisión' },
+      'otro': { variant: 'secondary', icon: <FaBell className="me-1" />, text: 'Otro' }
     };
     
+    const tipoInfo = tipos[tipo?.toLowerCase()] || tipos['otro'];
+    return (
+      <Badge bg={tipoInfo.variant}>
+        {tipoInfo.icon}
+        {tipoInfo.text}
+      </Badge>
+    );
+  };
+
+  const formatFecha = (fecha) => {
+    if (!fecha) return 'Sin fecha';
+    return new Date(fecha).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+
+      // Fetch reportes y vehículos en paralelo
+      const [reportsResponse, vehiclesResponse] = await Promise.all([
+        fetch('http://localhost:3001/api/reports', {
+          method: 'GET',
+          headers,
+        }),
+        fetch('http://localhost:3001/api/vehicles', {
+          method: 'GET',
+          headers,
+        }).catch(error => {
+          console.warn('No se pudieron cargar los vehículos:', error);
+          return { ok: false };
+        })
+      ]);
+
+      if (!reportsResponse.ok) {
+        throw new Error(`Error al cargar los reportes: ${reportsResponse.status}`);
+      }
+
+      const reportsData = await reportsResponse.json();
+      console.log('Datos de Reportes:', reportsData);
+      setReportesData(reportsData);
+
+      // Cargar vehículos si la respuesta es exitosa
+      if (vehiclesResponse.ok) {
+        const vehiclesData = await vehiclesResponse.json();
+        console.log('Datos de Vehículos:', vehiclesData);
+        setVehiculos(vehiclesData);
+      } else {
+        setVehiculos([]);
+      }
+
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      Swal.fire({
+        title: 'Error al cargar datos',
+        text: `No se pudieron cargar los datos: ${error.message}`,
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#ffc107'
+      });
+      
+      setVehiculos([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    // Detectar ID de notificación en la URL
-    const params = new URLSearchParams(window.location.search);
-    const notifId = params.get('id');
-    
-    if (notifId && !loading) {
-      // Buscar la notificación con ese ID
-      const notificacion = notificaciones.find(n => n.id === parseInt(notifId));
-      if (notificacion) {
-        // Mostrar detalles de esa notificación
-        setNotificacionSeleccionada(notificacion);
-        setShowModal(true);
-      }
-    }
-  }, [notificaciones, loading]);
-
-  // Filtrar notificaciones según términos de búsqueda y filtros
-  useEffect(() => {
-    let filtered = [...notificaciones];
-    
-    // Filtrar por término de búsqueda
-    if (searchTerm) {
-      filtered = filtered.filter(notif => 
-        notif.conductor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        notif.vehiculo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        notif.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    // Filtrar por tipo
-    if (filtroTipo !== 'Todos') {
-      filtered = filtered.filter(notif => notif.tipo === filtroTipo);
-    }
-    
-    // Filtrar por estado
-    if (filtroEstado !== 'Todos') {
-      filtered = filtered.filter(notif => notif.estado === filtroEstado);
-    }
-    
-    setFilteredNotificaciones(filtered);
-  }, [searchTerm, filtroTipo, filtroEstado, notificaciones]);
-
-  // Formatear fecha
-  const formatearFecha = (fechaString) => {
-    const fecha = new Date(fechaString);
-    const ahora = new Date();
-    const diferenciaMs = ahora - fecha;
-    const diferenciaMinutos = Math.floor(diferenciaMs / (1000 * 60));
-    
-    if (diferenciaMinutos < 60) {
-      return `Hace ${diferenciaMinutos} minutos`;
-    } else if (diferenciaMinutos < 24 * 60) {
-      const horas = Math.floor(diferenciaMinutos / 60);
-      return `Hace ${horas} ${horas === 1 ? 'hora' : 'horas'}`;
-    } else {
-      return fecha.toLocaleDateString('es-ES', { 
-        day: 'numeric', 
-        month: 'short', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    }
-  };
-
-  // Manejar cambio de estado de notificación
-  const cambiarEstadoNotificacion = (id, nuevoEstado) => {
-    const actualizadas = notificaciones.map(notif => 
-      notif.id === id ? { ...notif, estado: nuevoEstado } : notif
-    );
-    setNotificaciones(actualizadas);
-  };
-
-  // Eliminar notificación
-  const eliminarNotificacion = (id) => {
-    setNotificaciones(notificaciones.filter(notif => notif.id !== id));
-  };
-
-  // Ver detalles de notificación
-  const verDetalles = (notificacion) => {
-    setNotificacionSeleccionada(notificacion);
+  const handleViewReporte = (reporte) => {
+    setSelectedReporte(reporte);
     setShowModal(true);
   };
 
-  // Obtener color de badge según prioridad
-  const getBadgeColor = (prioridad) => {
-    switch (prioridad.toLowerCase()) {
-      case 'crítica': return 'danger';
-      case 'alta': return 'warning';
-      case 'media': return 'primary';
-      case 'baja': return 'success';
-      default: return 'secondary';
+  const handleDeleteReporte = async (id_reporte) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar reporte?',
+      text: '¿Estás seguro de que deseas eliminar este reporte? Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+    
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/reports/${id_reporte}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al eliminar el reporte');
+      }
+
+      await fetchData();
+      Swal.fire({
+        title: '¡Eliminado!',
+        text: 'El reporte ha sido eliminado correctamente.',
+        icon: 'success',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ffc107',
+        timer: 2000,
+        timerProgressBar: true
+      });
+    } catch (err) {
+      setError(err.message);
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudo eliminar el reporte',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ffc107'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Obtener color de badge según estado
-  const getEstadoBadgeColor = (estado) => {
-    switch (estado.toLowerCase()) {
-      case 'pendiente': return 'danger';
-      case 'recibido': return 'primary';
-      case 'en proceso': return 'warning';
-      case 'resuelto': return 'success';
-      default: return 'secondary';
+  const handleMarkAsResolved = async (id_reporte) => {
+    const result = await Swal.fire({
+      title: '¿Marcar como resuelto?',
+      text: '¿Estás seguro de que este reporte ha sido resuelto?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Sí, marcar como resuelto',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+    
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Encontrar el reporte actual
+      const reporteActual = reportesData.find(r => r.id_reporte === id_reporte);
+      if (!reporteActual) {
+        throw new Error('Reporte no encontrado');
+      }
+
+      const response = await fetch(`http://localhost:3001/api/reports/${id_reporte}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id_reporte: reporteActual.id_reporte,
+          descripcion: reporteActual.descripcion + ' [RESUELTO]',
+          vehiculo: reporteActual.vehiculo,
+          tipo_reporte: reporteActual.tipo_reporte
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al marcar el reporte como resuelto');
+      }
+
+      await fetchData();
+      Swal.fire({
+        title: '¡Marcado como resuelto!',
+        text: 'El reporte ha sido marcado como resuelto.',
+        icon: 'success',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ffc107',
+        timer: 2000,
+        timerProgressBar: true
+      });
+    } catch (err) {
+      setError(err.message);
+      Swal.fire({
+        title: 'Error',
+        text: 'No se pudo marcar el reporte como resuelto',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#ffc107'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Obtener icono según tipo de notificación
-  const getTipoIcon = (tipo) => {
-    switch (tipo) {
-      case 'Problema con el vehículo': return <FaExclamationTriangle className="text-warning" />;
-      case 'Retraso en la entrega': return <FaBell className="text-primary" />;
-      case 'Problema con la carga': return <FaBell className="text-warning" />;
-      case 'Carga exitosa': return <FaBell className="text-success" />;
-      case 'Descarga exitosa': return <FaBell className="text-success" />;
-      case 'Emergencia': return <FaExclamationTriangle className="text-danger" />;
-      default: return <FaBell className="text-secondary" />;
-    }
+  const calculateStats = () => {
+    const totalReportes = reportesData.length;
+    const reportesPendientes = reportesData.filter(r => !r.descripcion?.includes('[RESUELTO]')).length;
+    const reportesResueltos = reportesData.filter(r => r.descripcion?.includes('[RESUELTO]')).length;
+    const reportesHoy = reportesData.filter(r => {
+      const hoy = new Date().toDateString();
+      const fechaReporte = new Date(r.fecha_reporte).toDateString();
+      return hoy === fechaReporte;
+    }).length;
+
+    return { totalReportes, reportesPendientes, reportesResueltos, reportesHoy };
   };
+
+  const { totalReportes, reportesPendientes, reportesResueltos, reportesHoy } = calculateStats();
+
+  if (loading) {
+    return (
+      <LayoutBarButton>
+        <div className="d-flex justify-content-center align-items-center" style={{ height: '60vh' }}>
+          <Spinner animation="border" variant="warning" />
+          <span className="ms-3">Cargando reportes...</span>
+        </div>
+      </LayoutBarButton>
+    );
+  }
 
   return (
-    <LayoutBarButton userData={userData}>
-      <div className="notificaciones-admin-container">
-        <h1 className="mt-4 mb-4">Reportes de Conductores</h1>
+    <LayoutBarButton>
+      <div className="d-flex justify-content-between align-items-center mt-4 mb-4">
+        <h1>
+          <FaBell className="me-2" />
+          Notificaciones y Reportes
+        </h1>
+      </div>
+
+      {error && (
+        <Alert variant="danger" onClose={() => setError(null)} dismissible className="mb-4">
+          <pre>{error}</pre>
+        </Alert>
+      )}
+
+      {/* Estadísticas de reportes */}
+      <Row className="stats-cards mb-4">
+        <Col md={3} sm={6} className="mb-4">
+          <Card className="stats-card h-100">
+            <Card.Body>
+              <div className="d-flex align-items-center">
+                <div className="stats-icon orange">
+                  <FaBell />
+                </div>
+                <div>
+                  <h4 className="stats-number">{totalReportes}</h4>
+                  <div className="stats-label">Total Reportes</div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
         
-        {/* Filtros y búsqueda */}
-        <Row className="mb-4 align-items-center">
-          <Col lg={4} md={6} className="mb-3 mb-md-0">
-            <InputGroup>
-              <InputGroup.Text>
-                <FaSearch />
-              </InputGroup.Text>
-              <Form.Control
-                placeholder="Buscar por conductor, vehículo o descripción..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </InputGroup>
-          </Col>
-          
-          <Col lg={8} md={6} className="d-flex justify-content-md-end">
-            <Dropdown className="me-2">
-              <Dropdown.Toggle variant="outline-secondary">
-                Tipo: {filtroTipo}
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={() => setFiltroTipo('Todos')}>Todos</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroTipo('Problema con el vehículo')}>Problema con el vehículo</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroTipo('Retraso en la entrega')}>Retraso en la entrega</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroTipo('Problema con la carga')}>Problema con la carga</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroTipo('Emergencia')}>Emergencia</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroTipo('Carga exitosa')}>Carga exitosa</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroTipo('Descarga exitosa')}>Descarga exitosa</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroTipo('Otro')}>Otro</Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-            
-            <Dropdown>
-              <Dropdown.Toggle variant="outline-secondary">
-                Estado: {filtroEstado}
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item onClick={() => setFiltroEstado('Todos')}>Todos</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroEstado('Pendiente')}>Pendiente</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroEstado('Recibido')}>Recibido</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroEstado('En proceso')}>En proceso</Dropdown.Item>
-                <Dropdown.Item onClick={() => setFiltroEstado('Resuelto')}>Resuelto</Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          </Col>
-        </Row>
+        <Col md={3} sm={6} className="mb-4">
+          <Card className="stats-card h-100">
+            <Card.Body>
+              <div className="d-flex align-items-center">
+                <div className="stats-icon text-warning">
+                  <FaExclamationTriangle />
+                </div>
+                <div>
+                  <h4 className="stats-number">{reportesPendientes}</h4>
+                  <div className="stats-label">Pendientes</div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
         
-        {/* Lista de notificaciones */}
-        <div className="notificaciones-list">
-          {filteredNotificaciones.length === 0 ? (
+        <Col md={3} sm={6} className="mb-4">
+          <Card className="stats-card h-100">
+            <Card.Body>
+              <div className="d-flex align-items-center">
+                <div className="stats-icon text-success">
+                  <FaCheck />
+                </div>
+                <div>
+                  <h4 className="stats-number">{reportesResueltos}</h4>
+                  <div className="stats-label">Resueltos</div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        
+        <Col md={3} sm={6} className="mb-4">
+          <Card className="stats-card h-100">
+            <Card.Body>
+              <div className="d-flex align-items-center">
+                <div className="stats-icon text-info">
+                  <FaCalendarAlt />
+                </div>
+                <div>
+                  <h4 className="stats-number">{reportesHoy}</h4>
+                  <div className="stats-label">Hoy</div>
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Tabla de reportes */}
+      <Card className="mb-4">
+        <Card.Header>
+          <h5 className="mb-0">Lista de Reportes ({reportesData.length})</h5>
+        </Card.Header>
+        <Card.Body>
+          {reportesData.length === 0 ? (
             <div className="text-center py-5">
-              <FaBell size={40} className="text-muted mb-3" />
-              <h5>No hay notificaciones que coincidan con los filtros</h5>
+              <FaBell size={64} className="text-muted mb-3" />
+              <h5 className="text-muted">No hay reportes registrados</h5>
+              <p className="text-muted">Los reportes aparecerán aquí cuando los usuarios los envíen.</p>
             </div>
           ) : (
-            filteredNotificaciones.map(notificacion => (
-              <Card key={notificacion.id} className="notificacion-card mb-3">
-                <Card.Body>
-                  <Row>
-                    <Col xs={12} md={8}>
-                      <div className="d-flex align-items-center mb-2">
-                        <div className="tipo-icon me-2">
-                          {getTipoIcon(notificacion.tipo)}
-                        </div>
-                        <div>
-                          <h5 className="mb-0">{notificacion.tipo}</h5>
-                          <div className="text-muted small">{formatearFecha(notificacion.fecha)}</div>
-                        </div>
-                      </div>
-                      
-                      <p className="notificacion-descripcion mb-2">{notificacion.descripcion}</p>
-                      
-                      <div className="d-flex flex-wrap mb-2">
-                        <div className="me-3 mb-1">
-                          <span className="fw-bold">Conductor:</span> {notificacion.conductor}
-                        </div>
-                        <div className="me-3 mb-1">
-                          <span className="fw-bold">Vehículo:</span> {notificacion.vehiculo}
-                        </div>
-                        <div className="me-3 mb-1">
-                          <span className="fw-bold">Etapa:</span> {notificacion.etapa}
-                        </div>
-                      </div>
-                      
-                      <div className="mb-2">
-                        <FaMapMarkerAlt className="text-danger me-1" /> {notificacion.ubicacion}
-                      </div>
-                      
-                      <div className="d-flex flex-wrap">
-                        <Badge bg={getBadgeColor(notificacion.prioridad)} className="me-2 mb-1">
-                          Prioridad: {notificacion.prioridad}
-                        </Badge>
-                        <Badge bg={getEstadoBadgeColor(notificacion.estado)} className="me-2 mb-1">
-                          {notificacion.estado}
-                        </Badge>
-                        {notificacion.imagenes.length > 0 && (
-                          <Badge bg="info" className="me-2 mb-1">
-                            <FaImage className="me-1" /> {notificacion.imagenes.length} {notificacion.imagenes.length === 1 ? 'imagen' : 'imágenes'}
-                          </Badge>
-                        )}
-                      </div>
-                    </Col>
-                    
-                    <Col xs={12} md={4} className="d-flex flex-column align-items-md-end justify-content-center mt-3 mt-md-0">
-                      <div className="d-flex flex-wrap justify-content-md-end">
-                        <Button 
-                          variant="outline-primary" 
-                          size="sm" 
-                          className="me-2 mb-2"
-                          onClick={() => verDetalles(notificacion)}
-                        >
-                          Ver detalles
-                        </Button>
-                        
-                        <Dropdown className="me-2 mb-2">
-                          <Dropdown.Toggle variant="outline-secondary" size="sm" id={`dropdown-${notificacion.id}`}>
-                            Cambiar estado
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu>
-                            <Dropdown.Item onClick={() => cambiarEstadoNotificacion(notificacion.id, 'Pendiente')}>Pendiente</Dropdown.Item>
-                            <Dropdown.Item onClick={() => cambiarEstadoNotificacion(notificacion.id, 'Recibido')}>Recibido</Dropdown.Item>
-                            <Dropdown.Item onClick={() => cambiarEstadoNotificacion(notificacion.id, 'En proceso')}>En proceso</Dropdown.Item>
-                            <Dropdown.Item onClick={() => cambiarEstadoNotificacion(notificacion.id, 'Resuelto')}>Resuelto</Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
-                        
-                        <Button 
-                          variant="outline-danger" 
-                          size="sm" 
-                          className="mb-2"
-                          onClick={() => eliminarNotificacion(notificacion.id)}
-                        >
-                          <FaTrash />
-                        </Button>
-                      </div>
-                    </Col>
-                  </Row>
-                </Card.Body>
-              </Card>
-            ))
+            <div className="table-responsive">
+              <Table hover className="align-middle">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Vehículo</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportesData.map((reporte) => {
+                    const isResolved = reporte.descripcion?.includes('[RESUELTO]');
+                    return (
+                      <tr key={reporte.id_reporte} className={isResolved ? 'table-success' : ''}>
+                        <td>
+                          <span className="fw-bold">{reporte.id_reporte}</span>
+                        </td>
+                        <td>
+                          {getTipoReporteBadge(reporte.tipo_reporte)}
+                        </td>
+                        <td>
+                          <small className="text-muted">
+                            {getVehiculoDescription(reporte.vehiculo)}
+                          </small>
+                        </td>
+                        <td>
+                          <div style={{ maxWidth: '200px' }}>
+                            <span className="text-truncate d-block" title={reporte.descripcion}>
+                              {reporte.descripcion?.replace('[RESUELTO]', '')}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <small className="text-muted">
+                            <FaCalendarAlt className="me-1" />
+                            {formatFecha(reporte.fecha_reporte)}
+                          </small>
+                        </td>
+                        <td>
+                          {isResolved ? (
+                            <Badge bg="success">
+                              <FaCheck className="me-1" />
+                              Resuelto
+                            </Badge>
+                          ) : (
+                            <Badge bg="warning">
+                              <FaExclamationTriangle className="me-1" />
+                              Pendiente
+                            </Badge>
+                          )}
+                        </td>
+                        <td>
+                          <div className="d-flex gap-2">
+                            <Button
+                              variant="outline-info"
+                              size="sm"
+                              onClick={() => handleViewReporte(reporte)}
+                              title="Ver detalles"
+                              disabled={isSubmitting}
+                            >
+                              <FaEye />
+                            </Button>
+                            {!isResolved && (
+                              <Button
+                                variant="outline-success"
+                                size="sm"
+                                onClick={() => handleMarkAsResolved(reporte.id_reporte)}
+                                title="Marcar como resuelto"
+                                disabled={isSubmitting}
+                              >
+                                <FaCheck />
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDeleteReporte(reporte.id_reporte)}
+                              title="Eliminar reporte"
+                              disabled={isSubmitting}
+                            >
+                              <FaTrash />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </div>
           )}
-        </div>
-      </div>
-      
-      {/* Modal de detalles */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+        </Card.Body>
+      </Card>
+
+      {/* Modal para ver detalles del reporte */}
+      <Modal show={showModal} onHide={() => !isSubmitting && setShowModal(false)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Detalles de la notificación</Modal.Title>
+          <Modal.Title>
+            <FaEye className="me-2" />
+            Detalles del Reporte #{selectedReporte?.id_reporte}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {notificacionSeleccionada && (
+          {selectedReporte && (
             <div>
-              <h5 className="d-flex align-items-center">
-                {getTipoIcon(notificacionSeleccionada.tipo)}
-                <span className="ms-2">{notificacionSeleccionada.tipo}</span>
-                <Badge bg={getBadgeColor(notificacionSeleccionada.prioridad)} className="ms-3">
-                  Prioridad: {notificacionSeleccionada.prioridad}
-                </Badge>
-              </h5>
-              
-              <p className="text-muted">
-                {formatearFecha(notificacionSeleccionada.fecha)}
-              </p>
-              
-              <h6>Descripción:</h6>
-              <p>{notificacionSeleccionada.descripcion}</p>
-              
               <Row className="mb-3">
-                <Col md={4}>
-                  <h6>Conductor:</h6>
-                  <p>{notificacionSeleccionada.conductor}</p>
+                <Col md={6}>
+                  <strong>Tipo de Reporte:</strong>
+                  <div className="mt-1">
+                    {getTipoReporteBadge(selectedReporte.tipo_reporte)}
+                  </div>
                 </Col>
-                <Col md={4}>
-                  <h6>Vehículo:</h6>
-                  <p>{notificacionSeleccionada.vehiculo}</p>
-                </Col>
-                <Col md={4}>
-                  <h6>Etapa:</h6>
-                  <p>{notificacionSeleccionada.etapa}</p>
+                <Col md={6}>
+                  <strong>Fecha:</strong>
+                  <div className="mt-1 text-muted">
+                    <FaCalendarAlt className="me-1" />
+                    {formatFecha(selectedReporte.fecha_reporte)}
+                  </div>
                 </Col>
               </Row>
               
-              <h6>Ubicación:</h6>
-              <p><FaMapMarkerAlt className="text-danger me-1" /> {notificacionSeleccionada.ubicacion}</p>
+              <Row className="mb-3">
+                <Col md={12}>
+                  <strong>Vehículo:</strong>
+                  <div className="mt-1 text-muted">
+                    <FaCar className="me-1" />
+                    {getVehiculoDescription(selectedReporte.vehiculo)}
+                  </div>
+                </Col>
+              </Row>
               
-              <h6>Estado:</h6>
-              <div className="mb-3">
-                <Badge bg={getEstadoBadgeColor(notificacionSeleccionada.estado)} style={{ fontSize: '1rem', padding: '8px 12px' }}>
-                  {notificacionSeleccionada.estado}
-                </Badge>
-              </div>
+              <Row className="mb-3">
+                <Col md={12}>
+                  <strong>Estado:</strong>
+                  <div className="mt-1">
+                    {selectedReporte.descripcion?.includes('[RESUELTO]') ? (
+                      <Badge bg="success">
+                        <FaCheck className="me-1" />
+                        Resuelto
+                      </Badge>
+                    ) : (
+                      <Badge bg="warning">
+                        <FaExclamationTriangle className="me-1" />
+                        Pendiente
+                      </Badge>
+                    )}
+                  </div>
+                </Col>
+              </Row>
               
-              <h6>Imágenes adjuntas:</h6>
-              {notificacionSeleccionada.imagenes.length === 0 ? (
-                <p>No hay imágenes adjuntas</p>
-              ) : (
-                <Row>
-                  {notificacionSeleccionada.imagenes.map((imagen, index) => (
-                    <Col key={index} xs={6} md={4} className="mb-3">
-                      <div className="imagen-placeholder d-flex justify-content-center align-items-center bg-light rounded" style={{ height: '120px' }}>
-                        <FaImage size={30} className="text-secondary" />
-                      </div>
-                      <div className="text-center mt-1 small">{imagen}</div>
-                    </Col>
-                  ))}
-                </Row>
-              )}
-              
-              <h6>Historial de acciones:</h6>
-              <ul className="list-unstyled">
-                <li className="mb-1">• Creado el {new Date(notificacionSeleccionada.fecha).toLocaleDateString('es-ES')}</li>
-                {notificacionSeleccionada.estado !== 'Pendiente' && (
-                  <li className="mb-1">• Marcado como {notificacionSeleccionada.estado.toLowerCase()} el {new Date().toLocaleDateString('es-ES')}</li>
-                )}
-              </ul>
+              <Row>
+                <Col md={12}>
+                  <strong>Descripción:</strong>
+                  <div className="mt-2 p-3 bg-light rounded">
+                    {selectedReporte.descripcion?.replace('[RESUELTO]', '')}
+                  </div>
+                </Col>
+              </Row>
             </div>
           )}
         </Modal.Body>
         <Modal.Footer>
-          {notificacionSeleccionada?.estado !== 'Resuelto' && (
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowModal(false)}
+            disabled={isSubmitting}
+          >
+            Cerrar
+          </Button>
+          {selectedReporte && !selectedReporte.descripcion?.includes('[RESUELTO]') && (
             <Button 
               variant="success" 
               onClick={() => {
-                cambiarEstadoNotificacion(notificacionSeleccionada.id, 'Resuelto');
                 setShowModal(false);
+                handleMarkAsResolved(selectedReporte.id_reporte);
               }}
+              disabled={isSubmitting}
             >
-              <FaCheckCircle className="me-1" /> Marcar como resuelto
+              <FaCheck className="me-1" />
+              Marcar como Resuelto
             </Button>
           )}
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Cerrar
-          </Button>
         </Modal.Footer>
       </Modal>
     </LayoutBarButton>

@@ -7,6 +7,7 @@ import {
   FaCar, FaImage, FaUser
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
+import Swal from 'sweetalert2';
 
 // Constantes para mensajes de validación
 const VALIDATION_MESSAGES = {
@@ -20,7 +21,6 @@ const Cargas = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [error, setError] = useState(null);
   const [cargas, setCargas] = useState([]);
   
   // Estados para datos relacionados
@@ -43,7 +43,7 @@ const Cargas = () => {
     fecha_fin: '',
     vehiculo: '',
     cliente: '',
-    conductor: ''
+    estado: ''
   });
   
   const [editCarga, setEditCarga] = useState({
@@ -55,12 +55,32 @@ const Cargas = () => {
     fecha_fin: '',
     vehiculo: '',
     cliente: '',
-    conductor: ''
+    estado: ''
   });
   
   // Estados de validación
   const [validated, setValidated] = useState(false);
   const [editValidated, setEditValidated] = useState(false);
+
+    const showAlert = useCallback((type, title, text = '', timer = null) => {
+  const config = {
+    title,
+    text,
+    icon: type,
+    confirmButtonColor: '#ffc107',
+    cancelButtonColor: '#6c757d',
+    background: '#fff',
+    color: '#333',
+    showConfirmButton: timer ? false : true,
+  };
+  
+  if (timer) {
+    config.timer = timer;
+    config.timerProgressBar = true;
+  }
+  
+  return Swal.fire(config);
+}, []);
 
   // Función para obtener el token de autenticación
   const getAuthToken = useCallback(() => {
@@ -97,48 +117,47 @@ const Cargas = () => {
 
   // Función para obtener todas las cargas
   const fetchCargas = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  setLoading(true);
+  
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      showAlert('error', 'Sin autenticación', 'No hay token de autenticación');
+      setLoading(false);
+      return;
+    }
     
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        setError('No hay token de autenticación');
-        setLoading(false);
+    const response = await fetch('http://localhost:3001/api/loads', {
+      method: 'GET',
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('token');
+        showAlert('error', 'Sesión expirada', 'Por favor, inicie sesión nuevamente.');
         return;
       }
-      
-      const response = await fetch('http://localhost:3001/api/loads', {
-        method: 'GET',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 401 || response.status === 403) {
-          localStorage.removeItem('token');
-          setError('Sesión expirada. Por favor, inicie sesión nuevamente.');
-          return;
-        }
-        throw new Error(errorText || 'Error al obtener las cargas');
-      }
-
-      const data = await response.json();
-      const processedData = processMySQLResponse(data);
-      
-      setCargas(processedData);
-      
-    } catch (error) {
-      console.error('Error fetching cargas:', error);
-      setError(`Error al cargar las cargas: ${error.message}`);
-      setCargas([]);
-    } finally {
-      setLoading(false);
+      throw new Error(errorText || 'Error al obtener las cargas');
     }
-  }, [getAuthToken, processMySQLResponse]);
+
+    const data = await response.json();
+    const processedData = processMySQLResponse(data);
+    
+    setCargas(processedData);
+    
+  } catch (error) {
+    console.error('Error fetching cargas:', error);
+    showAlert('error', 'Error de carga', `Error al cargar las cargas: ${error.message}`);
+    setCargas([]);
+  } finally {
+    setLoading(false);
+  }
+}, [getAuthToken, processMySQLResponse, showAlert]);
 
   // Función para obtener clientes
   const fetchClients = useCallback(async () => {
@@ -281,12 +300,12 @@ const Cargas = () => {
   }, [getAuthToken]);
 
   // Efectos para cargar datos
-  useEffect(() => {
-    fetchCargas();
-    fetchClients();
-    fetchVehicles();
-    fetchDrivers();
-  }, [fetchCargas, fetchClients, fetchVehicles, fetchDrivers]);
+useEffect(() => {
+  fetchCargas();
+  fetchClients();
+  fetchVehicles();
+  fetchDrivers();
+}, [fetchCargas, fetchClients, fetchVehicles, fetchDrivers]);
 
   // Filtrar cargas
   const filteredCargas = cargas.filter((carga) => {
@@ -335,18 +354,48 @@ const Cargas = () => {
 
   // Handlers
   const handleShowDetails = useCallback((carga) => {
-    console.log('👁️ Mostrando detalles de la carga:', carga);
+  console.log('👁️ Mostrando detalles de la carga:', carga);
+  
+  if (!carga || !carga.id_carga) {
+    console.error('❌ Carga inválida para mostrar detalles');
+    showAlert('error', 'Error', 'Carga inválida seleccionada');
+    return;
+  }
+  
+  setCurrentCarga(carga);
+  setShowCargaModal(true);
+}, [showAlert]);
+
+// PASO 10: Modificar  para usar SweetAlert
+const handleEditCarga = useCallback((carga) => {
+  console.log('✏️ Iniciando edición de la carga:', carga);
+  
+  if (!carga || !carga.id_carga) {
+    console.error('❌ Carga inválida para editar');
+    showAlert('error', 'Error', 'Carga inválida para editar');
+    return;
+  }
+  
+  setShowCargaModal(false);
+  
+  setTimeout(() => {
+    const editData = {
+      id_carga: carga.id_carga,
+      descripcion: carga.descripcion || '',
+      peso: carga.peso || '',
+      foto_carga: carga.foto_carga || '',
+      fecha_inicio: carga.fecha_inicio ? carga.fecha_inicio.split('T')[0] : '',
+      fecha_fin: carga.fecha_fin ? carga.fecha_fin.split('T')[0] : '',
+      vehiculo: carga.vehiculo || '',
+      cliente: carga.cliente || ''
+    };
     
-    if (!carga || !carga.id_carga) {
-      console.error('❌ Carga inválida para mostrar detalles');
-      setError('Carga inválida seleccionada');
-      return;
-    }
-    
-    setCurrentCarga(carga);
-    setShowCargaModal(true);
-    setError(null);
-  }, []);
+    console.log('✅ Datos preparados para edición:', editData);
+    setEditCarga(editData);
+    setShowEditCargaModal(true);
+    setEditValidated(false);
+  }, 100);
+}, [showAlert]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -363,125 +412,106 @@ const Cargas = () => {
     return new Date(fechaInicio) < new Date(fechaFin);
   };
 
-  const handleSubmitNewCarga = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
+const handleSubmitNewCarga = async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setValidated(true);
+    return;
+  }
+  
+  if (!validateDates(newCarga.fecha_inicio, newCarga.fecha_fin)) {
+    showAlert('error', 'Error de validación', 'La fecha de inicio debe ser anterior a la fecha de fin');
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    await createNewCarga(newCarga);
+    await fetchCargas();
     
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setValidated(true);
-      return;
-    }
+    setShowNewCargaModal(false);
+    setNewCarga({
+      descripcion: '',
+      peso: '',
+      foto_carga: '',
+      fecha_inicio: '',
+      fecha_fin: '',
+      vehiculo: '',
+      cliente: ''
+    });
+    setValidated(false);
     
-    if (!validateDates(newCarga.fecha_inicio, newCarga.fecha_fin)) {
-      setError('La fecha de inicio debe ser anterior a la fecha de fin');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      await createNewCarga(newCarga);
-      await fetchCargas();
-      
-      setShowNewCargaModal(false);
-      setNewCarga({
-        descripcion: '',
-        peso: '',
-        foto_carga: '',
-        fecha_inicio: '',
-        fecha_fin: '',
-        vehiculo: '',
-        cliente: '',
-        conductor: ''
-      });
-      setValidated(false);
-      setError(null);
-    } catch (error) {
-      setError(`Error al crear la carga: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    showAlert('success', '¡Carga creada!', 'La carga ha sido registrada correctamente', 2000);
+  } catch (error) {
+    showAlert('error', 'Error', `Error al crear la carga: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSubmitEditCarga = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
+  e.preventDefault();
+  const form = e.currentTarget;
+  
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setEditValidated(true);
+    return;
+  }
+  
+  if (!validateDates(editCarga.fecha_inicio, editCarga.fecha_fin)) {
+    showAlert('error', 'Error de validación', 'La fecha de inicio debe ser anterior a la fecha de fin');
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    const { id_carga, ...cargaData } = editCarga;
+    await updateCarga(id_carga, cargaData);
+    await fetchCargas();
     
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setEditValidated(true);
-      return;
-    }
+    setShowEditCargaModal(false);
+    setEditValidated(false);
     
-    if (!validateDates(editCarga.fecha_inicio, editCarga.fecha_fin)) {
-      setError('La fecha de inicio debe ser anterior a la fecha de fin');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const { id_carga, ...cargaData } = editCarga;
-      await updateCarga(id_carga, cargaData);
-      await fetchCargas();
-      
-      setShowEditCargaModal(false);
-      setEditValidated(false);
-      setError(null);
-    } catch (error) {
-      setError(`Error al actualizar la carga: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    showAlert('success', '¡Carga actualizada!', 'Los cambios han sido guardados correctamente', 2000);
+  } catch (error) {
+    showAlert('error', 'Error', `Error al actualizar la carga: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleEditCarga = useCallback((carga) => {
-    console.log('✏️ Iniciando edición de la carga:', carga);
-    
-    if (!carga || !carga.id_carga) {
-      console.error('❌ Carga inválida para editar');
-      setError('Carga inválida para editar');
-      return;
-    }
-    
-    setShowCargaModal(false);
-    
-    setTimeout(() => {
-      const editData = {
-        id_carga: carga.id_carga,
-        descripcion: carga.descripcion || '',
-        peso: carga.peso || '',
-        foto_carga: carga.foto_carga || '',
-        fecha_inicio: carga.fecha_inicio ? carga.fecha_inicio.split('T')[0] : '',
-        fecha_fin: carga.fecha_fin ? carga.fecha_fin.split('T')[0] : '',
-        vehiculo: carga.vehiculo || '',
-        cliente: carga.cliente || '',
-        conductor: carga.conductor || ''
-      };
-      
-      console.log('✅ Datos preparados para edición:', editData);
-      setEditCarga(editData);
-      setShowEditCargaModal(true);
-      setEditValidated(false);
-      setError(null);
-    }, 100);
-  }, []);
+const handleDeleteCarga = useCallback(async (cargaId) => {
+  const result = await Swal.fire({
+    title: '¿Eliminar carga?',
+    text: 'Esta acción no se puede deshacer',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    background: '#fff',
+    color: '#333',
+  });
 
-  const handleDeleteCarga = useCallback(async (cargaId) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar esta carga?')) {
-      return;
-    }
-    
+  if (result.isConfirmed) {
     try {
       setLoading(true);
       await deleteCarga(cargaId);
       await fetchCargas();
-      setError(null);
+      
+      showAlert('success', '¡Eliminado!', 'La carga ha sido eliminada correctamente', 2000);
     } catch (error) {
-      setError(`Error al eliminar la carga: ${error.message}`);
+      showAlert('error', 'Error', `Error al eliminar la carga: ${error.message}`);
     } finally {
       setLoading(false);
     }
-  }, [deleteCarga, fetchCargas]);
+  }
+}, [deleteCarga, fetchCargas, showAlert]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -501,12 +531,6 @@ const Cargas = () => {
           <FaPlus className="me-2" /> Nueva Carga
         </Button>
       </div>
-
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-      )}
       
       {/* Filtros y búsqueda */}
       <Card className="mb-4">
@@ -726,10 +750,10 @@ const Cargas = () => {
                       </p>
                     </Col>
                     <Col sm={6}>
-                      <p className="mb-1"><strong>Conductor:</strong></p>
+                      <p className="mb-1"><strong>Estado:</strong></p>
                       <p className="d-flex align-items-center">
                         <FaUser className="me-2 text-warning" />
-                        {getDriverName(currentCarga.estado)}
+                        {currentCarga.estado}
                       </p>
                     </Col>
                   </Row>
@@ -884,7 +908,7 @@ const Cargas = () => {
                       value={newCarga.vehiculo}
                       onChange={handleInputChange}
                     >
-                      <option value="">Seleccione un vehículo (opcional)</option>
+                      <option value="">Seleccione un vehículo</option>
                       {vehicles.map(vehicle => (
                         <option key={vehicle.id_vehiculo} value={vehicle.id_vehiculo}>
                           {vehicle.placa} - {vehicle.modelo}
@@ -895,13 +919,13 @@ const Cargas = () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Conductor</Form.Label>
+                    <Form.Label>Estado</Form.Label>
                     <Form.Select
                       name="conductor"
-                      value={newCarga.conductor}
+                      value={newCarga.estado}
                       onChange={handleInputChange}
                     >
-                      <option value="">Seleccione un conductor (opcional)</option>
+                      <option value="">Estado</option>
                       {drivers.map(driver => (
                         <option key={driver.id_conductor} value={driver.id_conductor}>
                           {driver.nombre_conductor} {driver.apellido_conductor}
@@ -964,41 +988,6 @@ const Cargas = () => {
               <h5 className="border-bottom pb-2 mb-3">Información de la Carga</h5>
             <div className="new-carga-form">
               </div>
-              {/* Información básica */}
-              <h5 className="border-bottom pb-2 mb-3">Información Básica</h5>
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Referencia</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="referencia"
-                      value={newCarga.referencia}
-                      onChange={handleInputChange}
-                      placeholder="Se generará automáticamente"
-                    />
-                    <Form.Text className="text-muted">
-                      Deje vacío para generar automáticamente
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Cliente</Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="cliente"
-                      value={newCarga.cliente}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Nombre del cliente"
-                    />
-                    <Form.Control.Feedback type="invalid">
-                      El cliente es obligatorio
-                    </Form.Control.Feedback>
-                  </Form.Group>
-                </Col>
-              </Row>
               
               <Row className="mb-3">
                 <Col md={12}>
@@ -1086,7 +1075,7 @@ const Cargas = () => {
               
               <h5 className="border-bottom pb-2 mb-3 mt-4">Asignaciones</h5>
               <Row className="mb-3">
-                <Col md={12}>
+                <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>Cliente *</Form.Label>
                     <Form.Select
@@ -1107,9 +1096,6 @@ const Cargas = () => {
                     </Form.Control.Feedback>
                   </Form.Group>
                 </Col>
-              </Row>
-              
-              <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
                     <Form.Label>Vehículo</Form.Label>
@@ -1122,23 +1108,6 @@ const Cargas = () => {
                       {vehicles.map(vehicle => (
                         <option key={vehicle.id_vehiculo} value={vehicle.id_vehiculo}>
                           {vehicle.placa} - {vehicle.modelo}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Conductor</Form.Label>
-                    <Form.Select
-                      name="conductor"
-                      value={editCarga.conductor}
-                      onChange={handleEditInputChange}
-                    >
-                      <option value="">Seleccione un conductor (opcional)</option>
-                      {drivers.map(driver => (
-                        <option key={driver.id_conductor} value={driver.id_conductor}>
-                          {driver.nombre}
                         </option>
                       ))}
                     </Form.Select>

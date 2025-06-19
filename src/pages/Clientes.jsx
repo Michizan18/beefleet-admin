@@ -9,6 +9,7 @@ import {
   FaBuilding, FaPhone, FaMapMarkerAlt
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
+import Swal from 'sweetalert2';
 
 // Constantes para mensajes de validación
 const VALIDATION_MESSAGES = {
@@ -87,52 +88,79 @@ const Clientes = () => {
 
   // Función para obtener todos los clientes
   const fetchClients = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  setLoading(true);
+  setError(null);
+  
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      Swal.fire({
+        title: 'Sesión Expirada',
+        text: 'No hay token de autenticación válido',
+        icon: 'warning',
+        confirmButtonColor: '#ffc107',
+        customClass: {
+          confirmButton: 'btn btn-warning'
+        },
+        buttonsStyling: false
+      });
+      setLoading(false);
+      return;
+    }
     
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        setError('No hay token de autenticación');
-        setLoading(false);
+    const response = await fetch('http://localhost:3001/api/clients', {
+      method: 'GET',
+      headers: {
+        'Authorization': token,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('token');
+        Swal.fire({
+          title: 'Sesión Expirada',
+          text: 'Por favor, inicie sesión nuevamente',
+          icon: 'warning',
+          confirmButtonColor: '#ffc107',
+          customClass: {
+            confirmButton: 'btn btn-warning'
+          },
+          buttonsStyling: false
+        });
         return;
       }
-      
-      const response = await fetch('http://localhost:3001/api/clients', {
-        method: 'GET',
-        headers: {
-          'Authorization': token,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 401 || response.status === 403) {
-          localStorage.removeItem('token');
-          setError('Sesión expirada. Por favor, inicie sesión nuevamente.');
-          return;
-        }
-        throw new Error(errorText || 'Error al obtener los clientes');
-      }
-
-      const data = await response.json();
-      const processedData = processMySQLResponse(data);
-      
-      if (!processedData.length) {
-        setError('No se encontraron clientes');
-      }
-      
-      setClients(processedData);
-      
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-      setError(`Error al cargar los clientes: ${error.message}`);
-      setClients([]);
-    } finally {
-      setLoading(false);
+      throw new Error(errorText || 'Error al obtener los clientes');
     }
-  }, [getAuthToken, processMySQLResponse]);
+
+    const data = await response.json();
+    const processedData = processMySQLResponse(data);
+    
+    if (!processedData.length) {
+      setError('No se encontraron clientes');
+    }
+    
+    setClients(processedData);
+    
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    Swal.fire({
+      title: 'Error de Conexión',
+      text: `Error al cargar los clientes: ${error.message}`,
+      icon: 'error',
+      confirmButtonColor: '#dc3545',
+      customClass: {
+        confirmButton: 'btn btn-danger'
+      },
+      buttonsStyling: false
+    });
+    setClients([]);
+  } finally {
+    setLoading(false);
+  }
+}, [getAuthToken, processMySQLResponse]);
 
   // Función para crear un nuevo cliente
   const createNewClient = useCallback(async (clientData) => {
@@ -248,67 +276,116 @@ const Clientes = () => {
   };
   
   const handleSubmitNewClient = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
+  e.preventDefault();
+  const form = e.currentTarget;
+  
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setValidated(true);
+    return;
+  }
+  
+  if (checkNitExists(newClient.nit)) {
+    Swal.fire({
+      title: 'NIT Duplicado',
+      text: `Ya existe un cliente con el NIT: ${newClient.nit}`,
+      icon: 'warning',
+      confirmButtonColor: '#ffc107',
+      customClass: {
+        confirmButton: 'btn btn-warning'
+      },
+      buttonsStyling: false
+    });
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    await createNewClient(newClient);
+    await fetchClients();
     
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setValidated(true);
-      return;
-    }
+    setShowNewClientModal(false);
+    setNewClient({
+      nit: '',
+      direccion: '',
+      ciudad: '',
+      telefono: '',
+      empresa: ''
+    });
+    setValidated(false);
+    setError(null);
     
-    if (checkNitExists(newClient.nit)) {
-      setError(`Ya existe un cliente con el NIT: ${newClient.nit}`);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      await createNewClient(newClient);
-      await fetchClients();
-      
-      setShowNewClientModal(false);
-      setNewClient({
-        nit: '',
-        direccion: '',
-        ciudad: '',
-        telefono: '',
-        empresa: ''
-      });
-      setValidated(false);
-      setError(null);
-    } catch (error) {
-      setError(`Error al crear el cliente: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    Swal.fire({
+      title: '¡Cliente Creado!',
+      text: 'El cliente se ha registrado correctamente',
+      icon: 'success',
+      confirmButtonColor: '#ffc107',
+      customClass: {
+        confirmButton: 'btn btn-warning'
+      },
+      buttonsStyling: false
+    });
+  } catch (error) {
+    Swal.fire({
+      title: 'Error al Crear Cliente',
+      text: error.message,
+      icon: 'error',
+      confirmButtonColor: '#dc3545',
+      customClass: {
+        confirmButton: 'btn btn-danger'
+      },
+      buttonsStyling: false
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSubmitEditClient = async (e) => {
-    e.preventDefault();
-    const form = e.currentTarget;
+  e.preventDefault();
+  const form = e.currentTarget;
+  
+  if (form.checkValidity() === false) {
+    e.stopPropagation();
+    setEditValidated(true);
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    const { id_cliente, ...clientData } = editClient;
+    await updateClient(id_cliente, clientData);
+    await fetchClients();
     
-    if (form.checkValidity() === false) {
-      e.stopPropagation();
-      setEditValidated(true);
-      return;
-    }
+    setShowEditClientModal(false);
+    setEditValidated(false);
+    setError(null);
     
-    try {
-      setLoading(true);
-      const { id_cliente, ...clientData } = editClient;
-      await updateClient(id_cliente, clientData);
-      await fetchClients();
-      
-      setShowEditClientModal(false);
-      setEditValidated(false);
-      setError(null);
-    } catch (error) {
-      setError(`Error al actualizar el cliente: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    Swal.fire({
+      title: '¡Cliente Actualizado!',
+      text: 'Los datos del cliente se han actualizado correctamente',
+      icon: 'success',
+      confirmButtonColor: '#ffc107',
+      customClass: {
+        confirmButton: 'btn btn-warning'
+      },
+      buttonsStyling: false
+    });
+  } catch (error) {
+    Swal.fire({
+      title: 'Error al Actualizar',
+      text: error.message,
+      icon: 'error',
+      confirmButtonColor: '#dc3545',
+      customClass: {
+        confirmButton: 'btn btn-danger'
+      },
+      buttonsStyling: false
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleEditClient = (client) => {
     setShowClientModal(false);
@@ -326,20 +403,56 @@ const Clientes = () => {
     }, 100);
   };
 
-  const handleDeleteClient = async (clientId) => {
-    if (window.confirm('¿Está seguro de que desea eliminar este cliente?')) {
-      try {
-        setLoading(true);
-        await deleteClient(clientId);
-        await fetchClients();
-        setError(null);
-      } catch (error) {
-        setError(`Error al eliminar el cliente: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
+const handleDeleteClient = async (clientId) => {
+  const result = await Swal.fire({
+    title: '¿Eliminar Cliente?',
+    text: 'Esta acción no se puede deshacer',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    customClass: {
+      confirmButton: 'btn btn-danger',
+      cancelButton: 'btn btn-secondary'
+    },
+    buttonsStyling: false
+  });
+
+  if (result.isConfirmed) {
+    try {
+      setLoading(true);
+      await deleteClient(clientId);
+      await fetchClients();
+      setError(null);
+      
+      Swal.fire({
+        title: '¡Eliminado!',
+        text: 'El cliente ha sido eliminado correctamente',
+        icon: 'success',
+        confirmButtonColor: '#ffc107',
+        customClass: {
+          confirmButton: 'btn btn-warning'
+        },
+        buttonsStyling: false
+      });
+    } catch (error) {
+      Swal.fire({
+        title: 'Error',
+        text: `Error al eliminar el cliente: ${error.message}`,
+        icon: 'error',
+        confirmButtonColor: '#dc3545',
+        customClass: {
+          confirmButton: 'btn btn-danger'
+        },
+        buttonsStyling: false
+      });
+    } finally {
+      setLoading(false);
     }
-  };
+  }
+};
   
   return (
     <LayoutBarButton userData={userData}>
@@ -354,12 +467,6 @@ const Clientes = () => {
           <FaPlus className="me-2" /> Nuevo Cliente
         </Button>
       </div>
-
-      {error && (
-        <div className="alert alert-danger" role="alert">
-          {error}
-        </div>
-      )}
       
       {/* Filtros y búsqueda */}
       <Card className="mb-4">

@@ -67,7 +67,7 @@ const Conductores = () => {
     tipo_licencia: '',
     fecha_vencimiento: '',
     experiencia: '',
-    estado: 'Activo',
+    estado: '',
   };
   
   const [newDriver, setNewDriver] = useState(initialDriverState);
@@ -108,8 +108,8 @@ const Conductores = () => {
       tipo_licencia: driver.tipo_licencia || '',
       fecha_vencimiento: driver.fecha_vencimiento || '',
       experiencia: driver.experiencia || '',
-      estado: driver.estado || 'Activo',
-      fecha_registro: driver.fecha_registro || ''
+      estado: driver.estado || '',
+      fecha_ingreso: driver.fecha_ingreso || ''
     };
   }, []);
 
@@ -206,7 +206,9 @@ const Conductores = () => {
       ciudad: newDriver.ciudad || null,
       direccion: newDriver.direccion || null,
       tipo_licencia: newDriver.tipo_licencia || null,
-      fecha_vencimiento: newDriver.fecha_vencimiento || null
+      fecha_vencimiento: newDriver.fecha_vencimiento || null,
+      fecha_ingreso: newDriver.fecha_ingreso || null,
+      estado: newDriver.estado || 'Activo'
     };
 
     const response = await fetch('http://localhost:3001/api/drivers', {
@@ -222,7 +224,6 @@ const Conductores = () => {
       const errorData = await response.text();
       throw new Error(`Error ${response.status}: ${errorData}`);
     }
-    fetchDrivers();
     const data = await response.json();
     // Cerrar modal de crear y mostrar modal de éxito
     setShowNewDriverModal(false);
@@ -244,6 +245,7 @@ setDrivers(prevDrivers => [normalizeDriverData(data.driver || data), ...prevDriv
   } finally {
     setIsUpdating(false);
   }
+  fetchDrivers();
 };
 
   // Función para editar un conductor
@@ -743,11 +745,11 @@ const confirmDeleteDriver = async () => {
                   </p>
                 </Col>
                 <Col sm={6}>
-                  <p className="mb-1"><strong>Fecha de Registro:</strong></p>
+                  <p className="mb-1"><strong>Fecha de ingreso:</strong></p>
                   <p className="d-flex align-items-center">
                     <FaCalendarPlus className="me-2 text-warning" />
-                    {currentDriver.fecha_registro ? 
-                      new Date(currentDriver.fecha_registro).toLocaleDateString('es-CO') : 
+                    {currentDriver.fecha_ingreso ? 
+                      new Date(currentDriver.fecha_ingreso).toLocaleDateString('es-CO') : 
                       'No disponible'
                     }
                   </p>
@@ -793,7 +795,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Tipo de Documento</Form.Label>
+                    <Form.Label>Tipo de Documento *</Form.Label>
                     <Form.Select
                       name="tipo_documento"
                       value={newDriver.tipo_documento}
@@ -813,7 +815,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Número de Documento</Form.Label>
+                    <Form.Label>Número de Documento *</Form.Label>
                     <Form.Control
                       type="text"
                       name="documento"
@@ -833,7 +835,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Nombre</Form.Label>
+                    <Form.Label>Nombre *</Form.Label>
                     <Form.Control
                       type="text"
                       name="nombre_conductor"
@@ -849,7 +851,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Apellido</Form.Label>
+                    <Form.Label>Apellido *</Form.Label>
                     <Form.Control
                       type="text"
                       name="apellido_conductor"
@@ -869,7 +871,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Email</Form.Label>
+                    <Form.Label>Email *</Form.Label>
                     <Form.Control
                       type="email"
                       name="correo_conductor"
@@ -885,7 +887,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Teléfono</Form.Label>
+                    <Form.Label>Teléfono *</Form.Label>
                     <Form.Control
                       type="tel"
                       name="telefono"
@@ -904,7 +906,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Municipio</Form.Label>
+                    <Form.Label>Municipio *</Form.Label>
                     <Form.Control
                       type="text"
                       name="ciudad"
@@ -920,7 +922,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Dirección</Form.Label>
+                    <Form.Label>Dirección *</Form.Label>
                     <Form.Control
                       type="text"
                       name="direccion"
@@ -940,7 +942,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Tipo de Licencia</Form.Label>
+                    <Form.Label>Tipo de Licencia *</Form.Label>
                     <Form.Select
                       name="tipo_licencia"
                       value={newDriver.tipo_licencia}
@@ -961,7 +963,7 @@ const confirmDeleteDriver = async () => {
                 </Col>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Fecha de Vencimiento</Form.Label>
+                    <Form.Label>Fecha de Vencimiento *</Form.Label>
                     <Form.Control
                       type="date"
                       name="fecha_vencimiento"
@@ -979,7 +981,7 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Años de Experiencia</Form.Label>
+                    <Form.Label>Años de Experiencia *</Form.Label>
                     <Form.Control
                       type="text"
                       name="experiencia"
@@ -997,12 +999,13 @@ const confirmDeleteDriver = async () => {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Estado</Form.Label>
+                    <Form.Label>Estado *</Form.Label>
                     <Form.Select
                       name="estado"
                       value={newDriver.estado}
                       onChange={handleInputChange}
                     >
+                      <option value="">Seleccionar...</option>
                       {DRIVER_STATUS.map(status => (
                         <option key={status.value} value={status.value}>
                           {status.label}
@@ -1293,7 +1296,9 @@ const confirmDeleteDriver = async () => {
                       name="estado"
                       value={editDriver.estado}
                       onChange={handleEditInputChange}
+                      required
                     >
+                      <option value="">Seleccionar...</option>
                       {DRIVER_STATUS.map(status => (
                         <option key={status.value} value={status.value}>
                           {status.label}

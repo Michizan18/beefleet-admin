@@ -8,6 +8,7 @@ import {
   FaEdit, FaTrashAlt, FaPlus, FaSave,
 } from 'react-icons/fa';
 import LayoutBarButton from '../components/LayoutBarButton';
+import Swal from 'sweetalert2';
 
 const Vehiculos = () => {
   const [userData, setUserData] = useState(null);
@@ -72,30 +73,63 @@ const Vehiculos = () => {
 
   // Función para eliminar vehículo
   const handleDeleteVehicle = async (id_vehiculo) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este vehículo?')) {
-      return;
+  const result = await Swal.fire({
+    title: '¿Estás seguro?',
+    text: 'Esta acción no se puede deshacer',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ffc107',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    customClass: {
+      popup: 'custom-swal-popup',
+      title: 'custom-swal-title',
+      content: 'custom-swal-content'
+    }
+  });
+
+  if (!result.isConfirmed) return;
+  
+  try {
+    const response = await fetch(`http://localhost:3001/api/vehicles/${id_vehiculo}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al eliminar el vehículo');
     }
     
-    try {
-      const response = await fetch(`http://localhost:3001/api/vehicles/${id_vehiculo}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Agregar token si es necesario
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Error al eliminar el vehículo');
+    setVehiculos(vehiculos.filter(vehiculo => vehiculo.id_vehiculo !== id_vehiculo));
+    
+    Swal.fire({
+      title: '¡Eliminado!',
+      text: 'El vehículo ha sido eliminado exitosamente',
+      icon: 'success',
+      confirmButtonColor: '#ffc107',
+      customClass: {
+        popup: 'custom-swal-popup',
+        title: 'custom-swal-title'
       }
-      
-      setVehiculos(vehiculos.filter(vehiculo => vehiculo.id_vehiculo !== id_vehiculo));
-      alert('Vehículo eliminado exitosamente');
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error al eliminar el vehículo');
-    }
-  };
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    Swal.fire({
+      title: 'Error',
+      text: 'Hubo un error al eliminar el vehículo',
+      icon: 'error',
+      confirmButtonColor: '#ffc107',
+      customClass: {
+        popup: 'custom-swal-popup',
+        title: 'custom-swal-title'
+      }
+    });
+  }
+};
 
   const fetchData = async () => {
     try {
@@ -183,8 +217,6 @@ const handleUpdateVehicle = async (e) => {
   
   console.log('Datos a enviar:', editFormData);
   try {
-
-     // Asegurar que estado_vehiculo sea un número
     const dataToSend = {
       ...editFormData,
       estado_vehiculo: parseInt(editFormData.estado_vehiculo) || 1
@@ -206,16 +238,33 @@ const handleUpdateVehicle = async (e) => {
     const updatedVehicle = await response.json();
     const vehicleWithId = { ...editFormData, id_vehiculo: editingVehicle.id_vehiculo };
     
-    // Actualizar la lista de vehículos
     setVehiculos(vehiculos.map(v => 
-    v.id_vehiculo === editingVehicle.id_vehiculo ? vehicleWithId : v
+      v.id_vehiculo === editingVehicle.id_vehiculo ? vehicleWithId : v
     ));
-    
     setShowEditModal(false);
-    alert('Vehículo actualizado exitosamente');
+    
+    Swal.fire({
+      title: '¡Actualizado!',
+      text: 'El vehículo ha sido actualizado exitosamente',
+      icon: 'success',
+      confirmButtonColor: '#ffc107',
+      customClass: {
+        popup: 'custom-swal-popup',
+        title: 'custom-swal-title'
+      }
+    });
   } catch (error) {
     console.error('Error:', error);
-    alert('Error al actualizar el vehículo');
+    Swal.fire({
+      title: 'Error',
+      text: 'Error al actualizar el vehículo',
+      icon: 'error',
+      confirmButtonColor: '#ffc107',
+      customClass: {
+        popup: 'custom-swal-popup',
+        title: 'custom-swal-title'
+      }
+    });
   }
 };
 
@@ -291,10 +340,28 @@ const handleUpdateVehicle = async (e) => {
       });
       setValidated(false);
       fetchData();
-      alert('Vehículo creado exitosamente');
+      Swal.fire({
+        title: '¡Éxito!',
+        text: 'Vehículo creado exitosamente',
+        icon: 'success',
+        confirmButtonColor: '#ffc107',
+        customClass: {
+          popup: 'custom-swal-popup',
+          title: 'custom-swal-title'
+        }
+      });
     } catch (error) {
       console.error('Error:', error);
-      alert(`Error al crear el vehículo: ${error.message}`);
+      Swal.fire({
+        title: 'Error',
+        text: `Error al crear el vehículo: ${error.message}`,
+        icon: 'error',
+        confirmButtonColor: '#ffc107',
+        customClass: {
+          popup: 'custom-swal-popup',
+          title: 'custom-swal-title'
+        }
+      });
     }
   };
   
@@ -500,6 +567,10 @@ const handleUpdateVehicle = async (e) => {
                     <Col sm={6}>
                       <p className="mb-1"><strong>Marca:</strong></p>
                       <p>{currentVehicle.marca || 'N/A'}</p>
+                    </Col>
+                    <Col sm={6}>
+                      <p className="mb-1"><strong>Capcidad:</strong></p>
+                      <p>{currentVehicle.capacidad || 'N/A'}</p>
                     </Col>
                   </Row>
                   <Row className="mb-3">
